@@ -161,6 +161,36 @@ function Motion.new(model,tool,emit)
 				base=joint.C0*rest,basis=pivot:ToObjectSpace(joint.Part0.CFrame).Rotation}
 		end
 	end
+	-- The two shipped idle clips are generic and were never authored against these weapon meshes, so
+	-- the hand they place can rest up to ~1.1 studs off the weapon's centre plane. The error flips
+	-- sign between rifles and shotguns, so no single baked rest constant fixes it. Walk the joint
+	-- chain to find where each hand actually lands in weapon space and cancel only its off-plane
+	-- drift; the clip's along-weapon and vertical placement is left alone.
+	local function frameInBody(name)
+		local acc,guard=I,0
+		while name~="Body" and guard<8 do
+			local d=joints[name]
+			if not d then return nil end
+			acc=d.base*d.joint.C1:Inverse()*acc
+			name=d.joint.Part0.Name
+			guard+=1
+		end
+		return if name=="Body" then acc else nil
+	end
+	for _,armName in {"LeftArm","RightArm"} do
+		local data=joints[armName]
+		local frame=data and frameInBody(armName)
+		local parent=data and frameInBody(data.joint.Part0.Name)
+		if frame and parent then
+			-- Whichever end of the arm is nearer the weapon origin is the hand.
+			local half=data.joint.Part1.Size.Z/2
+			local a=(frame*CFrame.new(0,0,-half)).Position
+			local b=(frame*CFrame.new(0,0,half)).Position
+			local drift=if a.Magnitude<b.Magnitude then a.Z else b.Z
+			data.base=CFrame.new(parent:VectorToObjectSpace(Vector3.new(0,0,-drift)))*data.base
+		end
+	end
+
 	local tracks,markers=reloadTracks(profile[1])
 	local authored=showcase[name]
 	if authored then tracks,markers=authored.reload,authored.markers end

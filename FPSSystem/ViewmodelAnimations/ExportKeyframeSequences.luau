@@ -11,7 +11,11 @@
 
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Motion = require(ReplicatedStorage.Blaster.Scripts.WeaponViewmodelMotion)
+-- Required through a throwaway clone: Studio's Edit-mode module cache will otherwise hand back a
+-- stale copy after the source is edited, and the export would silently bake the previous poses.
+local motionSource = ReplicatedStorage.Blaster.Scripts.WeaponViewmodelMotion:Clone()
+motionSource.Parent = workspace
+local Motion = require(motionSource)
 local ViewModels = ReplicatedStorage.Blaster.ViewModels
 
 -- Generic class clips use representatives that are NOT in the module's `showcase` table, so the
@@ -219,5 +223,6 @@ for _, target in TARGETS do
 	table.insert(report, ("%-14s <- %-14s %s"):format(target.out, target.vm, table.concat(made, " ")))
 end
 
+motionSource:Destroy()
 return ("%d clips, %d keyframes, %d markers\n%s")
 	:format(totalClips, totalKeys, totalMarkers, table.concat(report, "\n"))
