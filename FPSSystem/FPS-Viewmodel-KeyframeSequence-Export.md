@@ -96,3 +96,16 @@ To take these live: publish each `KeyframeSequence` (right-click in Explorer, Sa
 paste the returned ids into the matching `Animation` objects in each viewmodel's `Animations`
 folder, then restore the two controllers in `FPSSystem/ViewmodelAnimations/baseline/`, which is
 the asset-driven playback path. Until that is done the export is inert and gameplay is unchanged.
+
+## Editing scaffold (disposable)
+
+`workspace.ViewmodelAnimationRigs` holds the twelve representative viewmodel rigs, one per clip
+folder, named `<clip folder> - <weapon>` and laid out on a 4x3 grid at 16-stud spacing around
+(0, 8, -250), clear of the weapon display near the origin. The Animation Editor binds only to a
+rig in Workspace, not to one in ReplicatedStorage, which is why the clones are needed.
+
+Only each rig's root part is anchored; anchoring a Motor6D-driven part would freeze it against the
+animation being edited. All parts have `CanCollide = false`.
+
+This is an authoring convenience with no gameplay role. Deleting the folder is the whole cleanup,
+and re-running `ExportKeyframeSequences.luau` does not depend on it.
