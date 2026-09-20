@@ -1,5 +1,15 @@
 # FPS System weapon viewmodel animation pass
 
+## Revised three-weapon preview
+
+Glock 17, AK47 and Mossberg 590 now have separately authored carry positions and mesh-specific hand grips rather than the original shared idle poses. Their recoil directions/strengths and reload presentation poses are distinct. The pistol turns side-on for magazine handling; the rifle rocks its magazine out, reseats it and reaches for the charging handle; the shotgun presents its receiver for the existing per-shell loading cycle. The other weapons retain the earlier pass pending visual approval of these examples.
+
+The revised examples pass 27 class/grip checks plus the existing 7,102-assertion motion suite. Normal in-game Tool activation was verified for all three; pressing R visibly moved each viewmodel and restored ammo (Glock 16→17, AK47 29→30, Mossberg 7→8). Reload and firing timings remain the game's original timings. `WeaponClassMotion.spec.luau` maps to `ServerStorage.WeaponClassMotionTests`.
+
+The approved class carry/recoil and reload presentation have now been extended to all 26 firearms. Non-showcase meshes retain their own corrected arm rests; top-loading, bullpup, rocking-magazine and revolver mechanisms retain their extraction/loading paths. Melee remains unchanged. This extension passed the numerical suite but was not individually visually polished on all 26 firearms.
+
+No separate pistol slide, shotgun pump, loose shell or finger geometry was added. Those motions remain limited to the available hand/weapon joints.
+
 Installed in the existing FPS System.rbxl Studio session. These are procedural first-person Motor6D animations, not published Roblox animation assets or Animation Editor timelines.
 
 ## Coverage

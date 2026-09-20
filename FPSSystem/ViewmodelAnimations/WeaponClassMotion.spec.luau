@@ -1,6 +1,11 @@
 -- Three approved showcase rigs. This catches falling back to the old shared carry/recoil.
 return function(Motion, models, weapons)
 	local results, failures, carries, shots = {}, {}, {}, {}
+	local gripTargets = {
+		["Glock 17"]={RightArm=Vector3.new(.23,.18,-.43),LeftArm=Vector3.new(-.08,.12,-.47)},
+		AK47={RightArm=Vector3.new(.28,-.20,.75),LeftArm=Vector3.new(-.03,-.10,-1.48)},
+		["Mossberg 590"]={RightArm=Vector3.new(.18,-.20,.95),LeftArm=Vector3.new(-.03,-.32,-2.05)},
+	}
 	local function check(ok,message)
 		if not ok then table.insert(failures,message) end
 	end
@@ -10,6 +15,11 @@ return function(Motion, models, weapons)
 		local body=model:FindFirstChild("BodyJoint",true)
 		local original=body.C0
 		local m=Motion.new(model,tool)
+		for armName,target in gripTargets[name] do
+			local data=m.joints[armName]
+			local hand=data.joint.Part0.CFrame*data.base*data.joint.C1:Inverse()*CFrame.new(0,0,-data.joint.Part1.Size.Z/2)
+			check((model:GetPivot():PointToObjectSpace(hand.Position)-target).Magnitude<.03,name..": "..armName.." misses carry grip")
+		end
 		m:equip() m:step(1,0,false)
 		local carry=body.C0
 		carries[name]=original:ToObjectSpace(carry)
@@ -34,5 +44,5 @@ return function(Motion, models, weapons)
 	check(shots['Mossberg 590'].Position.Magnitude>shots.AK47.Position.Magnitude*1.4,"Shotgun kick should be heavier than rifle")
 	check((carries['Glock 17'].Position-carries.AK47.Position).Magnitude>.1,"Pistol/rifle carry must be distinct")
 	assert(#failures==0,table.concat(failures,'\n'))
-	return {weapons=results,checks=21}
+	return {weapons=results,checks=27}
 end
