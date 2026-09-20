@@ -109,3 +109,23 @@ animation being edited. All parts have `CanCollide = false`.
 
 This is an authoring convenience with no gameplay role. Deleting the folder is the whole cleanup,
 and re-running `ExportKeyframeSequences.luau` does not depend on it.
+
+## Trap: the Animation Editor only loads from the rig's `AnimSaves`
+
+Staging the rigs in Workspace is not enough to see the exported clips. The Animation Editor's
+`... -> Load` is populated solely from an `AnimSaves` **ObjectValue** parented under the selected
+rig, and it greys the entry out when that container is empty. It never looks at `ServerStorage`,
+so the export folder is invisible to it no matter which rig is selected.
+
+Note `AnimSaves` is an `ObjectValue`, not a `Folder`. The viewmodel templates ship one, already
+empty, so the container exists but reads as "no saved animations".
+
+Each staged rig's `AnimSaves` now holds a copy of its matching clip set — 49 sequences total.
+Verified on the AK47 rig: every `Pose` name (`Root`, `Body`, `Magazine`, `LeftArm`, `RightArm`,
+`ChargingHandle`) resolves to a part that exists in the rig, so all tracks bind; the rig's `TrimA`
+through `TrimE` parts carry no joint and are correctly absent from the poses. Loop and priority
+survive the copy: Idle loops at `Idle` priority, Equip is `Action`, Shoot and Reload are `Action4`,
+and the Reload keyframe markers are intact.
+
+`ServerStorage.ViewmodelKeyframeSequences` remains the generated master. `AnimSaves` holds working
+copies; re-running the exporter rebuilds the master only, so the copies must be refreshed too.
