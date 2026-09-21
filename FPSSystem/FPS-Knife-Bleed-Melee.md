@@ -101,13 +101,50 @@ weapon needs an entry in that table; the Knife now has the Crowbar's.
 | viewmodel blade | 0.50 x 2.20 x 0.26, body transparent, 0 leftover Trim parts |
 | world model | blade 2.20 studs, Body and Handle invisible |
 
+## Sounds, icon and grip (2026-09-21, later)
+- `Sounds.Equip` -> `rbxassetid://90559856125293`.
+- `Sounds.Hit` is now a **Folder** of two, `124216736896680` and `129240409121774`, so repeated stabs
+  do not machine-gun one clip. `impactEffect` was taught to accept either a Sound or a Folder here;
+  every other weapon still has a plain Sound and takes the original branch unchanged.
+- `Sounds.Shoot` (the swing) -> `rbxassetid://129582509517716`.
+- `TextureId` -> `rbxassetid://71861214836431`, the supplied icon, uploaded at 512px. The catalog
+  picks it up automatically, so the shop grid shows it instead of falling back to the name.
+
+All five assets preload clean: icon loaded, equip 0.21s, hits 1.36s and 1.54s, swing 0.65s.
+
+### Two things the grip fix had to get right
+**The blade was pointing at the player.** Seating it by assumption put the TIP 0.95 studs from the
+hand and the BUTT 1.53 -- backwards. The mesh's point is at local **-Y**, not +Y, so the quarter turn
+about X had to go the other way. Measured after: butt 0.35 from the grip, tip 1.85.
+
+**The rest pose is not the carry pose.** Seating against the arm joint's rest transform put the
+handle 1.13 studs from the hand in play -- the knife hanging below the fist, which is what was
+reported. `WeaponViewmodelMotion` poses the arms every frame, so the hand actually sits at
+`(-0.295, -0.042, 0.000)` in Body space, not the `(0.250, 0.050, 0.631)` the rest transform implies.
+Sampled over 40 frames in play, that position does not move at all (wobble 0.000), so it is a
+reliable anchor rather than a snapshot.
+
+Re-seated against the live grip:
+
+| | before | after |
+|---|---|---|
+| handle butt to hand | 1.13 studs | **0.35** |
+| blade tip to hand | 1.34 studs | **1.85** |
+| tip is the far end | no | **yes** |
+
+The world model is seated against the Tool's `Handle` instead, which is what Roblox welds into the
+character's hand, so third person uses its own correct reference.
+
 ## Still not verified -- needs one look
-- **Blade angle.** Size is now right and was measured, but which way the blade POINTS was not seen.
-  The mesh is long on Y and the body it welds to is long on Z, so the clone is turned a quarter turn
-  about X to face down the weapon's forward axis. If it sits sideways or upside down, that single
-  rotation in the build is the knob.
-- **Carry distance.** The Knife uses the Crowbar's motion profile verbatim, and a knife is shorter
-  than a crowbar, so it may be held further out than it should be. The two numbers in the profile
-  are carry length and grip.
+- **Blade roll.** The butt-to-hand and tip-to-hand distances are now measured and correct, which
+  fixes how far along the knife the hand sits and which way it points. What those numbers cannot see
+  is ROLL -- whether the edge faces the right way round the blade's own axis. If it looks turned,
+  the third argument of the `CFrame.Angles(math.pi / 2, 0, 0)` in the seating is the knob.
+- **Third person.** Only the first-person grip was measured against a live pose. The world model is
+  seated against the Tool's Handle, which is the right reference, but nobody has watched the
+  character hold it.
+- **Carry distance.** The Knife still uses the Crowbar's motion profile verbatim, so the whole
+  weapon may be carried further from the camera than a knife should be. That is the profile's two
+  numbers, separate from the grip fixed here.
 - **No shop icon.** `TextureId` is empty, so the grid falls back to the name. Every other weapon has
   an uploaded icon.
