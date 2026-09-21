@@ -1,8 +1,8 @@
 # Change Log: The Knife, a Melee Weapon That Bleeds
 
 **Date:** 2026-09-21
-**Status:** Applied. Mechanics confirmed live (damage, bleed total, refresh-not-stack, catalog entry).
-**Appearance and in-hand equip were NOT verified** -- see Not Verified.
+**Status:** Applied and confirmed live end to end, including equipping it in first person. The first
+build was wrong in two ways -- see Two Faults In The First Build.
 
 ## Summary
 A new melee weapon built from the Baton, dealing moderate damage and leaving the target bleeding for
@@ -25,12 +25,15 @@ the PART keeps every joint, attachment and trail exactly where the donor had the
 "add a mesh rather than replace the core part" rule the weapon archive already records.
 
 ## Changes
-- `ServerStorage.Weapons.Knife` (new) -- Baton clone. `SpecialMesh.MeshId` set to the prepared mesh
-  `rbxassetid://3499835987`, scale 0.7. `damage` 30 (Crowbar and Baton are both 45),
-  `knockbackForce` 20, `stunDuration` cleared (stunning is the Baton's identity), `viewModel` set to
-  `Knife`, `Category` Melee, `Price` 350.
-- `ReplicatedStorage.Blaster.ViewModels.Knife` (new) -- Baton viewmodel clone, same mesh swap at
-  scale 0.85.
+- `ServerStorage.Weapons.Knife` (new) -- **Crowbar** clone. Its Body is kept but made invisible (it
+  is the rig hub: the arm Motor6Ds, the tool weld, MuzzleAttachment and the trail all hang off it),
+  the five cosmetic Trim collars are removed, and a clone of `Workspace.Knife` is welded on as
+  `Blade`. `damage` 30 (Crowbar and Baton are both 45), `knockbackForce` 20, `viewModel` `Knife`,
+  `Category` Melee, `Price` 350.
+- `ReplicatedStorage.Blaster.ViewModels.Knife` (new) -- Crowbar viewmodel, same treatment.
+- `ReplicatedStorage.Blaster.Scripts.WeaponViewmodelMotion` -- a `Knife` profile, the Crowbar's
+  melee entry verbatim. Mirrored into `FPSSystem/ViewmodelAnimations/WeaponViewmodelMotion.luau`,
+  which is the authoring copy.
 - `ReplicatedStorage.Blaster.Constants` -- `BLEED_DURATION_ATTRIBUTE` and `BLEED_DAMAGE_ATTRIBUTE`,
   opt-in like every other weapon extension here. Every other weapon leaves them unset.
 - `ServerScriptService.Blaster.Scripts.ShotResolver` -- `applyBleed`, and a call from the hit path.
@@ -68,17 +71,43 @@ intended: five seconds of bleeding is five ticks.
 The shop needed no code change: `WeaponShopService` builds the catalog from every Tool in
 `ServerStorage.Weapons` carrying a `Category`, so the Knife appears in the Melee tab by existing.
 
-## Not verified -- needs one look
-- **How it looks.** The mesh is swapped but its orientation and scale were never seen. The prepared
-  mesh is 0.50 x 2.20 x 0.26, long on **Y**, while the donor body part is long on **Z** -- so the
-  blade may well sit rotated ninety degrees in hand and in the viewmodel. `SpecialMesh` has no
-  rotation, so if it is wrong the fix is either an offset on the mesh or rebuilding `Blaster.Body` as
-  a MeshPart and re-seating the three Motor6Ds. Scales (0.7 tool, 0.85 viewmodel) were derived from
-  the donor's proportions, not judged by eye.
-- **Equipping it in game.** Granting the weapon in test never put it in the Backpack: the shop
-  service owns that, and setting the ownership attribute plus a loadout slot was not enough to make
-  it hand the tool over. Buying it through the shop is the real path and was not exercised, so the
-  `viewModel` wiring is verified by the viewmodel existing and being named correctly, not by holding
-  it.
+## Two faults in the first build
+The first attempt cloned the **Baton** and gave its `SpecialMesh` the knife's MeshId. Equipping it
+produced a knife taller than the character, and no first person at all.
+
+**The giant blade.** `SpecialMesh.Scale` multiplies the mesh's own native units. The scale 0.7 was
+carried over from the Baton, whose mesh has completely different native dimensions -- so it meant
+nothing for this one. The rebuild welds a CLONE of the prepared MeshPart instead, which carries its
+authored size (0.50 x 2.20 x 0.26) and needs no scale at all. Measured on the equipped tool
+afterwards: blade 2.20 studs, largest dimension anywhere on the weapon 3.32 (the invisible shaft).
+
+**No first person.** Nothing to do with the mesh. The console named it exactly:
+
+```
+ReplicatedStorage.Blaster.Scripts.WeaponViewmodelMotion:155: No viewmodel animation profile: Knife
+  WeaponViewmodelMotion.new <- ViewModelController.new <- BlasterController.new
+```
+
+`WeaponViewmodelMotion` asserts on a weapon it has no profile for, and that exception aborts
+`BlasterController.new` -- so the viewmodel was never built and the camera never switched. Any new
+weapon needs an entry in that table; the Knife now has the Crowbar's.
+
+## Verified after the rebuild
+| check | result |
+|---|---|
+| equipped | `Knife` |
+| camera | **`LockFirstPerson`** -- first person engages |
+| viewmodel | `Knife` present in Workspace |
+| viewmodel blade | 0.50 x 2.20 x 0.26, body transparent, 0 leftover Trim parts |
+| world model | blade 2.20 studs, Body and Handle invisible |
+
+## Still not verified -- needs one look
+- **Blade angle.** Size is now right and was measured, but which way the blade POINTS was not seen.
+  The mesh is long on Y and the body it welds to is long on Z, so the clone is turned a quarter turn
+  about X to face down the weapon's forward axis. If it sits sideways or upside down, that single
+  rotation in the build is the knob.
+- **Carry distance.** The Knife uses the Crowbar's motion profile verbatim, and a knife is shorter
+  than a crowbar, so it may be held further out than it should be. The two numbers in the profile
+  are carry length and grip.
 - **No shop icon.** `TextureId` is empty, so the grid falls back to the name. Every other weapon has
   an uploaded icon.

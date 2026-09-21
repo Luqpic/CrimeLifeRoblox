@@ -34,6 +34,10 @@ local profiles = {
 	["AR-18"]={"rifle",.90,.40}, ["AUG A-3"]={"bullpup",.90,.44},
 	["Baton"]={"melee",.78,.32}, ["Benelli M4"]={"shell",1.30,.43},
 	["Crowbar"]={"melee",1.00,.42}, ["Deagle"]={"pistol",1.38,.38},
+	-- Knife: the Crowbar's melee profile verbatim, so it carries and swings identically. The two
+	-- numbers are carry length and grip; the blade is shorter than a crowbar, so they may want
+	-- bringing in once someone has looked at it.
+	["Knife"]={"melee",1.00,.42},
 	["FN P90"]={"top",.62,.37}, ["Glock 17"]={"pistol",.78,.30},
 	["HCAR"]={"rifle",1.42,.55}, ["HK G3"]={"rifle",1.30,.48},
 	["Itacha Mag-10"]={"shell",1.65,.55}, ["Kriss Vector"]={"rifle",.56,.34},
