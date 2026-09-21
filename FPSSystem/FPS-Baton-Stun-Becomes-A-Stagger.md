@@ -1,8 +1,9 @@
 # Change Log: The Baton Stun Drops the Target Instead of Freezing It
 
 **Date:** 2026-09-21
-**Status:** Applied (stagger, recovery and the death-mid-stagger case all confirmed live; the baton
-swing that triggers it could NOT be landed in test -- see Blocked below)
+**Status:** Applied and fully confirmed live. The swing that triggers it could not be landed when
+this was written; the cause was a separate defect, fixed in
+`FPS-Carried-Weapons-Absorbed-Hits.md`, and the end-to-end path has since been verified.
 
 ## Summary
 A baton hit used to lock the target's movement while leaving it standing with its idle animation
@@ -69,24 +70,30 @@ captured value, not a default. The enemy was alive at the end and had resumed it
   not stand back up.
 - the corpse was still destroyed by the enemy death path, which is the scheduling fix above working.
 
-## Blocked: the swing itself could not be landed in test
-A real baton swing never connected in the harness, so the ShotResolver wiring is verified by
-inspection rather than by a swing. Casting the baton's own rays by hand showed why, and it is a
-separate defect worth its own attention:
+## The swing could not be landed when this was written -- and why
+A real baton swing never connected in the harness, so the ShotResolver wiring was verified by
+inspection rather than by a swing. Casting the baton's own rays by hand showed the reason, and it was
+a separate defect:
 
 ```
 cast from 3 studs, isolated target, nothing else nearby
   -> hit Workspace.Enemies.Enemy.Mossberg 590.Blaster.TrimD   tagged=nil
 ```
 
-Every ray hit **the target's own carried weapon**. `castRays` resolves the victim with a single hop,
-`raycastResult.Instance.Parent:FindFirstChildOfClass("Humanoid")`. That works for a body part, whose
-parent is the character, but a Tool's visible geometry sits in its own Model inside the Tool, so the
-lookup finds nothing and the hit comes back with `taggedHumanoid = nil` -- no damage, no stun. An
-armed enemy's gun absorbs melee swings aimed at its body.
+Every ray hit **the target's own carried weapon**. That is now fixed in
+`FPS-Carried-Weapons-Absorbed-Hits.md`, and the whole path has been confirmed since:
 
-This is the same shape as the line-of-sight fix in `FPS-Clustered-Enemies-Stop-Attacking.md`, one
-layer down: that one stopped allies' weapons from blocking *sight*, this is weapons blocking *hits*.
-The fix is the same walk-up-the-ancestry lookup, but it belongs in `castRays`, which every shot in
-the game runs through -- so it changes whether bullets that strike a carried weapon damage its
-holder. That is a gameplay decision and was left alone pending a call.
+- a baton swing at an enemy carrying an AKM landed on the first attempt for 45 damage, and the target
+  went to `IsRagdolled = true`, `PlatformStand = true`, 0/15 animation constraints, recovering to
+  15/15 and 4 colliding parts by t+1.4s;
+- a Security guard's baton swung at the player did the same to the player: 45 damage, ragdolled,
+  `StunnedUntil` 0.98s, recovered by t+1.5s, alive.
+
+## Also applied: the guards' batons
+`ServerStorage.EnemyTemplates.Security.Baton` had no `stunDuration` at all, so a guard's baton hit
+never stunned anyone -- the attribute ShotResolver reads was simply absent. It is now 1s, matching
+the player's baton, so a guard's swing and the player's read the same. Its `knockbackForce` is left
+at 15 against the player baton's 90; that difference is deliberate tuning and not part of this
+change.
+
+`EnemyTemplates.Thug.Crowbar` is unchanged and still has no stun, matching the player's Crowbar.
