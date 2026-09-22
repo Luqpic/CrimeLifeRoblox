@@ -607,6 +607,24 @@ return function(t)
 		expect.equal(#Palettes.list, 12)
 	end)
 
+	t.test("every palette key maps to a unique, legal attribute name", function()
+		-- Not decorative. ownedAttributeFor sanitises with gsub, so two distinct keys can collapse onto
+		-- one attribute -- "S&W" and "S W" both become SkinOwned_S_W -- and two palettes would then
+		-- share one ownership flag: buy either and you silently own both. Every current key is
+		-- alphanumeric so nothing collides today, which is exactly why this needs locking before
+		-- someone adds a key with a space in it. Phase 1 proved the same invariant for the 29 weapon
+		-- names.
+		local RenownConstants = require(game.ReplicatedStorage.Renown.Constants)
+		local probe = Instance.new("Part")
+		local seen = {}
+		for _, palette in Palettes.list do
+			local name = RenownConstants.ownedAttributeFor(palette.key)
+			expect.falsy(seen[name])
+			seen[name] = palette.key
+			expect.truthy(pcall(function() probe:SetAttribute(name, true) end))
+		end
+	end)
+
 	t.test("every Renown ramp still runs dark to light", function()
 		local function luminance(c)
 			return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
@@ -687,7 +705,7 @@ local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
 return tostring(run("RenownPalettes")) .. " | " .. tostring(run("Palettes"))
 ```
 
-Expected: `RenownPalettes` 7 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
+Expected: `RenownPalettes` 8 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
 
 - [ ] **Step 5: Confirm the row still fits**
 
