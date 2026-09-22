@@ -919,7 +919,12 @@ Expected before: the viewmodel exists but Body is stock grey — the world Tool 
 
 - [ ] **Step 2: Apply the skin after the viewmodel is built**
 
-In `ViewModelController.new`, find the line that returns `self` at the end of the constructor. Immediately BEFORE that return, add:
+In `ViewModelController.new`, the constructor's final statement is `return self` at **line 180**, and
+`WeaponViewmodelMotion.new(viewModel, blaster, ...)` is at **line 171**. The skin call goes between
+them — immediately before `return self`. Both `viewModel` and `blaster` are in scope there.
+
+Confirm those lines by reading the script first; do not trust the numbers. Immediately BEFORE that
+return, add:
 
 ```lua
 	-- Dressed last, after the model is built and WeaponViewmodelMotion has solved the joints.
@@ -995,7 +1000,9 @@ Expected: `camera=LockFirstPerson` and `joints=BodyJoint,LeftArmJoint,RightArmJo
 Export the **actual Source from Studio** for every script this task created or modified — never retype
 it — and write each to the path below, so git carries what actually runs and the review has a real diff:
 
-- `ReplicatedStorage.Blaster.Scripts.ViewModelController` -> `FPSSystem/Cosmetics/ViewModelController.luau`
+- `ReplicatedStorage.Blaster.Scripts.ViewModelController` -> **`FPSSystem/ViewmodelAnimations/ViewModelController.luau`**
+  (update the EXISTING mirror, do not create a second copy under `Cosmetics/`; that file is already
+  tracked and already matches Studio at 15888 bytes)
 
 ```bash
 mkdir -p FPSSystem/Cosmetics
