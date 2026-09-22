@@ -4,6 +4,7 @@
 -- The viewmodel is NOT dressed here. It is built client-side and is dressed there, after the motion
 -- module has solved its joints.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
@@ -54,7 +55,12 @@ function CosmeticsService.refresh(player: Player, weaponName: string?)
 		if container then
 			for _, tool in container:GetChildren() do
 				if tool:IsA("Tool") and (weaponName == nil or tool.Name == weaponName) then
-					CosmeticsService.applyToTool(player, tool)
+					-- One weapon's failure must not stop its neighbours being re-dressed -- guarded the
+					-- same way WeaponShopService already guards this same call.
+					local ok, err = pcall(CosmeticsService.applyToTool, player, tool)
+					if not ok then
+						warn("[Cosmetics] failed to skin " .. tool.Name .. ": " .. tostring(err))
+					end
 				end
 			end
 		end
@@ -62,18 +68,27 @@ function CosmeticsService.refresh(player: Player, weaponName: string?)
 end
 
 -- The client asks; the server decides. Ownership is re-checked here rather than trusted from the
--- caller, so a forged request naming a Vip palette from a player without the pass is refused.
-ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest.OnServerEvent:Connect(
-	function(player: Player, weaponName: unknown, paletteKey: unknown)
-		if typeof(weaponName) ~= "string" or typeof(paletteKey) ~= "string" then
-			return
-		end
-		if not CosmeticsService.ownsPalette(player, paletteKey) then
-			return
-		end
-		player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
-		CosmeticsService.refresh(player, weaponName)
+-- caller, so a forged request naming a Vip palette from a player without the pass is refused. Named
+-- (rather than inline in the connection) so the check ordering -- the feature's paid-content boundary
+-- -- has a seam the test suite can call directly.
+function CosmeticsService.handleEquipRequest(player: Player, weaponName: unknown, paletteKey: unknown)
+	if typeof(weaponName) ~= "string" or typeof(paletteKey) ~= "string" then
+		return
 	end
-)
+	-- Bounds the attribute namespace to the real armoury (29 tools, already proven collision-free)
+	-- and keeps every derived name far under Roblox's 100-character attribute-name limit -- an
+	-- arbitrary client-supplied string could guarantee neither.
+	local tool = ServerStorage.Weapons:FindFirstChild(weaponName)
+	if not tool or not tool:IsA("Tool") then
+		return
+	end
+	if not CosmeticsService.ownsPalette(player, paletteKey) then
+		return
+	end
+	player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+	CosmeticsService.refresh(player, weaponName)
+end
+
+ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest.OnServerEvent:Connect(CosmeticsService.handleEquipRequest)
 
 return CosmeticsService
