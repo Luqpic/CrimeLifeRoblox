@@ -36,9 +36,11 @@ return function(t)
 		end
 	end)
 
-	t.test("priceOf returns the price for a Renown key and nil otherwise", function()
-		local first = renownPalettes()[1]
-		expect.equal(Palettes.priceOf(first.key), first.price)
+	t.test("priceOf returns the price for every Renown key and nil otherwise", function()
+		-- Round-trips all four rather than trusting the first to stand in for the rest.
+		for _, palette in renownPalettes() do
+			expect.equal(Palettes.priceOf(palette.key), palette.price)
+		end
 		expect.equal(Palettes.priceOf("Stock"), nil)
 		expect.equal(Palettes.priceOf("Gold"), nil)
 		expect.equal(Palettes.priceOf("NoSuchPalette"), nil)

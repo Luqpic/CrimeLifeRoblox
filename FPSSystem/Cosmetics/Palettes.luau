@@ -85,9 +85,13 @@ Palettes.list = {
 		ramp = { rgb(60, 18, 6), rgb(194, 65, 12), rgb(250, 160, 80) },
 	},
 	{
-		key = "Bone", name = "BONE", source = "Renown", price = 750,
-		swatch = rgb(232, 224, 204),
-		ramp = { rgb(120, 112, 96), rgb(186, 178, 158), rgb(240, 234, 218) },
+		-- Not the ivory this slot originally held. Measured: that swatch sat 37.4 from Arctic in RGB
+		-- space, the closest pair in the whole catalogue against a prior floor of 52.8, and both were
+		-- pale and near-identical in brightness -- a difference that may not survive a 52px chip or
+		-- colour-vision deficiency. This one sits 68.0 from its nearest neighbour.
+		key = "RoseGold", name = "ROSE GOLD", source = "Renown", price = 750,
+		swatch = rgb(183, 110, 121),
+		ramp = { rgb(74, 38, 44), rgb(183, 110, 121), rgb(232, 176, 182) },
 	},
 } :: { Palette }
 
@@ -107,7 +111,10 @@ end
 
 function Palettes.priceOf(key: string): number?
 	local palette = byKeyIndex[key]
-	return palette and palette.price or nil
+	if not palette then
+		return nil
+	end
+	return palette.price
 end
 
 -- The key the game treats as "unskinned". Kept here so nothing else hardcodes the string.
