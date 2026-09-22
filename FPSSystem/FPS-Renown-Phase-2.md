@@ -64,7 +64,7 @@ repo's mirrors under `FPSSystem/Renown/`, checked live):
   `ownedAttributeFor`.
 - `ReplicatedStorage.Renown.Remotes.BuySkinRequest` (RemoteEvent) — the one client-to-server purchase
   entry point, taking `(paletteKey, weaponName)`.
-- `ServerScriptService.Renown.Scripts.RenownService` (ModuleScript, 7741 bytes) — `balanceOf`, `grant`,
+- `ServerScriptService.Renown.Scripts.RenownService` (ModuleScript, 8127 bytes) — `balanceOf`, `grant`,
   `spend`, `onEliminated`/`awardForVictim`, `onLevelChanged`, `handleBuyRequest`, `start`.
 - `ServerScriptService.Renown.Scripts.RenownRunner` (Script, 179 bytes) — the sole caller of
   `RenownService.start()`; requiring the module alone connects nothing.
@@ -80,7 +80,7 @@ after Phase 1's own change-log commit):
   optional `price: number?`, present only on Renown entries. `Palettes.priceOf` added.
 - `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (4782 bytes) — `ownsPalette` gained the
   Renown branch described in Cause, gated on `source`, failing closed.
-- `StarterPlayer.StarterPlayerScripts.SkinRowController` (10901 bytes) — a `Coin` badge on each Renown
+- `StarterPlayer.StarterPlayerScripts.SkinRowController` (12718 bytes) — a `Coin` badge on each Renown
   chip, a `BuyStrip` (sibling of `SkinRow`, identical rectangle) with PRICE/BUY/CANCEL, the purchase
   path firing `BuySkinRequest`, and `refreshLocks()` called on initial chip build (a bug this phase's
   own review caught: without it, the coin badge stayed hidden on unowned Renown chips until the first
@@ -250,9 +250,9 @@ Phase 1's, `buyStrip.PriceLabel` for the strip's) and is unaffected, but any fut
 code touching this panel needs to know both exist.
 
 **Mirrors confirmed byte-exact.** Every file this phase touched or added was re-read live from Studio
-and compared to this repo's copy under `FPSSystem/`: `Constants.luau` 1722, `RenownService.luau` 7741,
+and compared to this repo's copy under `FPSSystem/`: `Constants.luau` 1722, `RenownService.luau` 8127,
 `RenownRunner.luau` 179, `RenownHud.luau` 1084, `Palettes.luau` 4412, `CosmeticsService.luau` 4782,
-`SkinRowController.luau` 10901 bytes — all identical, confirming the repo mirror is not stale relative
+`SkinRowController.luau` 12718 bytes — all identical, confirming the repo mirror is not stale relative
 to the shipped Studio state at the moment this log was written.
 
 ## Status
