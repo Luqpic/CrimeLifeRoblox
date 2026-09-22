@@ -931,11 +931,15 @@ Add `local RenownConstants = require(ReplicatedStorage.Renown.Constants)` beside
 - [ ] **Step 6: Run every suite**
 
 ```lua
+-- RunUnitTest returns a RESULT TABLE {run, passed, failed}, not a number, so tostring() on it yields
+-- a table address rather than a count. Read the fields.
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
-return table.concat({
-	tostring(run("RenownService")), tostring(run("RenownTier")), tostring(run("RenownConstants")),
-	tostring(run("Palettes")), tostring(run("SkinApplier")), tostring(run("CosmeticsOwnership")),
-}, "\n")
+local lines = {}
+for _, name in { "RenownService", "RenownTier", "RenownConstants", "Palettes", "SkinApplier", "CosmeticsOwnership" } do
+	local r = run(name)
+	table.insert(lines, string.format("%-20s run=%d passed=%d failed=%d", name, r.run, r.passed, r.failed))
+end
+return table.concat(lines, "\n")
 ```
 
 Expected: RenownService 21, RenownTier 8, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
