@@ -31,16 +31,26 @@ end
 
 -- Mirrors CosmeticsService.ownsPalette on the server, branch for branch. The client duplicates it
 -- because ServerScriptService is unreachable from here, so the two must be kept in step deliberately:
--- if they drift, the row rings a chip the weapon is not actually wearing.
+-- if they drift, the row rings a chip the weapon is not actually wearing. Gated on SOURCE, not on a
+-- price existing, for the same fail-closed reason as the server: a Renown palette added without a
+-- price must never fall through to `return true`.
 local function ownsPalette(palette): boolean
 	if palette.source == "Vip" then
 		return ownsVip()
 	end
-	if palette.price then
+	if palette.source == "Renown" then
 		return player:GetAttribute(RenownConstants.ownedAttributeFor(palette.key)) == true
 	end
 	return true
 end
+
+-- One shared list, not a per-build local: there is only ever one BuyStrip instance (a sibling of
+-- every weapon's SkinRow, reused across builds), so its BuyButton/CancelButton connections must be
+-- torn down against the SAME table hideBuyStrip() clears next time, not a fresh empty one created by
+-- the new build() call. A per-build local here left the previous weapon's BUY handler connected --
+-- silently stacked on the shared button -- because hideBuyStrip() at the top of build() was only ever
+-- clearing its own brand-new, already-empty table.
+local buyConnections: { RBXScriptConnection } = {}
 
 -- Builds the chips for one weapon. Returns a repaint function so the caller can refresh the equipped
 -- outline on attribute change without rebuilding the row.
@@ -116,7 +126,6 @@ function SkinRowController.build(
 	end
 
 	local buyStrip = row.Parent:WaitForChild("BuyStrip")
-	local buyConnections: { RBXScriptConnection } = {}
 
 	local function hideBuyStrip()
 		buyStrip.Visible = false
