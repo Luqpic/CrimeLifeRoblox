@@ -88,8 +88,14 @@ local function grantWeapon(player: Player, weaponName: string, container: Instan
 	weapon.Parent = container
 	-- Dressed here rather than at the two call sites because both the respawn restore and the equip
 	-- path funnel through this function; skinning at the choke point is what stops the two drifting.
-	-- Appearance only, so it cannot make a silent respawn restore behave like a purchase.
-	CosmeticsService.applyToTool(player, weapon)
+	-- Guarded because this is appearance code sitting inside the weapon-granting path. grantWeapon is
+	-- called in a loop by restoreEquippedWeapons and immediately before publishSlots in the equip
+	-- branch, so an unguarded throw here would silently drop later loadout slots or desync the slot
+	-- attributes the client renders. A failed skin must cost the player a colour, never a weapon.
+	local ok, err = pcall(CosmeticsService.applyToTool, player, weapon)
+	if not ok then
+		warn("[Cosmetics] failed to skin " .. weaponName .. ": " .. tostring(err))
+	end
 end
 
 local function findLiveTool(player: Player, weaponName: string): Tool?

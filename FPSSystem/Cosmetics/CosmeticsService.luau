@@ -3,7 +3,6 @@
 --
 -- The viewmodel is NOT dressed here. It is built client-side and is dressed there, after the motion
 -- module has solved its joints.
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
