@@ -11,9 +11,12 @@
 export type Palette = {
 	key: string,
 	name: string,
-	source: "Free" | "Vip",
+	source: "Free" | "Vip" | "Renown",
 	swatch: Color3,
 	ramp: { Color3 },
+	-- Present only on Renown entries. A Free or Vip palette carrying a price would imply it is
+	-- buyable with Renown, which must never be true of the pass tier.
+	price: number?,
 }
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -66,6 +69,26 @@ Palettes.list = {
 		swatch = rgb(226, 232, 240),
 		ramp = { rgb(96, 120, 146), rgb(170, 190, 210), rgb(240, 248, 255) },
 	},
+	{
+		key = "Cobalt", name = "COBALT", source = "Renown", price = 250,
+		swatch = rgb(30, 58, 138),
+		ramp = { rgb(12, 22, 54), rgb(30, 58, 138), rgb(96, 140, 224) },
+	},
+	{
+		key = "Verdigris", name = "VERDIGRIS", source = "Renown", price = 350,
+		swatch = rgb(47, 122, 107),
+		ramp = { rgb(16, 46, 40), rgb(47, 122, 107), rgb(120, 200, 180) },
+	},
+	{
+		key = "Ember", name = "EMBER", source = "Renown", price = 500,
+		swatch = rgb(194, 65, 12),
+		ramp = { rgb(60, 18, 6), rgb(194, 65, 12), rgb(250, 160, 80) },
+	},
+	{
+		key = "Bone", name = "BONE", source = "Renown", price = 750,
+		swatch = rgb(232, 224, 204),
+		ramp = { rgb(120, 112, 96), rgb(186, 178, 158), rgb(240, 234, 218) },
+	},
 } :: { Palette }
 
 local byKeyIndex: { [string]: Palette } = {}
@@ -80,6 +103,11 @@ end
 function Palettes.isVipOnly(key: string): boolean
 	local palette = byKeyIndex[key]
 	return palette ~= nil and palette.source == "Vip"
+end
+
+function Palettes.priceOf(key: string): number?
+	local palette = byKeyIndex[key]
+	return palette and palette.price or nil
 end
 
 -- The key the game treats as "unskinned". Kept here so nothing else hardcodes the string.
