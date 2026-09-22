@@ -64,7 +64,7 @@ Roblox instances, not files. Created:
 | `ReplicatedStorage.Cosmetics.Palettes` (ModuleScript) | The catalogue: colour ramps + lookup. Data only. |
 | `ReplicatedStorage.Cosmetics.SkinApplier` (ModuleScript) | `apply` / `remove`, luminance ramp mapping, original-colour bookkeeping. |
 | `ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest` (RemoteEvent) | Client asks, server decides |
-| `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (Script) | Ownership, validation, `SkinId` stamping, respawn restore |
+| `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (**ModuleScript**) | Ownership, validation, `SkinId` stamping, respawn restore |
 | `StarterPlayer.StarterPlayerScripts.SkinRowController` (LocalScript) | The skins row in the detail panel |
 | `ServerStorage.UnitTest.Cases.Palettes_Test` (ModuleScript) | Task 1 tests |
 | `ServerStorage.UnitTest.Cases.SkinApplier_Test` (ModuleScript) | Task 2 tests |
@@ -693,7 +693,7 @@ git commit -m "Add SkinApplier with exact, reversible luminance-keyed tinting"
 ## Task 3: Server applies the skin to the world Tool
 
 **Files:**
-- Create: `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (Script)
+- Create: `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (**ModuleScript** — it is `require`d by `WeaponShopService`, and `require` on a Script errors)
 - Modify: `ServerScriptService.Weapons.Scripts.WeaponShopService` — the grant/restore path
 
 **Interfaces:**
@@ -792,10 +792,27 @@ return CosmeticsService
 
 - [ ] **Step 3: Hook it into the grant path**
 
-Find where `WeaponShopService` parents a granted Tool into the Backpack (the `grantWeapon` function). Add, immediately after the Tool is parented:
+`WeaponShopService` has exactly one choke point, verified by reading it: `grantWeapon(player, weaponName, container)`
+at line 132, which ends with `weapon.Parent = container`. Both callers route through it — the respawn
+restore (`restoreEquippedWeapons`, line 188) and the equip path (`setLoadoutSlotRequest`, line 332). So
+ONE insertion covers both, and there is no second site to keep in sync.
+
+Change the final line of `grantWeapon` from:
 
 ```lua
-	CosmeticsService.applyToTool(player, tool)
+	weapon.Parent = container
+end
+```
+
+to:
+
+```lua
+	weapon.Parent = container
+	-- Dressed here rather than at the two call sites because both the respawn restore and the equip
+	-- path funnel through this function; skinning at the choke point is what stops the two drifting.
+	-- Appearance only, so it cannot make a silent respawn restore behave like a purchase.
+	CosmeticsService.applyToTool(player, weapon)
+end
 ```
 
 and at the top of the file, beside the other requires:
@@ -803,6 +820,8 @@ and at the top of the file, beside the other requires:
 ```lua
 local CosmeticsService = require(game:GetService("ServerScriptService").Cosmetics.Scripts.CosmeticsService)
 ```
+
+Note `weapon`, not `tool` — that is the local's name in this function.
 
 - [ ] **Step 4: Run the live check again**
 
