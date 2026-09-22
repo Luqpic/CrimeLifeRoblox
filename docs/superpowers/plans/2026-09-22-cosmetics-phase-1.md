@@ -799,10 +799,15 @@ return CosmeticsService
 
 - [ ] **Step 3: Hook it into the grant path**
 
-`WeaponShopService` has exactly one choke point, verified by reading it: `grantWeapon(player, weaponName, container)`
-at line 132, which ends with `weapon.Parent = container`. Both callers route through it — the respawn
-restore (`restoreEquippedWeapons`, line 188) and the equip path (`setLoadoutSlotRequest`, line 332). So
-ONE insertion covers both, and there is no second site to keep in sync.
+`WeaponShopService` has exactly one choke point: `grantWeapon(player, weaponName, container)` at
+**line 74**, which ends with `weapon.Parent = container`. Both callers route through it — the respawn
+restore (`restoreEquippedWeapons`, line 120) and the equip path (`setLoadoutSlotRequest`, near line
+278). So ONE insertion covers both, and there is no second site to keep in sync.
+
+Confirm the line by reading the script before editing; do not trust these numbers. An earlier draft of
+this plan cited 132/188/332, which were wrong — they came from counting lines with
+`gmatch("[^\n]*")`, a pattern that also matches the empty string after every line and so roughly
+doubles the count. Split on newlines with `gmatch("(.-)\n")` instead.
 
 Change the final line of `grantWeapon` from:
 
@@ -832,9 +837,27 @@ Note `weapon`, not `tool` — that is the local's name in this function.
 
 - [ ] **Step 4: Run the live check again**
 
-Re-run the Step 1 script.
+The skin is applied inside `grantWeapon`, so writing the attribute alone does NOT re-dress a Tool the
+player is already holding — `CosmeticsService.refresh` exists for that and is not wired until Task 5.
+Force a fresh grant first:
 
-Expected after: `SkinId=Carbon` and Body colour reads `0.109804, 0.117647, 0.141176` — RGB(28, 30, 36), the Carbon Body tint.
+```lua
+local Players = game:GetService("Players")
+local player = Players:GetPlayers()[1]
+player:SetAttribute("EquippedSkin_Crowbar", "Carbon")
+player:LoadCharacter()
+task.wait(2)
+local tool = player.Backpack:FindFirstChild("Crowbar")
+return string.format("SkinId=%s  Body=%s", tostring(tool:GetAttribute("SkinId")), tostring(tool.Blaster.Body.Color))
+```
+
+Expected: `SkinId=Carbon`, and Body reads `0.305882, 0.329412, 0.384314` — RGB(78, 84, 98), Carbon's
+LIGHTEST ramp stop.
+
+Not its darkest: the applier ranks each part by luminance across that weapon, and `Body` is the
+lightest visible part on the Crowbar, so it samples the top of the ramp. A fixed per-part colour would
+mean the applier was name-keyed, which is exactly what this design rejected. The figure to check is
+`SkinId`; the precise colour depends on the weapon's own contrast.
 
 - [ ] **Step 5: Confirm the rig is undisturbed**
 
