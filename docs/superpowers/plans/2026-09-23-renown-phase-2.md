@@ -63,7 +63,7 @@ Roblox instances, not files. Created:
 | `StarterPlayer.StarterPlayerScripts.RenownHud` (LocalScript) | Announces gains through `NotificationController` |
 | `ServerStorage.UnitTest.Cases.RenownConstants_Test` | Task 1 |
 | `ServerStorage.UnitTest.Cases.RenownService_Test` | Tasks 2 and 4 |
-| `ServerStorage.UnitTest.Cases.RenownPalettes_Test` | Task 3 |
+| `ServerStorage.UnitTest.Cases.RenownTier_Test` | Task 3 (named so the `Palettes` filter still isolates Phase 1's suite) |
 
 Modified:
 
@@ -550,7 +550,7 @@ git commit -m "Add Renown, earned from NPC kills and level-ups"
 
 **Files:**
 - Modify: `ReplicatedStorage.Cosmetics.Palettes`
-- Test: `ServerStorage.UnitTest.Cases.RenownPalettes_Test` (ModuleScript)
+- Test: `ServerStorage.UnitTest.Cases.RenownTier_Test` (ModuleScript)
 
 **Interfaces:**
 - Consumes: `Palettes.list`, `Palettes.byKey` from Phase 1
@@ -561,7 +561,7 @@ git commit -m "Add Renown, earned from NPC kills and level-ups"
 
 - [ ] **Step 1: Write the failing test**
 
-Create `ServerStorage.UnitTest.Cases.RenownPalettes_Test`:
+Create `ServerStorage.UnitTest.Cases.RenownTier_Test`:
 
 ```lua
 -- Tests for the Renown tier added to ReplicatedStorage.Cosmetics.Palettes.
@@ -656,7 +656,7 @@ end
 - [ ] **Step 2: Run it and confirm it fails**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownPalettes")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownTier")
 ```
 
 Expected: the four-palette and twelve-palette cases fail; `priceOf` errors as nil.
@@ -716,10 +716,10 @@ end
 
 ```lua
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
-return tostring(run("RenownPalettes")) .. " | " .. tostring(run("Palettes"))
+return tostring(run("RenownTier")) .. " | " .. tostring(run("Palettes"))
 ```
 
-Expected: `RenownPalettes` 8 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
+Expected: `RenownTier` 8 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
 
 - [ ] **Step 5: Confirm the row still fits**
 
@@ -734,7 +734,7 @@ Expected: `chips=12 expected canvas=698`. The row already scrolls, so nothing in
 
 - [ ] **Step 6: Mirror and commit**
 
-Export `ReplicatedStorage.Cosmetics.Palettes` to `FPSSystem/Cosmetics/Palettes.luau` (overwriting the Phase 1 mirror) and the new test to `FPSSystem/Renown/RenownPalettes_Test.luau`.
+Export `ReplicatedStorage.Cosmetics.Palettes` to `FPSSystem/Cosmetics/Palettes.luau` (overwriting the Phase 1 mirror) and the new test to `FPSSystem/Renown/RenownTier_Test.luau`.
 
 ```bash
 git add FPSSystem/
@@ -928,12 +928,12 @@ Add `local RenownConstants = require(ReplicatedStorage.Renown.Constants)` beside
 ```lua
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
 return table.concat({
-	tostring(run("RenownService")), tostring(run("RenownPalettes")), tostring(run("RenownConstants")),
+	tostring(run("RenownService")), tostring(run("RenownTier")), tostring(run("RenownConstants")),
 	tostring(run("Palettes")), tostring(run("SkinApplier")), tostring(run("CosmeticsOwnership")),
 }, "\n")
 ```
 
-Expected: RenownService 18, RenownPalettes 7, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
+Expected: RenownService 18, RenownTier 8, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
 
 - [ ] **Step 7: Prove a forged purchase is refused, live**
 
@@ -1309,7 +1309,7 @@ Measure each row and record actual numbers, in one Play session:
 ```lua
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
 return table.concat({
-	tostring(run("RenownConstants")), tostring(run("RenownService")), tostring(run("RenownPalettes")),
+	tostring(run("RenownConstants")), tostring(run("RenownService")), tostring(run("RenownTier")),
 	tostring(run("Palettes")), tostring(run("SkinApplier")), tostring(run("CosmeticsOwnership")),
 }, "\n")
 ```
