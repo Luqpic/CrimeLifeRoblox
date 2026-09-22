@@ -266,7 +266,7 @@ to the shipped Studio state at the moment this log was written.
   `onEliminated`.
 - **Needs a person — the click-driven paths have never been executed.** The server side of the buy flow
   is proven by firing the real `BuySkinRequest` remote (rows 6-10 above), and the buy-strip connection
-  leak fix from Task 5 was proven structurally (0 → 2 → 0 → 2, bounded regardless of how many weapons
+  leak fix from Task 5 was proven structurally (0 → 3 → 0 → 3, bounded regardless of how many weapons
   are switched through). But nobody has clicked a skin chip to open the strip, pressed `BUY`, pressed
   `CANCEL`, or watched the equipped-ring re-tween, in this environment or any prior task this phase —
   the collapsed viewport (`ViewportSize 1,1`, 0 `RenderStepped`/s) has made every click-simulation route
