@@ -177,6 +177,13 @@ function ViewModelController.new(blaster: Tool)
 		end
 	end)
 
+	-- Dressed last, after the model is built and WeaponViewmodelMotion has solved the joints.
+	-- Ordering is load-bearing: that module asserts on a weapon it has no profile for and the
+	-- exception aborts BlasterController.new, so anything that runs before it can take first person
+	-- down with it. Colour is the only thing written, so the solved joints are unaffected.
+	local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
+	SkinApplier.applyKey(viewModel, blaster:GetAttribute("SkinId"))
+
 	return self
 end
 
