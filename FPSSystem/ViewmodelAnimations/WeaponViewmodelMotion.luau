@@ -158,7 +158,8 @@ function Motion.new(model,tool,emit)
 	local profile=profiles[name]
 	assert(profile,"No viewmodel animation profile: "..name)
 	local authored=showcase[name]
-	local batonGrip=if name=="Baton" then Vector3.new(.14142,-.79,-1.40245) else nil
+	local batonGrip=if name=="Baton" then Vector3.new(.14142,-.79,-1.40245)
+		elseif name=="Knife" then Vector3.new(.18342,-.50,-1.10746) else nil
 	if not authored and profile[1]~="melee" then
 		local kind=profile[1]
 		local family=if kind=="pistol" or kind=="revolver" then showcase["Glock 17"]
@@ -187,6 +188,7 @@ function Motion.new(model,tool,emit)
 			local base=joint.C0*rest
 			local hand=authored and authored.grips[part]
 			if batonGrip and part=="RightArm" then hand=batonGrip end
+			if name=="Knife" and part=="LeftArm" then hand=Vector3.new(-.10,-.57,-1.03) end
 			if hand then
 				-- Place the front end of each whole-arm rig at its authored grip, with
 				-- the forearm extending back toward the corresponding shoulder.
@@ -218,6 +220,7 @@ function Motion.new(model,tool,emit)
 		-- Explicit mesh-specific grips already account for their side of the weapon.
 		if authored and authored.grips[armName] then continue end
 		if batonGrip and armName=="RightArm" then continue end
+		if name=="Knife" and armName=="LeftArm" then continue end
 		local data=joints[armName]
 		local frame=data and frameInBody(armName)
 		local parent=data and frameInBody(data.joint.Part0.Name)
@@ -349,7 +352,7 @@ function Motion:step(dt,speed,sprinting)
 			{contact,pose(-.22,-.18,.15,14,-18,-18)},{1,I}},t,true)
 		p.RightArm=sample({{0,s.fromRight},{contact,pose(0,0,0,0,0,if s.variant=="Shoot3" then -6 else 6)},{1,I}},t,true)
 		-- The baton and gripping hand move together; avoid twisting the hand off its handle.
-		if self.model.Name=="Baton" then p.RightArm=I end
+		if self.model.Name=="Baton" or self.model.Name=="Knife" then p.RightArm=I end
 		if t>=1 then self.swing=nil end
 	elseif self.kind~="melee" then
 		local kick=self.recoil*(1-.45*self.aim)
@@ -365,6 +368,8 @@ function Motion:step(dt,speed,sprinting)
 			end
 		end
 	end
+	-- Both knife hands remain locked to the handle through equip and all swings.
+	if self.model.Name=="Knife" then p.LeftArm=I p.RightArm=I end
 	self.poses=p
 	for name,data in self.joints do
 		local cf=p[name] or I
@@ -389,7 +394,7 @@ function Motion:step(dt,speed,sprinting)
 		else pose(.12,-.25,.18,-12,18,-22)
 	-- Lower the rendered rig relative to the camera in both hip-fire and ADS.
 	-- Translation only: camera orientation, crosshair and ballistic ray are unchanged.
-	local hipHeight=if self.kind=="melee" then -.32 else -.16
+	local hipHeight=if self.model.Name=="Knife" then .58 elseif self.kind=="melee" then -.32 else -.16
 	local lower=CFrame.new(0,hipHeight*(1-self.aim)-.30*self.aim,0)
 	return lower*I:Lerp(self.aimOffset,self.aim)*I:Lerp(runPose,self.sprint)*breath*walking
 end
