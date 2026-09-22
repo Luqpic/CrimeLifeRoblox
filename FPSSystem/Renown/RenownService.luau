@@ -17,6 +17,13 @@ local RenownService = {}
 
 -- The level each player was last seen at. A baseline, not a cache: LevelingService sets Level inside
 -- onPlayerAdded, so without this every player would collect a level-up award simply for joining.
+--
+-- Correct independent of script load order, since LevelingService and RenownRunner are both plain
+-- Scripts with no guaranteed relative order. If RenownRunner runs first, lastLevel[player] is nil when
+-- LevelingService's join-time SetAttribute("Level", 1) fires onLevelChanged; previous == nil early-
+-- returns and seeds the baseline instead of paying. If LevelingService runs first, the join-time Level
+-- is simply read directly as the baseline below, before this listener is even connected. Both land on
+-- Renown = 0.
 local lastLevel: { [Player]: number } = {}
 
 function RenownService.balanceOf(player: any): number
@@ -37,7 +44,7 @@ function RenownService.grant(player: any, amount: number, reason: string): numbe
 end
 
 function RenownService.spend(player: any, amount: number): boolean
-	if typeof(amount) ~= "number" or amount <= 0 then
+	if typeof(amount) ~= "number" or amount <= 0 or amount % 1 ~= 0 then
 		return false
 	end
 	local balance = RenownService.balanceOf(player)
