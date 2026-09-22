@@ -9,6 +9,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
+local RenownConstants = require(ReplicatedStorage.Renown.Constants)
 
 local CosmeticsService = {}
 
@@ -25,10 +26,15 @@ function CosmeticsService.ownsPalette(player: Player, key: string): boolean
 	if not Palettes.byKey(key) then
 		return false
 	end
-	if not Palettes.isVipOnly(key) then
-		return true
+	if Palettes.isVipOnly(key) then
+		return player:GetAttribute(MonetizationConstants.ownedAttributeFor(VIP_KEY)) == true
 	end
-	return player:GetAttribute(MonetizationConstants.ownedAttributeFor(VIP_KEY)) == true
+	-- A Renown palette is earned, not granted: it is owned only once bought. Free palettes still fall
+	-- through to true.
+	if Palettes.priceOf(key) then
+		return player:GetAttribute(RenownConstants.ownedAttributeFor(key)) == true
+	end
+	return true
 end
 
 function CosmeticsService.equippedKeyFor(player: Player, weaponName: string): string

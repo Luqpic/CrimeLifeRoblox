@@ -120,4 +120,59 @@ return function(t)
 		expect.truthy(pcall(RenownService.awardForVictim, player, orphan))
 		expect.equal(RenownService.balanceOf(player), 0)
 	end)
+
+	local Palettes = require(game.ReplicatedStorage.Cosmetics.Palettes)
+
+	local function ownedName(key)
+		return Constants.ownedAttributeFor(key)
+	end
+
+	t.test("buying a Renown palette deducts the price and records ownership", function()
+		local player = fakePlayer(1000)
+		expect.truthy(RenownService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(RenownService.balanceOf(player), 1000 - Palettes.priceOf("Cobalt"))
+		expect.equal(player._attributes[ownedName("Cobalt")], true)
+	end)
+
+	t.test("buying without enough Renown is refused and changes nothing", function()
+		local player = fakePlayer(10)
+		expect.falsy(RenownService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(RenownService.balanceOf(player), 10)
+		expect.equal(player._attributes[ownedName("Cobalt")], nil)
+	end)
+
+	t.test("buying the same palette twice deducts once", function()
+		local player = fakePlayer(1000)
+		RenownService.handleBuyRequest(player, "Cobalt")
+		local afterFirst = RenownService.balanceOf(player)
+		expect.falsy(RenownService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(RenownService.balanceOf(player), afterFirst)
+	end)
+
+	t.test("a Vip palette cannot be bought with Renown", function()
+		-- The whole point of the source check: this path must never be a way around the pass.
+		local player = fakePlayer(100000)
+		expect.falsy(RenownService.handleBuyRequest(player, "Gold"))
+		expect.equal(RenownService.balanceOf(player), 100000)
+		expect.equal(player._attributes[ownedName("Gold")], nil)
+	end)
+
+	t.test("a free palette cannot be bought", function()
+		local player = fakePlayer(100000)
+		expect.falsy(RenownService.handleBuyRequest(player, "Carbon"))
+		expect.equal(RenownService.balanceOf(player), 100000)
+	end)
+
+	t.test("an unknown palette key is refused and does not throw", function()
+		local player = fakePlayer(100000)
+		expect.falsy(RenownService.handleBuyRequest(player, "NoSuchPalette"))
+		expect.equal(RenownService.balanceOf(player), 100000)
+	end)
+
+	t.test("a non-string palette key is refused and does not throw", function()
+		local player = fakePlayer(100000)
+		expect.falsy(RenownService.handleBuyRequest(player, 42))
+		expect.falsy(RenownService.handleBuyRequest(player, nil))
+		expect.equal(RenownService.balanceOf(player), 100000)
+	end)
 end

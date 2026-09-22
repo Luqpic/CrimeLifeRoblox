@@ -9,9 +9,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Constants = require(ReplicatedStorage.Renown.Constants)
+local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
+local CosmeticsService = require(ServerScriptService.Cosmetics.Scripts.CosmeticsService)
 
 local RenownService = {}
 
@@ -99,8 +102,54 @@ function RenownService.onLevelChanged(player: any)
 	RenownService.grant(player, (level - previous) * Constants.LEVEL_RENOWN, "level")
 end
 
+-- The client asks; the server decides. Every condition is re-checked here rather than trusted, so a
+-- forged request cannot buy a palette the player cannot afford, nor reach the Vip tier at all.
+function RenownService.handleBuyRequest(player: any, paletteKey: unknown): boolean
+	if typeof(paletteKey) ~= "string" then
+		return false
+	end
+	local palette = Palettes.byKey(paletteKey)
+	if not palette or palette.source ~= "Renown" then
+		return false
+	end
+	if player:GetAttribute(Constants.ownedAttributeFor(paletteKey)) == true then
+		return false
+	end
+	local price = Palettes.priceOf(paletteKey)
+	if not price or not RenownService.spend(player, price) then
+		return false
+	end
+	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
+	return true
+end
+
 function RenownService.start()
 	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(RenownService.onEliminated)
+
+	ReplicatedStorage.Renown.Remotes.BuySkinRequest.OnServerEvent:Connect(
+		function(player: Player, paletteKey: unknown, weaponName: unknown)
+			if not RenownService.handleBuyRequest(player, paletteKey) then
+				return
+			end
+			-- Equipped by the SERVER in the same call rather than by a second client remote, so a
+			-- purchase cannot half-complete into "owned but not worn". Phase 1's machinery does the
+			-- rest: the attribute change drives the row's repaint and CosmeticsService.refresh
+			-- re-dresses the held weapon, whose SkinId listener catches first person.
+			--
+			-- weaponName arrives from the client and is validated here like any other client string.
+			-- Phase 1 measured why: an unvalidated weapon name let a crafted client create unbounded
+			-- player attributes, and one long enough made SetAttribute throw outright.
+			if typeof(weaponName) ~= "string" then
+				return
+			end
+			local template = ServerStorage.Weapons:FindFirstChild(weaponName)
+			if not (template and template:IsA("Tool")) then
+				return
+			end
+			player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+			CosmeticsService.refresh(player, weaponName)
+		end
+	)
 
 	safePlayerAdded(function(player: Player)
 		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
