@@ -1209,7 +1209,8 @@ side by side so they can be compared:
 - **Equipped** — 2px `#CBF23C` stroke at full opacity.
 - **Locked** — swatch at 35% opacity with a 20x20 lock glyph centred, glyph `#8A8F9A`.
 
-Eight chips at 52px with 6px gaps span 458px, which is wider than 290. That is intended: the row
+Eight chips at 52px with 6px gaps span 458px, 466 with the row's padding, wider than its 290px window.
+That is intended: the row
 scrolls horizontally and shows four and a half chips at rest, which is the visual cue that more exist.
 
 - [ ] **Step 4: Screenshot and check at true size**
@@ -1255,7 +1256,7 @@ local detail = ReplicatedStorage.GuiTemplates.WeaponaryShop.ShopArea.DetailPanel
 local existing = detail:FindFirstChild("SkinRow")
 if existing then existing:Destroy() end
 
--- A ScrollingFrame, not a Frame: eight 52px chips span 458px in a 290px slot, so the row must scroll.
+-- A ScrollingFrame, not a Frame: eight 52px chips span 466px with padding in a 290px slot, so it scrolls.
 local row = Instance.new("ScrollingFrame")
 row.Name = "SkinRow"
 row.Position = UDim2.fromOffset(0, 372)
@@ -1560,8 +1561,9 @@ return string.format("chips=%d locked=%d  AbsSize=%s  CanvasX=%.0f",
 	shown, locked, tostring(row.AbsoluteSize), row.AbsoluteCanvasSize.X)
 ```
 
-Expected without the Vip pass: `chips=8 locked=3`, `AbsSize=290, 60`, and `CanvasX` about 458 —
+Expected without the Vip pass: `chips=8 locked=3`, `AbsSize=290, 60`, and `CanvasX` = 466 —
 proving the canvas really is wider than the window, so the row scrolls rather than clipping silently.
+(466 = 8x52 chips + 7x6 gaps + 4px padding each side.)
 
 - [ ] **Step 5: Confirm the row displaced nothing**
 
