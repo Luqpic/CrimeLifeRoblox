@@ -7,10 +7,12 @@ local TweenService = game:GetService("TweenService")
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
+local RenownConstants = require(ReplicatedStorage.Renown.Constants)
 
 local player = Players.LocalPlayer
 local equipRemote = ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest
 local promptGamepass = ReplicatedStorage.Monetization.Remotes.PromptGamepassPurchase
+local buyRemote = ReplicatedStorage.Renown.Remotes.BuySkinRequest
 
 local STROKE_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local ACCENT_HOVER_TRANSPARENCY = 0.6
@@ -25,6 +27,19 @@ end
 
 local function ownsVip(): boolean
 	return player:GetAttribute(MonetizationConstants.ownedAttributeFor("Vip")) == true
+end
+
+-- Mirrors CosmeticsService.ownsPalette on the server, branch for branch. The client duplicates it
+-- because ServerScriptService is unreachable from here, so the two must be kept in step deliberately:
+-- if they drift, the row rings a chip the weapon is not actually wearing.
+local function ownsPalette(palette): boolean
+	if palette.source == "Vip" then
+		return ownsVip()
+	end
+	if palette.price then
+		return player:GetAttribute(RenownConstants.ownedAttributeFor(palette.key)) == true
+	end
+	return true
 end
 
 -- Builds the chips for one weapon. Returns a repaint function so the caller can refresh the equipped
@@ -54,7 +69,11 @@ function SkinRowController.build(
 		-- disagree with the weapon the player is actually holding -- e.g. a refunded Vip pass leaves
 		-- the server showing Stock while the row still rings (and locks) the old Gold chip, or a
 		-- palette removed from Palettes.list leaves the server on Stock while the row rings nothing.
-		if not Palettes.byKey(current) or (Palettes.isVipOnly(current) and not ownsVip()) then
+		local currentPalette = Palettes.byKey(current)
+		-- Unowned now covers a Renown skin as well as a Vip one, matching equippedKeyFor on the
+		-- server. Without this the row would ring a Cobalt chip the server had already degraded to
+		-- Stock -- the same disagreement the Vip branch was added to prevent.
+		if not currentPalette or not ownsPalette(currentPalette) then
 			current = Palettes.DEFAULT_KEY
 		end
 		equippedKey = current
@@ -88,11 +107,60 @@ function SkinRowController.build(
 			if not chip then
 				continue
 			end
-			local locked = palette.source == "Vip" and not ownsVip()
-			chip.Swatch.BackgroundTransparency = locked and 0.65 or 0
-			chip.Lock.Visible = locked
+			local owned = ownsPalette(palette)
+			chip.Swatch.BackgroundTransparency = owned and 0 or 0.65
+			-- A Vip chip shows a lock, a Renown chip a coin: one says "pay", the other says "play".
+			chip.Lock.Visible = not owned and palette.source == "Vip"
+			chip.Coin.Visible = not owned and palette.price ~= nil
 		end
 	end
+
+	local buyStrip = row.Parent:WaitForChild("BuyStrip")
+	local buyConnections: { RBXScriptConnection } = {}
+
+	local function hideBuyStrip()
+		buyStrip.Visible = false
+		row.Visible = true
+		for _, connection in buyConnections do
+			connection:Disconnect()
+		end
+		table.clear(buyConnections)
+	end
+
+	local function showBuyStrip(palette)
+		-- Clears the previous palette's button connections before wiring this one, so opening the
+		-- strip on three chips in a row does not leave three live BUY handlers on the same button.
+		hideBuyStrip()
+
+		local price = palette.price or 0
+		local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
+
+		buyStrip.PaletteName.Text = palette.name
+		buyStrip.PriceLabel.Text = price .. " RENOWN"
+		buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
+		buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
+		buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
+		buyStrip.BuyButton.Text = if affordable then "BUY" else "NOT ENOUGH"
+
+		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
+			-- Re-read the balance at click time rather than trusting what it was when the strip
+			-- opened: Renown can arrive from a kill while the strip is on screen, and the server
+			-- re-checks anyway, so this only avoids firing a request that is certain to be refused.
+			if (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) < price then
+				return
+			end
+			buyRemote:FireServer(palette.key, weaponName)
+			hideBuyStrip()
+		end))
+		table.insert(buyConnections, buyStrip.CancelButton.MouseButton1Click:Connect(hideBuyStrip))
+
+		row.Visible = false
+		buyStrip.Visible = true
+	end
+
+	-- A row being rebuilt means a different weapon is on screen, so a strip left open from the last
+	-- one must not survive into it.
+	hideBuyStrip()
 
 	for index, palette in Palettes.list do
 		local locked = palette.source == "Vip" and not ownsVip()
@@ -120,15 +188,16 @@ function SkinRowController.build(
 		end)
 
 		chip.MouseButton1Click:Connect(function()
-			-- Read fresh rather than the `locked` computed above: that local is captured once at
-			-- build time, so a stale copy would keep prompting for the Vip pass after it was bought
-			-- with this same panel open. refreshLocks updates the swatch/lock visuals on ownership
-			-- change, but a closure over the old value would never see that change.
-			local isLocked = palette.source == "Vip" and not ownsVip()
-			if isLocked then
-				-- MonetizationService already disables the prompt for an unconfigured pass id, so
-				-- this is safe to fire before the place is published.
-				promptGamepass:FireServer("Vip")
+			-- Read ownership fresh rather than capturing it at build time: a chip bought or unlocked
+			-- while this same panel is open must act on what is true now, not what was true then.
+			if not ownsPalette(palette) then
+				if palette.source == "Vip" then
+					-- MonetizationService already disables the prompt for an unconfigured pass id, so
+					-- this is safe to fire before the place is published.
+					promptGamepass:FireServer("Vip")
+				else
+					showBuyStrip(palette)
+				end
 				return
 			end
 			equipRemote:FireServer(weaponName, palette.key)
@@ -145,13 +214,19 @@ function SkinRowController.build(
 		end)
 	end
 
-	-- One connection per build, released the same way currentSkinConnection is: showDetail
-	-- disconnects the previous build's ownership connection (this second return value) before
-	-- building the next weapon's row, so viewing twenty weapons leaves one of these rather than
-	-- twenty -- not a second, separately-invented teardown path.
-	local ownershipConnection = player:GetAttributeChangedSignal(
-		MonetizationConstants.ownedAttributeFor("Vip")
-	):Connect(refreshLocks)
+	-- The loop above only ever painted Lock inline (Vip's initial-build state was already known per
+	-- chip); it never painted Coin, so an unowned Renown chip's badge stayed hidden until the first
+	-- ownership change happened to fire refreshLocks. One call here covers the initial build too.
+	refreshLocks()
+
+	-- One connection covering every ownership signal, rather than one per palette: AttributeChanged
+	-- fires with the name, so a Renown skin added later needs no new wiring here.
+	local ownershipConnection = player.AttributeChanged:Connect(function(name: string)
+		if name == MonetizationConstants.ownedAttributeFor("Vip") or name:sub(1, 10) == "SkinOwned_" then
+			refreshLocks()
+			repaint()
+		end
+	end)
 
 	repaint()
 	return repaint, ownershipConnection
