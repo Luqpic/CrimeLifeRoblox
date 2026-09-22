@@ -934,7 +934,42 @@ In `ViewModelController.new`, find the line that returns `self` at the end of th
 
 Unequip and re-equip the weapon so a fresh viewmodel is built, then re-run the Step 1 script.
 
-Expected: `Body colour=0.109804, 0.117647, 0.141176`.
+Expected: Body is no longer stock — it now matches the colour the SERVER put on the same weapon's
+world Tool for the same palette.
+
+Do not assert a hardcoded triple. The applier ranks parts by luminance within whichever model it is
+given, and a viewmodel's visible part set is not the world Tool's (on 11 weapons the viewmodel's named
+parts are invisible skeleton and the visible geometry is `Mesh1`..`Mesh8`). The meaningful assertion is
+agreement between the two views, so compare them directly:
+
+```lua
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+local viewModel
+for _, child in workspace:GetChildren() do
+	if child:IsA("Model") and child:FindFirstChild("AnimationController") then viewModel = child break end
+end
+local function lightest(model)
+	local best, bestLum
+	for _, d in model.Blaster:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 1 then
+			local l = 0.2126 * d.Color.R + 0.7152 * d.Color.G + 0.0722 * d.Color.B
+			if not bestLum or l > bestLum then best, bestLum = d, l end
+		end
+	end
+	return best
+end
+local worldPart, viewPart = lightest(tool), lightest(viewModel)
+return string.format("SkinId=%s\n  world  %s = %s\n  view   %s = %s\n  agree=%s",
+	tostring(tool:GetAttribute("SkinId")),
+	worldPart.Name, tostring(worldPart.Color),
+	viewPart.Name, tostring(viewPart.Color),
+	tostring(worldPart.Color == viewPart.Color))
+```
+
+Expected: `agree=true`. Both sides' lightest visible part lands on the same ramp stop, which is what
+"first and third person show the same skin" actually means here.
 
 - [ ] **Step 4: Confirm first person still works and the rig is unchanged**
 
