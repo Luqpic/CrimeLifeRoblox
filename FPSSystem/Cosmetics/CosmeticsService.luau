@@ -61,4 +61,19 @@ function CosmeticsService.refresh(player: Player, weaponName: string?)
 	end
 end
 
+-- The client asks; the server decides. Ownership is re-checked here rather than trusted from the
+-- caller, so a forged request naming a Vip palette from a player without the pass is refused.
+ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest.OnServerEvent:Connect(
+	function(player: Player, weaponName: unknown, paletteKey: unknown)
+		if typeof(weaponName) ~= "string" or typeof(paletteKey) ~= "string" then
+			return
+		end
+		if not CosmeticsService.ownsPalette(player, paletteKey) then
+			return
+		end
+		player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+		CosmeticsService.refresh(player, weaponName)
+	end
+)
+
 return CosmeticsService
