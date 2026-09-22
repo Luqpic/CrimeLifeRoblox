@@ -113,7 +113,10 @@ function SkinApplier.applyKey(model: Instance, key: string?): number
 	end
 	local palette = Palettes.byKey(key)
 	if not palette then
-		return 0
+		-- An unrecognised key -- e.g. a stale replicated SkinId the catalogue no longer lists --
+		-- falls back to stock, the one state guaranteed to exist, rather than leaving whatever skin
+		-- was already applied sitting there indefinitely.
+		return SkinApplier.remove(model)
 	end
 	SkinApplier.remove(model)
 	return SkinApplier.apply(model, palette)
