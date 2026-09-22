@@ -826,7 +826,8 @@ Append to `ServerStorage.UnitTest.Cases.RenownService_Test`, inside the existing
 return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownService")
 ```
 
-Expected: the 11 existing cases pass; the 7 new ones fail on `handleBuyRequest` being nil.
+Expected: the 14 existing cases pass; the 7 new ones fail on `handleBuyRequest` being nil.
+(14, not 11: Task 2's fix round added a fractional-spend case and split the `balanceOf` fallback tests.)
 
 - [ ] **Step 3: Create the remote**
 
@@ -937,7 +938,7 @@ return table.concat({
 }, "\n")
 ```
 
-Expected: RenownService 18, RenownTier 8, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
+Expected: RenownService 21, RenownTier 8, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
 
 - [ ] **Step 7: Prove a forged purchase is refused, live**
 
