@@ -50,8 +50,12 @@ Shipped in earlier Phase 1 tasks, confirmed present and correct by this pass:
   `source` (`Free`/`Vip`), `swatch`, and a 3-stop `ramp` per palette.
 - `ReplicatedStorage.Cosmetics.SkinApplier` (ModuleScript) — `apply`/`remove`/`applyKey`, scoped to
   the Tool's `Blaster` sub-model, filtered to `Transparency < 1`, luminance-ranked against each
-  part's recorded `SkinOriginalColor` attribute (not its current colour, so re-skinning never ranks
-  against a previous skin's result).
+  part's current `.Color`. In the shipped path that is always the just-restored stock colour, not a
+  leftover skin's: `applyKey` calls `remove()` before `apply()`, and `remove()` clears the recorded
+  `SkinOriginalColor` attribute before `apply()`'s ranking step ever reads it, so the attribute is
+  nil at ranking time and `.Color` (which `remove()` just set back to stock) is what `apply()`
+  actually ranks against. Re-skinning still never ranks against a previous skin's result — the
+  result is identical — but not by the attribute-read mechanism this line previously named.
 - `ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest` (RemoteEvent) — the one client-to-server
   entry point for equipping a skin.
 - `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (ModuleScript) — ownership
@@ -168,6 +172,12 @@ Luau VM, hence a cold `require` cache) gave 10/10, 14/14, 11/11 with no code cha
 practical rule this adds to the existing trap list: **run this project's unit suites from a fresh
 Play session, not from an Edit-mode command**, or clone-require every module the suite touches —
 Edit mode can fail a clean suite and look exactly like a real bug.
+
+**Spec deletion, unremarked until now.** The original spec's palette entry carried a `rarity` field;
+`ReplicatedStorage.Cosmetics.Palettes`'s `Palette` type never picked it up, because nothing in the
+shipped feature reads it — the row locks and sorts purely on `source`/`key`, and no panel surfaces a
+rarity tier. Deliberate, not a slip, but the earlier logs never said so; recorded here so the
+archive shows the deletion was a decision.
 
 **Second live example of the Cause's central claim.** The brief's Cause section was written around
 Spas 12. This pass's rig and damage tests happened to use `Glock 17`, and its viewmodel turned out to

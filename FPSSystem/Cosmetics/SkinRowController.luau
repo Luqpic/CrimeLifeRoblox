@@ -49,11 +49,31 @@ function SkinRowController.build(
 		if typeof(current) ~= "string" then
 			current = Palettes.DEFAULT_KEY
 		end
+		-- Mirrors CosmeticsService.equippedKeyFor on the server: it degrades an unknown key, or a
+		-- Vip palette the player no longer owns, to Stock. Without the same fallback here the row can
+		-- disagree with the weapon the player is actually holding -- e.g. a refunded Vip pass leaves
+		-- the server showing Stock while the row still rings (and locks) the old Gold chip, or a
+		-- palette removed from Palettes.list leaves the server on Stock while the row rings nothing.
+		if not Palettes.byKey(current) or (Palettes.isVipOnly(current) and not ownsVip()) then
+			current = Palettes.DEFAULT_KEY
+		end
 		equippedKey = current
 		for key, chip in chips do
 			local stroke = chip:FindFirstChildOfClass("UIStroke")
 			if stroke then
 				TweenService:Create(stroke, STROKE_TWEEN, { Transparency = key == current and 0 or 1 }):Play()
+			end
+		end
+
+		-- The preview model showDetail hands build() is a freshly cloned, unskinned model, and until
+		-- now was only ever dressed from the click handler -- so opening the panel on an
+		-- already-equipped weapon rang the right chip while the rotating preview above it stayed
+		-- stock until a chip was clicked. Applying here too means it also runs whenever the equipped
+		-- skin changes while the panel is open, since this is exactly what repaintSkins already is.
+		if previewModel then
+			local ok, err = pcall(SkinApplier.applyKey, previewModel, current)
+			if not ok then
+				warn("[Cosmetics] failed to dress the " .. weaponName .. " preview with " .. tostring(current) .. ": " .. tostring(err))
 			end
 		end
 	end
