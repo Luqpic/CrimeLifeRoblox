@@ -251,6 +251,7 @@ local showDetail
 local refreshDetailStats
 local currentSpinConnection: RBXScriptConnection? = nil
 local currentSkinConnection: RBXScriptConnection? = nil
+local currentSkinOwnershipConnection: RBXScriptConnection? = nil
 
 local function stopSpin()
 	if currentSpinConnection then
@@ -615,15 +616,19 @@ function showDetail(weaponName: string)
 	end
 
 	-- Rebuilt per weapon because the equipped chip and the locked chips both depend on which weapon
-	-- is on screen. The attribute connection is stored and replaced the same way currentSpinConnection
-	-- is, so viewing twenty weapons leaves one connection rather than twenty.
+	-- is on screen. Both attribute connections are stored and replaced the same way
+	-- currentSpinConnection is, so viewing twenty weapons leaves one of each rather than twenty.
 	if currentSkinConnection then
 		currentSkinConnection:Disconnect()
 	end
-	local repaintSkins = SkinRowController.build(skinRow, skinChipTemplate, weaponName, displayModel)
+	if currentSkinOwnershipConnection then
+		currentSkinOwnershipConnection:Disconnect()
+	end
+	local repaintSkins, skinOwnershipConnection = SkinRowController.build(skinRow, skinChipTemplate, weaponName, displayModel)
 	currentSkinConnection = player:GetAttributeChangedSignal(
 		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
 	):Connect(repaintSkins)
+	currentSkinOwnershipConnection = skinOwnershipConnection
 
 	refreshDetailStats(weaponName)
 end
