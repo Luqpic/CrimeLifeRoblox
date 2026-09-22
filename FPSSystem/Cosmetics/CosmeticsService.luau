@@ -23,15 +23,18 @@ function CosmeticsService.attributeFor(weaponName: string): string
 end
 
 function CosmeticsService.ownsPalette(player: Player, key: string): boolean
-	if not Palettes.byKey(key) then
+	local palette = Palettes.byKey(key)
+	if not palette then
 		return false
 	end
 	if Palettes.isVipOnly(key) then
 		return player:GetAttribute(MonetizationConstants.ownedAttributeFor(VIP_KEY)) == true
 	end
-	-- A Renown palette is earned, not granted: it is owned only once bought. Free palettes still fall
-	-- through to true.
-	if Palettes.priceOf(key) then
+	-- Gated on SOURCE, not on a price existing. Those are equivalent in today's catalogue, but they
+	-- are separate invariants maintained by hand, and if they ever diverge this branch must fail
+	-- CLOSED: a Renown palette added without a price would otherwise fall through to `return true`
+	-- and be free for everyone, permanently. The Vip branch above fails closed for the same reason.
+	if palette.source == "Renown" then
 		return player:GetAttribute(RenownConstants.ownedAttributeFor(key)) == true
 	end
 	return true

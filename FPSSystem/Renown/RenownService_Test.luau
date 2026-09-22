@@ -149,18 +149,17 @@ return function(t)
 		expect.equal(RenownService.balanceOf(player), afterFirst)
 	end)
 
-	t.test("a Vip palette cannot be bought with Renown", function()
-		-- The whole point of the source check: this path must never be a way around the pass.
-		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, "Gold"))
-		expect.equal(RenownService.balanceOf(player), 100000)
-		expect.equal(player._attributes[ownedName("Gold")], nil)
-	end)
-
-	t.test("a free palette cannot be bought", function()
-		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, "Carbon"))
-		expect.equal(RenownService.balanceOf(player), 100000)
+	-- Gold and Carbon alone cannot prove the source check runs: neither carries a `price`, so both
+	-- are refused by handleBuyRequest's price guard regardless of whether the source check exists at
+	-- all -- deleting the source check would leave this suite fully green. A property over the WHOLE
+	-- catalogue is the only version of this test that can catch a future palette whose source and
+	-- price disagree.
+	t.test("purchasability matches source: every palette succeeds only if it is Renown-sourced", function()
+		for _, palette in Palettes.list do
+			local player = fakePlayer(99999)
+			local bought = RenownService.handleBuyRequest(player, palette.key)
+			expect.equal(bought, palette.source == "Renown")
+		end
 	end)
 
 	t.test("an unknown palette key is refused and does not throw", function()

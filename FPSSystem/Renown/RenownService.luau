@@ -116,7 +116,13 @@ function RenownService.handleBuyRequest(player: any, paletteKey: unknown): boole
 		return false
 	end
 	local price = Palettes.priceOf(paletteKey)
-	if not price or not RenownService.spend(player, price) then
+	if not price then
+		-- Reaching here means a Renown-sourced palette carries no price, which is a catalogue bug
+		-- rather than a player action. Refusing loudly beats selling at an unknown price.
+		warn("[Renown] palette " .. paletteKey .. " is Renown-sourced but has no price")
+		return false
+	end
+	if not RenownService.spend(player, price) then
 		return false
 	end
 	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
@@ -131,10 +137,13 @@ function RenownService.start()
 			if not RenownService.handleBuyRequest(player, paletteKey) then
 				return
 			end
-			-- Equipped by the SERVER in the same call rather than by a second client remote, so a
-			-- purchase cannot half-complete into "owned but not worn". Phase 1's machinery does the
-			-- rest: the attribute change drives the row's repaint and CosmeticsService.refresh
-			-- re-dresses the held weapon, whose SkinId listener catches first person.
+			-- Equipped by the SERVER in the same call rather than by a second client remote. The
+			-- PURCHASE is what is atomic -- handleBuyRequest above either fully succeeds or changes
+			-- nothing. Equipping here is a best-effort follow-up: a bad weaponName below skips it,
+			-- leaving the palette owned but not worn, which is not a stranding bug -- the player can
+			-- still equip it through the normal equip remote. When it does run, the attribute change
+			-- drives the row's repaint and CosmeticsService.refresh re-dresses the held weapon, whose
+			-- SkinId listener catches first person.
 			--
 			-- weaponName arrives from the client and is validated here like any other client string.
 			-- Phase 1 measured why: an unvalidated weapon name let a crafted client create unbounded
