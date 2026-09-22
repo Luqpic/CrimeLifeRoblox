@@ -37,8 +37,11 @@ end
 function RenownService.grant(player: any, amount: number, reason: string): number
 	local balance = RenownService.balanceOf(player)
 	-- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
-	-- rate tables that a later edit could get wrong.
-	if typeof(amount) ~= "number" or amount <= 0 then
+	-- rate tables that a later edit could get wrong. NaN and infinity both pass a bare `amount <= 0`
+	-- check (NaN compares false to everything; infinity is merely large) -- reachable only through the
+	-- single-UserId `/setlevel` admin path today, but an infinite balance makes spend's `balance <
+	-- amount` false forever, making every skin free permanently, so it is guarded here regardless.
+	if typeof(amount) ~= "number" or amount ~= amount or amount == math.huge or amount <= 0 then
 		return balance
 	end
 	local updated = balance + math.floor(amount)

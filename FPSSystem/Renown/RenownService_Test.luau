@@ -57,6 +57,15 @@ return function(t)
 		expect.equal(RenownService.balanceOf(player), 10)
 	end)
 
+	t.test("granting NaN or infinity changes nothing", function()
+		-- Neither passes a bare `amount <= 0` check (NaN compares false to everything; infinity is
+		-- merely large), and an infinite balance would make every future spend succeed forever.
+		local player = fakePlayer(10)
+		RenownService.grant(player, 0 / 0, "test")
+		RenownService.grant(player, math.huge, "test")
+		expect.equal(RenownService.balanceOf(player), 10)
+	end)
+
 	t.test("spending deducts and reports success", function()
 		local player = fakePlayer(300)
 		expect.truthy(RenownService.spend(player, 250))

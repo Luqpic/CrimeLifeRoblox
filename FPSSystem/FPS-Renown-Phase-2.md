@@ -4,10 +4,14 @@
 **Status:** All thirteen verification rows, the damage-path-clean check, all six unit suites (71/71),
 and the git-scoped no-earn-path-file-modified check confirmed live in `FPS System.rbxl` (Server/Client
 datamodels, one continuous Play session for rows 1-12, a Stop/Start boundary for row 13) with real
-before/after numbers — see Verification below. Two items carry over from Phase 1, unresolved for the
-same reasons, and one new item joins them: the click-driven buy-strip paths (open strip, BUY, CANCEL,
-equipped-ring re-tween) have never been executed by an actual click. See Notes and the final Status
-section.
+before/after numbers — see Verification below. Rows 1 and 5 measured the earn rule
+(`RenownService.awardForVictim`) directly rather than the production `Eliminated` wire; that wire
+(`Eliminated -> onEliminated -> awardForVictim`) was confirmed correct by source inspection, not by a
+live firing of `Eliminated` itself — both `ShotResolver` call sites pass `(shooter, taggedHumanoid,
+damage)`, matching `onEliminated`'s signature, and `KillStatsService` guards identically against the
+same event. Two items carry over from Phase 1, unresolved for the same reasons, and one new item joins
+them: the click-driven buy-strip paths (open strip, BUY, CANCEL, equipped-ring re-tween) have never
+been executed by an actual click. See Notes and the final Status section.
 
 ## Summary
 Phase 2 ships Renown: a second currency, earned only from NPC kills (Thug/Criminal +2, Police +5) and
@@ -237,6 +241,14 @@ the strip by clicking a chip, `BUY`, `CANCEL`, the equipped-ring re-tween) remai
 actual click, for the same reason they were unexercised in Task 5. `screen_capture` was not attempted;
 it is documented to return a magenta placeholder in Play mode.
 
+**Two `PriceLabel`s now live under `DetailPanel`.** Phase 1's stats-panel `PriceLabel` sits directly
+under `DetailPanel` at `y=310`; Task 5's buy-strip `PriceLabel` (this phase) sits one level deeper,
+inside `BuyStrip`, at `y=372`. A recursive lookup — `DetailPanel:FindFirstChild("PriceLabel", true)` —
+is ambiguous now: which one it returns depends on child/descendant iteration order, not on which one
+the caller meant. Every existing call site names the exact path it wants (`detailPanel.PriceLabel` for
+Phase 1's, `buyStrip.PriceLabel` for the strip's) and is unaffected, but any future recursive-search
+code touching this panel needs to know both exist.
+
 **Mirrors confirmed byte-exact.** Every file this phase touched or added was re-read live from Studio
 and compared to this repo's copy under `FPSSystem/`: `Constants.luau` 1722, `RenownService.luau` 7741,
 `RenownRunner.luau` 179, `RenownHud.luau` 1084, `Palettes.luau` 4412, `CosmeticsService.luau` 4782,
@@ -247,7 +259,11 @@ to the shipped Studio state at the moment this log was written.
 - **Confirmed live, with numbers, this pass:** all thirteen verification rows, the damage-path-clean
   check, the git-scoped no-earn-path-file-modified check, and all six unit suites (71/71 total:
   `RenownConstants` 8/8, `RenownService` 20/20, `RenownTier` 8/8, `Palettes` 10/10, `SkinApplier` 14/14,
-  `CosmeticsOwnership` 11/11).
+  `CosmeticsOwnership` 11/11). Carve-out: rows 1 and 5 measured the earn rule directly
+  (`RenownService.awardForVictim`), not the production wire. The `Eliminated -> onEliminated ->
+  awardForVictim` wire itself was confirmed by source inspection rather than by a live firing of
+  `Eliminated` — both `ShotResolver` `Fire` sites pass `(shooter, taggedHumanoid, damage)`, matching
+  `onEliminated`.
 - **Needs a person — the click-driven paths have never been executed.** The server side of the buy flow
   is proven by firing the real `BuySkinRequest` remote (rows 6-10 above), and the buy-strip connection
   leak fix from Task 5 was proven structurally (0 → 2 → 0 → 2, bounded regardless of how many weapons

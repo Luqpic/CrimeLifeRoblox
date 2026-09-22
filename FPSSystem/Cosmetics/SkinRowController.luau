@@ -50,6 +50,11 @@ end
 -- the new build() call. A per-build local here left the previous weapon's BUY handler connected --
 -- silently stacked on the shared button -- because hideBuyStrip() at the top of build() was only ever
 -- clearing its own brand-new, already-empty table.
+--
+-- Safe as a single shared table specifically because there is exactly one SkinRow and one BuyStrip in
+-- this panel -- both are per-panel singletons that build() re-targets on every call, not one pair per
+-- weapon. If the shop ever gives each weapon its own row (and its own strip), this table -- and
+-- hideBuyStrip's closure over `row` below -- would need to become per-row instead of shared.
 local buyConnections: { RBXScriptConnection } = {}
 
 -- Builds the chips for one weapon. Returns a repaint function so the caller can refresh the equipped
@@ -121,13 +126,23 @@ function SkinRowController.build(
 			chip.Swatch.BackgroundTransparency = owned and 0 or 0.65
 			-- A Vip chip shows a lock, a Renown chip a coin: one says "pay", the other says "play".
 			chip.Lock.Visible = not owned and palette.source == "Vip"
-			chip.Coin.Visible = not owned and palette.price ~= nil
+			chip.Coin.Visible = not owned and palette.source == "Renown"
 		end
 	end
 
-	local buyStrip = row.Parent:WaitForChild("BuyStrip")
+	-- Timed rather than unbounded: a missing BuyStrip must not hang showDetail with no chips and no
+	-- error. If it never arrives, the row still builds and equips normally -- only the buy path (an
+	-- unowned Renown chip's click) goes inert, which is recoverable; a hung panel is not. A shop that
+	-- cannot sell beats a shop that will not open.
+	local buyStrip = row.Parent:WaitForChild("BuyStrip", 5)
+	if not buyStrip then
+		warn("[Cosmetics] BuyStrip not found under " .. row.Parent:GetFullName() .. "; the Renown buy path is inert for this session")
+	end
 
 	local function hideBuyStrip()
+		if not buyStrip then
+			return
+		end
 		buyStrip.Visible = false
 		row.Visible = true
 		for _, connection in buyConnections do
@@ -137,19 +152,36 @@ function SkinRowController.build(
 	end
 
 	local function showBuyStrip(palette)
+		if not buyStrip then
+			return
+		end
 		-- Clears the previous palette's button connections before wiring this one, so opening the
 		-- strip on three chips in a row does not leave three live BUY handlers on the same button.
 		hideBuyStrip()
 
 		local price = palette.price or 0
-		local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
 
 		buyStrip.PaletteName.Text = palette.name
 		buyStrip.PriceLabel.Text = price .. " RENOWN"
-		buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
-		buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
-		buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
-		buyStrip.BuyButton.Text = if affordable then "BUY" else "NOT ENOUGH"
+
+		-- Re-painted on every balance change while the strip is open, not just once at open time: a
+		-- one-shot `affordable` here left the control lying -- Renown arriving from a kill mid-strip
+		-- would leave the button reading "NOT ENOUGH" while the click handler's own live re-read below
+		-- would have allowed the purchase. Registered in buyConnections so hideBuyStrip tears this
+		-- down with everything else.
+		local function refreshAffordability()
+			local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
+			buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
+			buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
+			buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
+			buyStrip.BuyButton.Text = if affordable then "BUY" else "NOT ENOUGH"
+			-- Actually disabled, not merely repainted: the spec asks for a disabled control, and a
+			-- button that looks dead but responds is worse than one that does neither.
+			buyStrip.BuyButton.Active = affordable
+		end
+		refreshAffordability()
+		table.insert(buyConnections,
+			player:GetAttributeChangedSignal(RenownConstants.ATTRIBUTE):Connect(refreshAffordability))
 
 		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
 			-- Re-read the balance at click time rather than trusting what it was when the strip
