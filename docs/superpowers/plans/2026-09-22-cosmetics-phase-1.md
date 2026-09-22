@@ -676,8 +676,15 @@ end
 return string.format("viewmodels=29 partsPainted=%d worstCoverage=%.0f%% (%s)", painted, worst * 100, worstName)
 ```
 
-Expected: `partsPainted=229`, `worstCoverage=100%`. Anything below 100% means a weapon whose skin
-would be invisible in first person — stop and report rather than continuing.
+Expected: `partsPainted=158`, `worstCoverage=100%`.
+
+158, not 229: 229 is the total BasePart count inside the viewmodels' `Blaster` models, of which **71
+are invisible donor skeleton** and 158 actually render. The applier is meant to skip those 71. That
+ratio — nearly a third of all viewmodel parts invisible — is the measured reason this applier is not
+name-keyed.
+
+`worstCoverage` is the figure that matters. Anything below 100% means a weapon whose skin would be
+invisible in first person — stop and report rather than continuing.
 
 - [ ] **Step 6: Mirror the module into the repo and commit**
 
