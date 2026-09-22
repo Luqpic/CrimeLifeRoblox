@@ -238,7 +238,8 @@ git commit -m "Add the Renown constants"
   - `RenownService.balanceOf(player): number`
   - `RenownService.grant(player, amount: number, reason: string): number` — returns the new balance
   - `RenownService.spend(player, amount: number): boolean` — false when short, balance untouched
-  - `RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)` — the kill handler, exposed for test
+  - `RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)` — production kill handler; validates the attacker is a Player
+  - `RenownService.awardForVictim(player, victimHumanoid: unknown)` — the award rule, testable without a real Player
   - `RenownService.onLevelChanged(player)` — the level handler, exposed for test
 
 - [ ] **Step 1: Write the failing test**
@@ -313,13 +314,13 @@ return function(t)
 
 	t.test("killing a Thug awards the Criminal rate", function()
 		local player = fakePlayer()
-		RenownService.onEliminated(player, fakeVictim("Criminal"))
+		RenownService.awardForVictim(player, fakeVictim("Criminal"))
 		expect.equal(RenownService.balanceOf(player), Constants.KILL_RENOWN.Criminal)
 	end)
 
 	t.test("killing Police awards the higher rate", function()
 		local player = fakePlayer()
-		RenownService.onEliminated(player, fakeVictim("Police"))
+		RenownService.awardForVictim(player, fakeVictim("Police"))
 		expect.equal(RenownService.balanceOf(player), Constants.KILL_RENOWN.Police)
 	end)
 
@@ -327,18 +328,21 @@ return function(t)
 		-- The victim has no Faction attribute, exactly as a player character does not. If this ever
 		-- pays out, two players can farm Renown off each other indefinitely.
 		local player = fakePlayer()
-		RenownService.onEliminated(player, fakeVictim(nil))
+		RenownService.awardForVictim(player, fakeVictim(nil))
 		expect.equal(RenownService.balanceOf(player), 0)
 	end)
 
-	t.test("an attacker that is not a player awards nothing and does not throw", function()
+	t.test("onEliminated rejects an attacker that is not a Player", function()
+		-- The victim here WOULD pay 5 through awardForVictim, so this proves the guard is doing work
+		-- rather than the victim simply being worthless. An NPC killing an NPC must earn nobody
+		-- anything.
 		expect.truthy(pcall(RenownService.onEliminated, Instance.new("Model"), fakeVictim("Police")))
 		expect.truthy(pcall(RenownService.onEliminated, nil, fakeVictim("Police")))
 	end)
 
 	t.test("a victim with no character awards nothing and does not throw", function()
 		local orphan = Instance.new("Humanoid")
-		expect.truthy(pcall(RenownService.onEliminated, fakePlayer(), orphan))
+		expect.truthy(pcall(RenownService.awardForVictim, fakePlayer(), orphan))
 	end)
 end
 ```
@@ -406,12 +410,22 @@ function RenownService.spend(player: any, amount: number): boolean
 	return true
 end
 
--- Kill handler. Reads the victim's faction exactly as KillStatsService does, which is what makes PvP
--- worthless here: a player's own character carries no Faction attribute, so it resolves to nil.
+-- Production entry point for the Eliminated BindableEvent. Validates the signal's shape strictly,
+-- because this receives whatever ShotResolver passes, then delegates the award rule.
 function RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)
 	if typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
 		return
 	end
+	RenownService.awardForVictim(attacker, victimHumanoid)
+end
+
+-- The award rule, split from the guard above so it can be tested. A Player cannot be constructed with
+-- Instance.new, so no test stand-in can ever satisfy `typeof(attacker) == "Instance"`; splitting keeps
+-- that check STRICT in production instead of loosening real validation for test convenience.
+--
+-- Reads the victim's faction exactly as KillStatsService does, which is what makes PvP worthless here:
+-- a player's own character carries no Faction attribute, so it resolves to nil and pays zero.
+function RenownService.awardForVictim(player: any, victimHumanoid: unknown)
 	if typeof(victimHumanoid) ~= "Instance" then
 		return
 	end
@@ -421,7 +435,7 @@ function RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)
 	end
 	local amount = Constants.renownForFaction(character:GetAttribute("Faction"))
 	if amount > 0 then
-		RenownService.grant(attacker, amount, "kill")
+		RenownService.grant(player, amount, "kill")
 	end
 end
 
