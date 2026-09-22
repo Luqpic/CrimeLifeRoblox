@@ -13,6 +13,7 @@ local disconnectAndClear = require(ReplicatedStorage.Utility.disconnectAndClear)
 local WeaponViewmodelMotion = require(script.Parent.WeaponViewmodelMotion)
 local playSoundFromSource = require(script.Parent.Parent.Utility.playSoundFromSource)
 local playRandomSoundFromSource = require(script.Parent.Parent.Utility.playRandomSoundFromSource)
+local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 
 local camera = Workspace.CurrentCamera
 local player = Players.LocalPlayer
@@ -181,10 +182,19 @@ function ViewModelController.new(blaster: Tool)
 	-- Ordering is load-bearing: that module asserts on a weapon it has no profile for and the
 	-- exception aborts BlasterController.new, so anything that runs before it can take first person
 	-- down with it. Colour is the only thing written, so the solved joints are unaffected.
-	local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
-	SkinApplier.applyKey(viewModel, blaster:GetAttribute("SkinId"))
+	self:dressViewModel()
 
 	return self
+end
+
+-- Re-applies the equipped skin to the viewmodel. Guarded because this is appearance code sitting
+-- inside the viewmodel-build/equip path -- a failed skin must cost the player a colour, never their
+-- first-person rig (mirrors WeaponShopService's own guard around CosmeticsService.applyToTool).
+function ViewModelController:dressViewModel()
+	local ok, err = pcall(SkinApplier.applyKey, self.model, self.blaster:GetAttribute("SkinId"))
+	if not ok then
+		warn("[Cosmetics] failed to skin the " .. self.blaster.Name .. " viewmodel: " .. tostring(err))
+	end
 end
 
 function ViewModelController:update(deltaTime: number)
@@ -271,6 +281,21 @@ function ViewModelController:hideToolInstances()
 			if index then
 				table.remove(self.toolInstances, index)
 			end
+		end)
+	)
+
+	-- Re-registered every enable(), not just once at construction: self.connections is fully
+	-- disconnected on every :disable() (below, via stopHidingToolInstances), so a listener set up only
+	-- once in .new() would silently stop working after the player's first weapon swap. The viewmodel
+	-- is built once per Tool instance, so without a live listener here a skin change made while this
+	-- weapon is equipped would redress the world Tool but leave the viewmodel on its old colour until
+	-- the next respawn -- first and third person would visibly disagree. Re-dressing immediately below
+	-- also catches a skin changed while the weapon was unequipped, so it is already current on re-equip.
+	self:dressViewModel()
+	table.insert(
+		self.connections,
+		self.blaster:GetAttributeChangedSignal("SkinId"):Connect(function()
+			self:dressViewModel()
 		end)
 	)
 
