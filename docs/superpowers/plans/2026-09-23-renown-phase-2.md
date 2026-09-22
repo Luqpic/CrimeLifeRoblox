@@ -1046,17 +1046,156 @@ return strip:GetFullName() .. " | " .. coin:GetFullName()
 
 - [ ] **Step 2: Wire the buy flow into SkinRowController**
 
-`SkinRowController.build` already computes a per-chip locked state and reads it fresh at click time. Extend it:
+Read the live script first — it is the Phase 1 controller and these edits build on its existing shape.
 
-- A palette with a price that the player does not own shows `chip.Coin.Visible = true`, `chip.Lock.Visible = false`, and `chip.Swatch.BackgroundTransparency = 0.5`.
-- A Vip palette without the pass keeps the lock, unchanged.
-- Clicking an unowned Renown chip calls a new local `showBuyStrip(palette)` instead of firing the equip remote.
-- `showBuyStrip` sets `PaletteName.Text = palette.name`, `PriceLabel.Text = palette.price .. " RENOWN"`, hides `SkinRow`, shows `BuyStrip`. When the balance is short it sets `PriceLabel.TextColor3` to `#FF4B4B`, `BuyButton.BackgroundColor3` to `#2A2E38`, `BuyButton.TextColor3` to `#8A8F9A`, and makes BUY inert.
-- BUY fires `BuySkinRequest:FireServer(palette.key, weaponName)`. The server validates both arguments; the client is only asking.
-- CANCEL, and a completed purchase, restore `SkinRow.Visible = true` and `BuyStrip.Visible = false`.
-- Read ownership fresh at click time, never captured — the same rule Phase 1 established when a captured `locked` would have kept prompting after the pass was bought.
+**2a. Add the requires and the remote**, beside the existing ones:
 
-Register every new connection in the table the controller already disconnects per build, so browsing weapons cannot leak them.
+```lua
+local RenownConstants = require(ReplicatedStorage.Renown.Constants)
+local buyRemote = ReplicatedStorage.Renown.Remotes.BuySkinRequest
+```
+
+**2b. Replace `ownsVip`-only ownership with one helper that mirrors the server.** Add below `ownsVip`:
+
+```lua
+-- Mirrors CosmeticsService.ownsPalette on the server, branch for branch. The client duplicates it
+-- because ServerScriptService is unreachable from here, so the two must be kept in step deliberately:
+-- if they drift, the row rings a chip the weapon is not actually wearing.
+local function ownsPalette(palette): boolean
+	if palette.source == "Vip" then
+		return ownsVip()
+	end
+	if palette.price then
+		return player:GetAttribute(RenownConstants.ownedAttributeFor(palette.key)) == true
+	end
+	return true
+end
+```
+
+**2c. Extend `repaint`'s validation.** Replace the existing fallback line:
+
+```lua
+		if not Palettes.byKey(current) or (Palettes.isVipOnly(current) and not ownsVip()) then
+			current = Palettes.DEFAULT_KEY
+		end
+```
+
+with:
+
+```lua
+		local currentPalette = Palettes.byKey(current)
+		-- Unowned now covers a Renown skin as well as a Vip one, matching equippedKeyFor on the
+		-- server. Without this the row would ring a Cobalt chip the server had already degraded to
+		-- Stock -- the same disagreement the Vip branch was added to prevent.
+		if not currentPalette or not ownsPalette(currentPalette) then
+			current = Palettes.DEFAULT_KEY
+		end
+```
+
+**2d. Extend `refreshLocks`** so it paints all three unowned states:
+
+```lua
+	local function refreshLocks()
+		for _, palette in Palettes.list do
+			local chip = chips[palette.key]
+			if not chip then
+				continue
+			end
+			local owned = ownsPalette(palette)
+			chip.Swatch.BackgroundTransparency = owned and 0 or 0.65
+			-- A Vip chip shows a lock, a Renown chip a coin: one says "pay", the other says "play".
+			chip.Lock.Visible = not owned and palette.source == "Vip"
+			chip.Coin.Visible = not owned and palette.price ~= nil
+		end
+	end
+```
+
+**2e. The buy strip.** Add inside `build`, after `refreshLocks`:
+
+```lua
+	local buyStrip = row.Parent:WaitForChild("BuyStrip")
+	local buyConnections: { RBXScriptConnection } = {}
+
+	local function hideBuyStrip()
+		buyStrip.Visible = false
+		row.Visible = true
+		for _, connection in buyConnections do
+			connection:Disconnect()
+		end
+		table.clear(buyConnections)
+	end
+
+	local function showBuyStrip(palette)
+		-- Clears the previous palette's button connections before wiring this one, so opening the
+		-- strip on three chips in a row does not leave three live BUY handlers on the same button.
+		hideBuyStrip()
+
+		local price = palette.price or 0
+		local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
+
+		buyStrip.PaletteName.Text = palette.name
+		buyStrip.PriceLabel.Text = price .. " RENOWN"
+		buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
+		buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
+		buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
+		buyStrip.BuyButton.Text = if affordable then "BUY" else "NOT ENOUGH"
+
+		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
+			-- Re-read the balance at click time rather than trusting what it was when the strip
+			-- opened: Renown can arrive from a kill while the strip is on screen, and the server
+			-- re-checks anyway, so this only avoids firing a request that is certain to be refused.
+			if (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) < price then
+				return
+			end
+			buyRemote:FireServer(palette.key, weaponName)
+			hideBuyStrip()
+		end))
+		table.insert(buyConnections, buyStrip.CancelButton.MouseButton1Click:Connect(hideBuyStrip))
+
+		row.Visible = false
+		buyStrip.Visible = true
+	end
+
+	-- A row being rebuilt means a different weapon is on screen, so a strip left open from the last
+	-- one must not survive into it.
+	hideBuyStrip()
+```
+
+**2f. Extend the click handler.** Replace its first branch:
+
+```lua
+		chip.MouseButton1Click:Connect(function()
+			-- Read ownership fresh rather than capturing it at build time: a chip bought or unlocked
+			-- while this same panel is open must act on what is true now, not what was true then.
+			if not ownsPalette(palette) then
+				if palette.source == "Vip" then
+					-- MonetizationService already disables the prompt for an unconfigured pass id, so
+					-- this is safe to fire before the place is published.
+					promptGamepass:FireServer("Vip")
+				else
+					showBuyStrip(palette)
+				end
+				return
+			end
+			equipRemote:FireServer(weaponName, palette.key)
+```
+
+(the `previewModel` application below it is unchanged)
+
+**2g. Widen the ownership connection.** Replace it:
+
+```lua
+	-- One connection covering every ownership signal, rather than one per palette: AttributeChanged
+	-- fires with the name, so a Renown skin added later needs no new wiring here.
+	local ownershipConnection = player.AttributeChanged:Connect(function(name: string)
+		if name == MonetizationConstants.ownedAttributeFor("Vip") or name:sub(1, 10) == "SkinOwned_" then
+			refreshLocks()
+			repaint()
+		end
+	end)
+```
+
+`showDetail` already disconnects this connection before building the next weapon's row, so nothing extra is needed on the caller's side.
 
 - [ ] **Step 3: Announce gains client-side**
 
