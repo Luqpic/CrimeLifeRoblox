@@ -4,7 +4,7 @@
 
 **Goal:** Ship tint-based weapon skins in the FPS System place — visible in first and third person, browsable and equippable from the weapon detail panel, gated by the existing `Vip` game pass — with no save layer and no change to any damage path.
 
-**Architecture:** A skin is a **palette**: a named map of `partName → Color3` over the 11-name part vocabulary shared by all 29 weapons. One `SkinApplier` module serves both sides — the server applies it to the world Tool where `WeaponShopService` already rebuilds weapons, the client applies it to the viewmodel after `WeaponViewmodelMotion` has solved the joints. The equipped skin travels as a `SkinId` attribute on the Tool, so no new networking is added.
+**Architecture:** A skin is a **palette**: a ramp of colour stops spread across each weapon's visible parts by their original luminance, so one palette dresses all 29 weapons without naming a single part. One `SkinApplier` module serves both sides — the server applies it to the world Tool where `WeaponShopService` already rebuilds weapons, the client applies it to the viewmodel after `WeaponViewmodelMotion` has solved the joints. The equipped skin travels as a `SkinId` attribute on the Tool, so no new networking is added.
 
 **Tech Stack:** Roblox Luau. Existing in-place unit framework at `ServerStorage.UnitTest` (`RunUnitTest(filter, timeout)`, assertions `expect.equal / truthy / falsy / near / throws / deepEqual`). Existing `ReplicatedStorage.Monetization` for ownership. Existing Figma file `iRetcvpbMMD190DJA9Mwrm`, page `02 · Redesign`.
 
@@ -18,7 +18,18 @@
 - **No DataStore, no Renown, no texture skins, no new purchase plumbing.** All Phase 2 or later.
 - **Restore-on-spawn must stay silent.** `WeaponShopService`'s restore path already distinguishes a grant from a purchase so a respawn handing back four weapons plays no purchase sound. Skin restore inherits that.
 - **Run unit tests in Play mode, not Edit mode.** Studio's Edit-mode module cache serves a stale module after an edit; Play gets a fresh require.
-- **Part name vocabulary (measured, all 29 weapons):** `Body` (29/29), `TrimA` (27), `TrimB` (27), `TrimC` (26), `TrimD` (17), `Magazine` (14), `TrimE` (11), `TrimF` (4), `ChargingHandle` (1), `TrimG` (1), `Blade` (1).
+- **Part naming is NOT a reliable target — measured today, and this is why the applier is not name-keyed.**
+  The world Tools share an 11-name vocabulary (`Body` 29/29, `TrimA` 27, `TrimB` 27, `TrimC` 26,
+  `TrimD` 17, `Magazine` 14, `TrimE` 11, `TrimF` 4, `ChargingHandle` 1, `TrimG` 1, `Blade` 1). **The
+  viewmodels do not.** 11 of the 29 carry `Mesh1`..`Mesh8` and `MagazineMesh` — 61 of 229 viewmodel
+  parts sit outside that vocabulary. Worse, on those weapons the *named* parts are invisible donor
+  skeleton: `Spas 12`'s viewmodel has `Body` and `TrimA`..`TrimD` at `Transparency = 1` while the
+  visible geometry is `Mesh1`..`Mesh4`. A name-keyed palette would tint only invisible parts there, so
+  the skin would be entirely absent in first person for 38% of the armoury. The applier therefore keys
+  on **visibility and relative luminance**, never on part names.
+- **Skinning is scoped to the `Blaster` sub-model.** Verified 29/29 Tools and 29/29 viewmodels have
+  one, and no `LeftArm`/`RightArm`/`Root` part exists inside any of them. Scoping there is what makes
+  it structurally impossible to tint the player's arms.
 - **Design tokens:** panel `#171A22`, raised `#1E222C`, accent `#CBF23C`, danger `#FF4B4B`, Acid 2px stroke convention.
 - **Measured shop geometry (read live, do not re-derive):** `WeaponaryShop` 920x580, `ShopArea` 700x484,
   `DetailPanel` **700x438** with NO `UIListLayout` — every child is absolutely positioned. Occupied:
@@ -50,8 +61,8 @@ Roblox instances, not files. Created:
 | Path | Responsibility |
 |---|---|
 | `ReplicatedStorage.Cosmetics` (Folder) | Namespace root |
-| `ReplicatedStorage.Cosmetics.Palettes` (ModuleScript) | The catalogue: palette definitions + lookup. Data only. |
-| `ReplicatedStorage.Cosmetics.SkinApplier` (ModuleScript) | `apply` / `remove`, original-colour bookkeeping. Pure enough to unit test. |
+| `ReplicatedStorage.Cosmetics.Palettes` (ModuleScript) | The catalogue: colour ramps + lookup. Data only. |
+| `ReplicatedStorage.Cosmetics.SkinApplier` (ModuleScript) | `apply` / `remove`, luminance ramp mapping, original-colour bookkeeping. |
 | `ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest` (RemoteEvent) | Client asks, server decides |
 | `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (Script) | Ownership, validation, `SkinId` stamping, respawn restore |
 | `StarterPlayer.StarterPlayerScripts.SkinRowController` (LocalScript) | The skins row in the detail panel |
@@ -71,6 +82,11 @@ Modified:
 
 ## Task 1: The palette catalogue
 
+A palette is a **ramp**, not a part-name map: colour stops from dark to light, plus one swatch colour
+for the UI chip. The applier spreads the ramp across each weapon's own visible parts by their original
+luminance, so one palette dresses all 29 weapons without naming a single part — and keeps each
+weapon's existing light-to-dark contrast instead of flattening it.
+
 **Files:**
 - Create: `ReplicatedStorage.Cosmetics.Palettes` (ModuleScript)
 - Test: `ServerStorage.UnitTest.Cases.Palettes_Test` (ModuleScript)
@@ -81,7 +97,8 @@ Modified:
   - `Palettes.list: { Palette }` — ordered, render order
   - `Palettes.byKey(key: string): Palette?`
   - `Palettes.isVipOnly(key: string): boolean`
-  - `type Palette = { key: string, name: string, source: "Free" | "Vip", tints: { [string]: Color3 } }`
+  - `Palettes.DEFAULT_KEY: string`
+  - `type Palette = { key: string, name: string, source: "Free" | "Vip", swatch: Color3, ramp: { Color3 } }`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -89,18 +106,46 @@ Create `ServerStorage.UnitTest.Cases.Palettes_Test`:
 
 ```lua
 -- Tests for ReplicatedStorage.Cosmetics.Palettes.
--- The catalogue is data, so these assert its shape and invariants rather than behaviour.
+-- The catalogue is data, so these assert its shape and the invariants the applier relies on.
 return function(t)
 	local Palettes = require(game.ReplicatedStorage.Cosmetics.Palettes)
 	local expect = t.expect
+
+	local function luminance(c)
+		return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
+	end
 
 	t.test("exposes an ordered list with at least six palettes", function()
 		expect.truthy(#Palettes.list >= 6)
 	end)
 
-	t.test("every palette tints Body, the only part every weapon has", function()
+	t.test("every palette has a ramp of at least two stops", function()
 		for _, palette in Palettes.list do
-			expect.truthy(palette.tints.Body ~= nil)
+			expect.truthy(#palette.ramp >= 2)
+		end
+	end)
+
+	t.test("every ramp stop is a Color3", function()
+		for _, palette in Palettes.list do
+			for _, stop in palette.ramp do
+				expect.equal(typeof(stop), "Color3")
+			end
+		end
+	end)
+
+	t.test("every palette has a swatch colour for its chip", function()
+		for _, palette in Palettes.list do
+			expect.equal(typeof(palette.swatch), "Color3")
+		end
+	end)
+
+	t.test("every ramp runs dark to light", function()
+		-- The applier maps a part's normalised luminance straight onto the ramp, so a ramp that ran
+		-- light to dark would invert that weapon's shading.
+		for _, palette in Palettes.list do
+			for index = 2, #palette.ramp do
+				expect.truthy(luminance(palette.ramp[index]) >= luminance(palette.ramp[index - 1]))
+			end
 		end
 	end)
 
@@ -118,25 +163,8 @@ return function(t)
 		expect.equal(Palettes.byKey("NoSuchPalette"), nil)
 	end)
 
-	t.test("tints only name parts that exist somewhere in the armoury", function()
-		local known = {
-			Body = true, TrimA = true, TrimB = true, TrimC = true, TrimD = true,
-			TrimE = true, TrimF = true, TrimG = true, Magazine = true,
-			ChargingHandle = true, Blade = true,
-		}
-		for _, palette in Palettes.list do
-			for partName in palette.tints do
-				expect.truthy(known[partName])
-			end
-		end
-	end)
-
-	t.test("carries no numbers -- a palette can never encode a stat", function()
-		for _, palette in Palettes.list do
-			for _, value in palette do
-				expect.falsy(type(value) == "number")
-			end
-		end
+	t.test("DEFAULT_KEY names a palette that actually exists", function()
+		expect.truthy(Palettes.byKey(Palettes.DEFAULT_KEY) ~= nil)
 	end)
 
 	t.test("isVipOnly agrees with the source field", function()
@@ -171,18 +199,22 @@ Expected: every case fails — `Palettes is not a valid member of ReplicatedStor
 Create `ReplicatedStorage.Cosmetics.Palettes`:
 
 ```lua
--- The skin catalogue. A palette is a named map of partName -> Color3, applied to ANY weapon.
+-- The skin catalogue. A palette is a ramp of colour stops, dark to light, plus a swatch for its chip.
 --
--- Universal rather than per-weapon because the armoury shares its part names: measured across all 29
--- weapons there are only 11 distinct visible part names, and Body appears in every one. So a single
--- table dresses the whole armoury, and adding a skin later is an entry here and nothing else.
+-- Not a part-name map, which is what this started as. Measured: 11 of the 29 viewmodels carry parts
+-- named Mesh1..Mesh8 and MagazineMesh, and on those weapons the conventionally named parts (Body,
+-- TrimA..TrimD) are invisible donor skeleton left behind by the viewmodel build script. Keying on
+-- names would have tinted only invisible geometry there, making the skin absent in first person for
+-- more than a third of the armoury.
 --
--- Data only. No numbers live in this file, and nothing in the damage path requires it.
+-- Keying on each part's own luminance instead means one palette dresses every weapon, present or
+-- future, and each weapon keeps its existing dark-to-light contrast rather than going flat.
 export type Palette = {
 	key: string,
 	name: string,
 	source: "Free" | "Vip",
-	tints: { [string]: Color3 },
+	swatch: Color3,
+	ramp: { Color3 },
 }
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -195,47 +227,45 @@ local Palettes = {}
 Palettes.list = {
 	{
 		key = "Stock", name = "STOCK", source = "Free",
-		-- The "no skin" entry. Its colours are the rig's own defaults, so selecting it reads as
-		-- removal without the UI needing a separate "none" concept.
-		tints = { Body = rgb(163, 162, 165), TrimA = rgb(99, 95, 98), TrimB = rgb(99, 95, 98) },
+		-- The "no skin" entry. applyKey short-circuits it to a removal, so its ramp is never applied;
+		-- it carries one anyway so every palette has the same shape and no branch handles a nil.
+		swatch = rgb(163, 162, 165),
+		ramp = { rgb(99, 95, 98), rgb(131, 129, 132), rgb(163, 162, 165) },
 	},
 	{
 		key = "Carbon", name = "CARBON", source = "Free",
-		tints = { Body = rgb(28, 30, 36), TrimA = rgb(58, 62, 72), TrimB = rgb(58, 62, 72),
-			TrimC = rgb(44, 47, 55), Magazine = rgb(36, 39, 46) },
+		swatch = rgb(40, 43, 51),
+		ramp = { rgb(18, 19, 23), rgb(40, 43, 51), rgb(78, 84, 98) },
 	},
 	{
 		key = "Sandstorm", name = "SANDSTORM", source = "Free",
-		tints = { Body = rgb(198, 176, 128), TrimA = rgb(120, 104, 74), TrimB = rgb(120, 104, 74),
-			TrimC = rgb(150, 132, 94), Magazine = rgb(96, 84, 60) },
+		swatch = rgb(198, 176, 128),
+		ramp = { rgb(84, 72, 50), rgb(150, 132, 94), rgb(214, 196, 152) },
 	},
 	{
 		key = "Crimson", name = "CRIMSON", source = "Free",
-		tints = { Body = rgb(122, 26, 32), TrimA = rgb(38, 20, 22), TrimB = rgb(38, 20, 22),
-			TrimC = rgb(74, 22, 26), Magazine = rgb(30, 16, 18) },
+		swatch = rgb(122, 26, 32),
+		ramp = { rgb(34, 14, 16), rgb(96, 24, 28), rgb(176, 52, 58) },
 	},
 	{
 		key = "Acid", name = "ACID", source = "Free",
-		tints = { Body = rgb(203, 242, 60), TrimA = rgb(38, 44, 20), TrimB = rgb(38, 44, 20),
-			TrimC = rgb(140, 168, 40), Magazine = rgb(30, 34, 18) },
+		swatch = rgb(203, 242, 60),
+		ramp = { rgb(30, 34, 18), rgb(120, 146, 36), rgb(216, 248, 96) },
 	},
 	{
 		key = "Gold", name = "GOLD", source = "Vip",
-		tints = { Body = rgb(212, 175, 55), TrimA = rgb(120, 96, 28), TrimB = rgb(120, 96, 28),
-			TrimC = rgb(168, 138, 42), TrimD = rgb(96, 78, 24), Magazine = rgb(72, 58, 18),
-			ChargingHandle = rgb(120, 96, 28), Blade = rgb(232, 200, 96) },
+		swatch = rgb(212, 175, 55),
+		ramp = { rgb(74, 58, 18), rgb(168, 138, 42), rgb(238, 212, 120) },
 	},
 	{
 		key = "Obsidian", name = "OBSIDIAN", source = "Vip",
-		tints = { Body = rgb(16, 16, 20), TrimA = rgb(78, 30, 96), TrimB = rgb(78, 30, 96),
-			TrimC = rgb(40, 18, 50), TrimD = rgb(24, 24, 30), Magazine = rgb(20, 20, 26),
-			ChargingHandle = rgb(78, 30, 96), Blade = rgb(150, 90, 180) },
+		swatch = rgb(78, 30, 96),
+		ramp = { rgb(12, 12, 16), rgb(58, 24, 72), rgb(150, 90, 180) },
 	},
 	{
 		key = "Arctic", name = "ARCTIC", source = "Vip",
-		tints = { Body = rgb(226, 232, 240), TrimA = rgb(120, 150, 180), TrimB = rgb(120, 150, 180),
-			TrimC = rgb(170, 190, 210), TrimD = rgb(100, 124, 150), Magazine = rgb(140, 160, 184),
-			ChargingHandle = rgb(120, 150, 180), Blade = rgb(240, 248, 255) },
+		swatch = rgb(226, 232, 240),
+		ramp = { rgb(96, 120, 146), rgb(170, 190, 210), rgb(240, 248, 255) },
 	},
 } :: { Palette }
 
@@ -265,7 +295,7 @@ return Palettes
 return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("Palettes")
 ```
 
-Expected: 8 passed, 0 failed.
+Expected: 10 passed, 0 failed.
 
 - [ ] **Step 5: Confirm the damage path is still clean**
 
@@ -281,11 +311,19 @@ return #leaks == 0 and "clean" or ("LEAK: " .. table.concat(leaks, ", "))
 
 Expected: `clean`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Mirror the module into the repo and commit**
+
+Export the module's **actual Source from Studio** — do not retype it — so the file equals what runs:
+
+```lua
+return game.ReplicatedStorage.Cosmetics.Palettes.Source
+```
+
+Write that verbatim to `FPSSystem/Cosmetics/Palettes.luau`, then:
 
 ```bash
-cd /Users/luqpic/Documents/Roblox/CrimeLifeRoblox
-git add FPSSystem/
+mkdir -p FPSSystem/Cosmetics
+git add FPSSystem/Cosmetics/Palettes.luau
 git commit -m "Add the cosmetics palette catalogue"
 ```
 
@@ -300,11 +338,11 @@ The riskiest module in the plan: it mutates live weapon instances and must be ex
 - Test: `ServerStorage.UnitTest.Cases.SkinApplier_Test` (ModuleScript)
 
 **Interfaces:**
-- Consumes: `Palettes.byKey`, `Palettes.DEFAULT_KEY` from Task 1
+- Consumes: `Palettes.byKey`, `Palettes.DEFAULT_KEY`, `Palettes.Palette` from Task 1
 - Produces:
-  - `SkinApplier.apply(model: Instance, palette: Palettes.Palette): number` — returns how many parts it recoloured
-  - `SkinApplier.remove(model: Instance): number` — returns how many parts it restored
-  - `SkinApplier.applyKey(model: Instance, key: string?): number` — `remove` when key is nil or the default
+  - `SkinApplier.apply(model: Instance, palette: Palettes.Palette): number` — parts recoloured
+  - `SkinApplier.remove(model: Instance): number` — parts restored
+  - `SkinApplier.applyKey(model: Instance, key: string?): number` — `remove` when key is nil or default
 
 - [ ] **Step 1: Write the failing test**
 
@@ -312,54 +350,95 @@ Create `ServerStorage.UnitTest.Cases.SkinApplier_Test`:
 
 ```lua
 -- Tests for ReplicatedStorage.Cosmetics.SkinApplier.
--- The contract that matters is REVERSIBILITY: a weapon must come back to stock exactly, because the
--- same Tool instances are reused across respawns and a drifting colour would accumulate.
+-- Two contracts matter. REVERSIBILITY, because the same Tool instances are reused across respawns and
+-- a drifting colour would accumulate. And COVERAGE, because the reason this module is luminance-keyed
+-- rather than name-keyed is that the named parts are invisible skeleton on 11 of the 29 weapons.
 return function(t)
 	local SkinApplier = require(game.ReplicatedStorage.Cosmetics.SkinApplier)
 	local expect = t.expect
 
-	-- A stand-in weapon with the part names the real rigs use.
+	-- A stand-in shaped like a real viewmodel: arms outside the Blaster sub-model, an invisible
+	-- skeleton part inside it, and visible mesh parts with names no palette could know.
 	local function makeWeapon()
 		local model = Instance.new("Model")
+
+		local arm = Instance.new("Part")
+		arm.Name = "RightArm"
+		arm.Color = Color3.fromRGB(200, 150, 120)
+		arm.Parent = model
+
+		local blaster = Instance.new("Model")
+		blaster.Name = "Blaster"
+		blaster.Parent = model
+
+		local skeleton = Instance.new("Part")
+		skeleton.Name = "Body"
+		skeleton.Transparency = 1
+		skeleton.Color = Color3.fromRGB(10, 10, 10)
+		skeleton.Parent = blaster
+
 		for name, colour in {
-			Body = Color3.fromRGB(10, 20, 30),
-			TrimA = Color3.fromRGB(40, 50, 60),
-			Unrelated = Color3.fromRGB(70, 80, 90),
+			Mesh1 = Color3.fromRGB(20, 20, 20),
+			Mesh2 = Color3.fromRGB(120, 120, 120),
+			Mesh3 = Color3.fromRGB(220, 220, 220),
 		} do
 			local part = Instance.new("Part")
 			part.Name = name
 			part.Color = colour
-			part.Parent = model
+			part.Parent = blaster
 		end
+
 		return model
 	end
 
 	local palette = {
 		key = "TestPalette", name = "TEST", source = "Free",
-		tints = { Body = Color3.fromRGB(1, 2, 3), TrimA = Color3.fromRGB(4, 5, 6) },
+		swatch = Color3.fromRGB(0, 0, 0),
+		ramp = { Color3.fromRGB(0, 0, 0), Color3.fromRGB(255, 255, 255) },
 	}
 
-	t.test("recolours exactly the parts the palette names", function()
-		local model = makeWeapon()
-		local count = SkinApplier.apply(model, palette)
-		expect.equal(count, 2)
-		expect.equal(model.Body.Color, Color3.fromRGB(1, 2, 3))
-		expect.equal(model.TrimA.Color, Color3.fromRGB(4, 5, 6))
+	local function luminance(c)
+		return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
+	end
+
+	t.test("colours the visible parts inside the Blaster sub-model", function()
+		expect.equal(SkinApplier.apply(makeWeapon(), palette), 3)
 	end)
 
-	t.test("leaves parts the palette does not name alone", function()
+	t.test("never touches the arms, which live outside the Blaster sub-model", function()
 		local model = makeWeapon()
 		SkinApplier.apply(model, palette)
-		expect.equal(model.Unrelated.Color, Color3.fromRGB(70, 80, 90))
+		expect.equal(model.RightArm.Color, Color3.fromRGB(200, 150, 120))
+	end)
+
+	t.test("skips invisible skeleton parts", function()
+		-- The whole reason this module is not name-keyed. Tinting Body here would be tinting nothing.
+		local model = makeWeapon()
+		SkinApplier.apply(model, palette)
+		expect.equal(model.Blaster.Body.Color, Color3.fromRGB(10, 10, 10))
+	end)
+
+	t.test("preserves contrast: darkest stays darkest, lightest stays lightest", function()
+		local model = makeWeapon()
+		SkinApplier.apply(model, palette)
+		expect.truthy(luminance(model.Blaster.Mesh1.Color) < luminance(model.Blaster.Mesh2.Color))
+		expect.truthy(luminance(model.Blaster.Mesh2.Color) < luminance(model.Blaster.Mesh3.Color))
+	end)
+
+	t.test("spans the ramp: darkest reaches the first stop, lightest the last", function()
+		local model = makeWeapon()
+		SkinApplier.apply(model, palette)
+		expect.near(luminance(model.Blaster.Mesh1.Color), 0, 0.01)
+		expect.near(luminance(model.Blaster.Mesh3.Color), 1, 0.01)
 	end)
 
 	t.test("restores every original colour on remove", function()
 		local model = makeWeapon()
 		SkinApplier.apply(model, palette)
-		local restored = SkinApplier.remove(model)
-		expect.equal(restored, 2)
-		expect.equal(model.Body.Color, Color3.fromRGB(10, 20, 30))
-		expect.equal(model.TrimA.Color, Color3.fromRGB(40, 50, 60))
+		expect.equal(SkinApplier.remove(model), 3)
+		expect.equal(model.Blaster.Mesh1.Color, Color3.fromRGB(20, 20, 20))
+		expect.equal(model.Blaster.Mesh2.Color, Color3.fromRGB(120, 120, 120))
+		expect.equal(model.Blaster.Mesh3.Color, Color3.fromRGB(220, 220, 220))
 	end)
 
 	t.test("re-skinning does not bake the previous skin in as the original", function()
@@ -367,16 +446,32 @@ return function(t)
 		SkinApplier.apply(model, palette)
 		SkinApplier.apply(model, {
 			key = "Second", name = "SECOND", source = "Free",
-			tints = { Body = Color3.fromRGB(9, 9, 9) },
+			swatch = Color3.fromRGB(9, 9, 9),
+			ramp = { Color3.fromRGB(9, 9, 9), Color3.fromRGB(90, 90, 90) },
 		})
 		SkinApplier.remove(model)
-		expect.equal(model.Body.Color, Color3.fromRGB(10, 20, 30))
+		expect.equal(model.Blaster.Mesh2.Color, Color3.fromRGB(120, 120, 120))
+	end)
+
+	t.test("a weapon whose parts share one luminance does not divide by zero", function()
+		local model = Instance.new("Model")
+		local blaster = Instance.new("Model")
+		blaster.Name = "Blaster"
+		blaster.Parent = model
+		for index = 1, 3 do
+			local part = Instance.new("Part")
+			part.Name = "Mesh" .. index
+			part.Color = Color3.fromRGB(100, 100, 100)
+			part.Parent = blaster
+		end
+		expect.equal(SkinApplier.apply(model, palette), 3)
+		expect.equal(typeof(blaster.Mesh1.Color), "Color3")
 	end)
 
 	t.test("remove on an unskinned model is a no-op", function()
 		local model = makeWeapon()
 		expect.equal(SkinApplier.remove(model), 0)
-		expect.equal(model.Body.Color, Color3.fromRGB(10, 20, 30))
+		expect.equal(model.Blaster.Mesh2.Color, Color3.fromRGB(120, 120, 120))
 	end)
 
 	t.test("adds and removes no instances -- geometry is never touched", function()
@@ -391,21 +486,21 @@ return function(t)
 	t.test("renames nothing", function()
 		local model = makeWeapon()
 		SkinApplier.apply(model, palette)
-		expect.truthy(model:FindFirstChild("Body") ~= nil)
-		expect.truthy(model:FindFirstChild("TrimA") ~= nil)
+		expect.truthy(model.Blaster:FindFirstChild("Mesh1") ~= nil)
+		expect.truthy(model:FindFirstChild("RightArm") ~= nil)
 	end)
 
 	t.test("applyKey with nil removes any applied skin", function()
 		local model = makeWeapon()
 		SkinApplier.apply(model, palette)
 		SkinApplier.applyKey(model, nil)
-		expect.equal(model.Body.Color, Color3.fromRGB(10, 20, 30))
+		expect.equal(model.Blaster.Mesh2.Color, Color3.fromRGB(120, 120, 120))
 	end)
 
 	t.test("applyKey with an unknown key leaves the model untouched", function()
 		local model = makeWeapon()
 		SkinApplier.applyKey(model, "NoSuchPalette")
-		expect.equal(model.Body.Color, Color3.fromRGB(10, 20, 30))
+		expect.equal(model.Blaster.Mesh2.Color, Color3.fromRGB(120, 120, 120))
 	end)
 end
 ```
@@ -427,9 +522,9 @@ Create `ReplicatedStorage.Cosmetics.SkinApplier`:
 -- Tool, the client dresses the viewmodel, and one implementation keeps them identical.
 --
 -- Geometry is never touched. No part is added, removed, renamed or re-parented -- only Color is
--- written. This is not stylistic: WeaponViewmodelMotion asserts on a weapon name it does not know
--- and that exception aborts BlasterController.new, so a skin that renamed a Tool would silently kill
--- first person for that weapon.
+-- written. This is not stylistic: WeaponViewmodelMotion asserts on a weapon name it does not know and
+-- that exception aborts BlasterController.new, so a skin that renamed a Tool would silently kill first
+-- person for that weapon.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 
@@ -437,47 +532,95 @@ local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 --
 -- An ATTRIBUTE on the part, not a Lua table keyed by instance: the server and the client each run
 -- their own copy of this module, a Tool outlives any one of their sessions, and a table would be
--- rebuilt empty after a respawn while the part kept its skinned colour -- which is how a skin
--- becomes permanent by accident.
+-- rebuilt empty after a respawn while the part kept its skinned colour -- which is how a skin becomes
+-- permanent by accident.
 local ORIGINAL_ATTRIBUTE = "SkinOriginalColor"
+
+-- Rec. 709 luma. Any reasonable weighting works; this one is the standard.
+local function luminance(colour: Color3): number
+	return 0.2126 * colour.R + 0.7152 * colour.G + 0.0722 * colour.B
+end
 
 local SkinApplier = {}
 
-local function eachPart(model: Instance)
+-- The weapon's own parts, wherever the caller handed us a Tool, a viewmodel or a bare display model.
+local function weaponRoot(model: Instance): Instance
+	return model:FindFirstChild("Blaster") or model
+end
+
+-- The parts a skin may touch: visible ones, inside the weapon's Blaster sub-model.
+--
+-- Scoped to Blaster because a viewmodel's LeftArm, RightArm and Root sit outside it -- that scoping is
+-- what makes tinting the player's arms structurally impossible rather than merely unlikely.
+--
+-- Visible only because the viewmodel build script leaves the original named parts behind as invisible
+-- donor skeleton: on Spas 12 the visible geometry is Mesh1..Mesh4 while Body and TrimA..TrimD sit at
+-- Transparency 1. Colouring those would be colouring nothing.
+local function skinnableParts(model: Instance): { BasePart }
 	local parts = {}
-	for _, descendant in model:GetDescendants() do
-		if descendant:IsA("BasePart") then
+	for _, descendant in weaponRoot(model):GetDescendants() do
+		if descendant:IsA("BasePart") and descendant.Transparency < 1 then
 			table.insert(parts, descendant)
 		end
 	end
 	return parts
 end
 
-function SkinApplier.apply(model: Instance, palette: Palettes.Palette): number
-	local changed = 0
-	for _, part in eachPart(model) do
-		local tint = palette.tints[part.Name]
-		if tint then
-			-- Recorded once only. A second skin must not overwrite the record with the first
-			-- skin's colour, or removal restores to a skin rather than to stock.
-			if part:GetAttribute(ORIGINAL_ATTRIBUTE) == nil then
-				part:SetAttribute(ORIGINAL_ATTRIBUTE, part.Color)
-			end
-			part.Color = tint
-			changed += 1
-		end
+local function sampleRamp(ramp: { Color3 }, position: number): Color3
+	if #ramp == 1 then
+		return ramp[1]
 	end
-	return changed
+	local scaled = math.clamp(position, 0, 1) * (#ramp - 1)
+	local lower = math.clamp(math.floor(scaled), 0, #ramp - 2)
+	return ramp[lower + 1]:Lerp(ramp[lower + 2], scaled - lower)
+end
+
+function SkinApplier.apply(model: Instance, palette: Palettes.Palette): number
+	local parts = skinnableParts(model)
+	if #parts == 0 then
+		return 0
+	end
+
+	-- Rank by each part's ORIGINAL luminance, not its current one, so re-skinning ranks by how the
+	-- weapon looks in stock rather than by whatever the previous skin left behind.
+	local levels: { [BasePart]: number } = {}
+	local darkest, lightest = math.huge, -math.huge
+	for _, part in parts do
+		local recorded = part:GetAttribute(ORIGINAL_ATTRIBUTE)
+		local base = if typeof(recorded) == "Color3" then recorded else part.Color
+		local level = luminance(base)
+		levels[part] = level
+		darkest = math.min(darkest, level)
+		lightest = math.max(lightest, level)
+	end
+
+	local spread = lightest - darkest
+	for _, part in parts do
+		-- Recorded once only. A second skin must not overwrite the record with the first skin's
+		-- colour, or removal restores to a skin rather than to stock.
+		if part:GetAttribute(ORIGINAL_ATTRIBUTE) == nil then
+			part:SetAttribute(ORIGINAL_ATTRIBUTE, part.Color)
+		end
+		-- A weapon whose visible parts all share one luminance has no contrast to preserve, so it
+		-- takes the ramp's midpoint rather than dividing by zero.
+		local position = if spread > 1e-4 then (levels[part] - darkest) / spread else 0.5
+		part.Color = sampleRamp(palette.ramp, position)
+	end
+	return #parts
 end
 
 function SkinApplier.remove(model: Instance): number
 	local restored = 0
-	for _, part in eachPart(model) do
-		local original = part:GetAttribute(ORIGINAL_ATTRIBUTE)
-		if typeof(original) == "Color3" then
-			part.Color = original
-			part:SetAttribute(ORIGINAL_ATTRIBUTE, nil)
-			restored += 1
+	-- Deliberately NOT filtered by visibility: a part hidden after it was skinned must still be able
+	-- to give its colour back.
+	for _, descendant in weaponRoot(model):GetDescendants() do
+		if descendant:IsA("BasePart") then
+			local original = descendant:GetAttribute(ORIGINAL_ATTRIBUTE)
+			if typeof(original) == "Color3" then
+				descendant.Color = original
+				descendant:SetAttribute(ORIGINAL_ATTRIBUTE, nil)
+				restored += 1
+			end
 		end
 	end
 	return restored
@@ -505,13 +648,44 @@ return SkinApplier
 return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SkinApplier")
 ```
 
-Expected: 9 passed, 0 failed.
+Expected: 13 passed, 0 failed.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Prove coverage on the real armoury, not just the stand-in**
+
+This is the check that would have caught the name-keyed design. Run in the Edit datamodel:
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
+local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
+local gold = Palettes.byKey("Gold")
+
+local worst, worstName, painted = math.huge, "", 0
+for _, viewModel in ReplicatedStorage.Blaster.ViewModels:GetChildren() do
+	local clone = viewModel:Clone()
+	local visible = 0
+	for _, d in clone.Blaster:GetDescendants() do
+		if d:IsA("BasePart") and d.Transparency < 1 then visible += 1 end
+	end
+	local done = SkinApplier.apply(clone, gold)
+	painted += done
+	local ratio = if visible > 0 then done / visible else 1
+	if ratio < worst then worst, worstName = ratio, viewModel.Name end
+	clone:Destroy()
+end
+return string.format("viewmodels=29 partsPainted=%d worstCoverage=%.0f%% (%s)", painted, worst * 100, worstName)
+```
+
+Expected: `partsPainted=229`, `worstCoverage=100%`. Anything below 100% means a weapon whose skin
+would be invisible in first person — stop and report rather than continuing.
+
+- [ ] **Step 6: Mirror the module into the repo and commit**
+
+Export the module's actual Source from Studio to `FPSSystem/Cosmetics/SkinApplier.luau`, then:
 
 ```bash
-git add FPSSystem/
-git commit -m "Add SkinApplier with exact, reversible tinting"
+git add FPSSystem/Cosmetics/SkinApplier.luau
+git commit -m "Add SkinApplier with exact, reversible luminance-keyed tinting"
 ```
 
 ---
@@ -596,10 +770,8 @@ end
 function CosmeticsService.applyToTool(player: Player, tool: Tool)
 	local key = CosmeticsService.equippedKeyFor(player, tool.Name)
 	tool:SetAttribute("SkinId", key)
-	local blaster = tool:FindFirstChild("Blaster")
-	if blaster then
-		SkinApplier.applyKey(blaster, key)
-	end
+	-- The applier locates the Tool's Blaster sub-model itself and skips invisible skeleton parts.
+	SkinApplier.applyKey(tool, key)
 end
 
 -- Re-dresses every weapon a player is currently carrying. Used when the equipped skin changes.
@@ -657,8 +829,15 @@ Expected: the same part count and the same names as before skinning — `Body,Tr
 
 - [ ] **Step 6: Commit**
 
+Export the **actual Source from Studio** for every script this task created or modified — never retype
+it — and write each to the path below, so git carries what actually runs and the review has a real diff:
+
+- `ServerScriptService.Cosmetics.Scripts.CosmeticsService` -> `FPSSystem/Cosmetics/CosmeticsService.luau`
+- `ServerScriptService.Weapons.Scripts.WeaponShopService` -> `FPSSystem/Cosmetics/WeaponShopService.luau`
+
 ```bash
-git add FPSSystem/
+mkdir -p FPSSystem/Cosmetics
+git add FPSSystem/Cosmetics/
 git commit -m "Dress the world Tool from the equipped skin on grant and respawn"
 ```
 
@@ -729,8 +908,14 @@ Expected: `camera=LockFirstPerson` and `joints=BodyJoint,LeftArmJoint,RightArmJo
 
 - [ ] **Step 5: Commit**
 
+Export the **actual Source from Studio** for every script this task created or modified — never retype
+it — and write each to the path below, so git carries what actually runs and the review has a real diff:
+
+- `ReplicatedStorage.Blaster.Scripts.ViewModelController` -> `FPSSystem/Cosmetics/ViewModelController.luau`
+
 ```bash
-git add FPSSystem/
+mkdir -p FPSSystem/Cosmetics
+git add FPSSystem/Cosmetics/
 git commit -m "Dress the viewmodel from the SkinId attribute after the joints are solved"
 ```
 
@@ -885,8 +1070,14 @@ Expected: unchanged — **not** `Gold`. Then grant the pass attribute server-sid
 
 - [ ] **Step 6: Commit**
 
+Export the **actual Source from Studio** for every script this task created or modified — never retype
+it — and write each to the path below, so git carries what actually runs and the review has a real diff:
+
+- `ServerScriptService.Cosmetics.Scripts.CosmeticsService` -> `FPSSystem/Cosmetics/CosmeticsService.luau` (overwrite)
+
 ```bash
-git add FPSSystem/
+mkdir -p FPSSystem/Cosmetics
+git add FPSSystem/Cosmetics/
 git commit -m "Add the server-authoritative skin equip remote"
 ```
 
@@ -1113,7 +1304,7 @@ function SkinRowController.build(
 		chip.Name = palette.key
 		chip.Visible = true
 		chip.LayoutOrder = index
-		chip.BackgroundColor3 = palette.tints.Body
+		chip.BackgroundColor3 = palette.swatch
 		chip.BackgroundTransparency = locked and 0.65 or 0
 		chip.Lock.Visible = locked
 		chip.Parent = row
@@ -1233,8 +1424,15 @@ pass id is configured; either is correct before publish.
 
 - [ ] **Step 7: Commit**
 
+Export the **actual Source from Studio** for every script this task created or modified — never retype
+it — and write each to the path below, so git carries what actually runs and the review has a real diff:
+
+- `StarterPlayer.StarterPlayerScripts.SkinRowController` -> `FPSSystem/Cosmetics/SkinRowController.luau`
+- `StarterPlayer.StarterPlayerScripts.WeaponaryShopController` -> `FPSSystem/Cosmetics/WeaponaryShopController.luau`
+
 ```bash
-git add FPSSystem/
+mkdir -p FPSSystem/Cosmetics
+git add FPSSystem/Cosmetics/
 git commit -m "Add the skins row to the weapon detail panel"
 ```
 
