@@ -1489,26 +1489,55 @@ return SkinRowController
 
 - [ ] **Step 3: Call it from the shop controller**
 
-In `WeaponaryShopController`, in the function that populates the detail panel, after the preview model
-has been built and framed in `DetailViewport`, add:
+Read `StarterPlayer.StarterPlayerScripts.WeaponaryShopController` before editing — it is 933 lines and
+these numbers are a guide, not a promise.
+
+`showDetail(weaponName)` begins at **line 492**. Inside it, `displayModel` is created at line 507 and
+is scoped to an `if blasterTemplate then` block that closes at **line 610**, after which
+`refreshDetailStats(weaponName)` runs at 611. The skins row needs the preview model, so `displayModel`
+must be reachable where the row is built.
+
+Hoist the declaration above the `if` so both are in scope:
 
 ```lua
-	local repaintSkins = SkinRowController.build(
-		detailPanel.SkinRow, detailPanel.SkinRow.SkinChip, weapon.Name, previewModel
-	)
-	local skinAttributeConnection = player:GetAttributeChangedSignal(
-		"EquippedSkin_" .. (string.gsub(weapon.Name, "[^%w_]", "_"))
+	local displayModel
+	local blasterTemplate = entry:FindFirstChild("Blaster")
+	if blasterTemplate then
+		displayModel = blasterTemplate:Clone()
+```
+
+(the rest of that block is unchanged — only the `local` moves out)
+
+Then, after the `if` block closes and before `refreshDetailStats(weaponName)`:
+
+```lua
+	-- Rebuilt per weapon because the equipped chip and the locked chips both depend on which weapon
+	-- is on screen. The attribute connection is stored and replaced the same way currentSpinConnection
+	-- is, so viewing twenty weapons leaves one connection rather than twenty.
+	if currentSkinConnection then
+		currentSkinConnection:Disconnect()
+	end
+	local repaintSkins = SkinRowController.build(skinRow, skinChipTemplate, weaponName, displayModel)
+	currentSkinConnection = player:GetAttributeChangedSignal(
+		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
 	):Connect(repaintSkins)
 ```
 
-Disconnect `skinAttributeConnection` wherever the controller already tears down the detail panel's
-other connections. Leaving it connected leaks one connection per weapon viewed.
+Declare `currentSkinConnection` beside the existing `currentSpinConnection` declaration, and resolve
+`skinRow` / `skinChipTemplate` beside the existing `detailViewport` lookup at line 104:
 
-Add at the top, beside the other requires:
+```lua
+local skinRow = detailPanel:WaitForChild("SkinRow")
+local skinChipTemplate = skinRow:WaitForChild("SkinChip")
+```
+
+Add the require beside the other requires at the top:
 
 ```lua
 local SkinRowController = require(script.Parent.SkinRowController)
 ```
+
+Note `showDetail` and `refreshDetailStats` are globals in this script, not locals — do not "fix" that.
 
 - [ ] **Step 4: Verify the row live**
 
