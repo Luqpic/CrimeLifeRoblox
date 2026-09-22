@@ -1291,7 +1291,13 @@ layout.Parent = row
 local chip = Instance.new("ImageButton")
 chip.Name = "SkinChip"
 chip.Size = UDim2.fromOffset(52, 52)
-chip.BackgroundColor3 = Color3.fromRGB(163, 162, 165)
+-- The chip's own background is the ROW colour, not the palette colour. The palette lives on an inset
+-- Swatch child, so every chip shows a 3px dark gap between its fill and its selection ring.
+-- That gap is load-bearing: the Acid palette's swatch IS the accent colour (#CBF23C), so without it
+-- an accent ring on an Acid chip would be invisible and that palette could never show as equipped.
+-- Insetting fixes it for all eight uniformly instead of special-casing one, and it gives dark
+-- palettes like Obsidian a defined edge against the row as well.
+chip.BackgroundColor3 = Color3.fromHex("171A22")
 chip.BorderSizePixel = 0
 chip.AutoButtonColor = false
 chip.Image = ""
@@ -1302,6 +1308,19 @@ local chipCorner = Instance.new("UICorner")
 chipCorner.CornerRadius = UDim.new(0, 8)
 chipCorner.Parent = chip
 
+local swatch = Instance.new("Frame")
+swatch.Name = "Swatch"
+swatch.AnchorPoint = Vector2.new(0.5, 0.5)
+swatch.Position = UDim2.fromScale(0.5, 0.5)
+swatch.Size = UDim2.fromOffset(46, 46)
+swatch.BackgroundColor3 = Color3.fromRGB(163, 162, 165)
+swatch.BorderSizePixel = 0
+swatch.Parent = chip
+
+local swatchCorner = Instance.new("UICorner")
+swatchCorner.CornerRadius = UDim.new(0, 6)
+swatchCorner.Parent = swatch
+
 -- Transparency 1 at rest; the controller tweens it to 0 for the equipped chip and 0.6 on hover.
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 2
@@ -1309,15 +1328,48 @@ stroke.Color = Color3.fromHex("CBF23C")
 stroke.Transparency = 1
 stroke.Parent = chip
 
-local lock = Instance.new("ImageLabel")
+-- Built from Frames rather than an uploaded image: Task 6 designed the glyph in Figma and confirmed
+-- it legible at 52px, but `upload_image` refused both the PNG and SVG exports with "Image Url is not
+-- trusted", so there is no asset id to reference. Two frames cost nothing and need no moderation.
+local lock = Instance.new("Frame")
 lock.Name = "Lock"
 lock.Size = UDim2.fromOffset(20, 20)
 lock.AnchorPoint = Vector2.new(0.5, 0.5)
 lock.Position = UDim2.fromScale(0.5, 0.5)
 lock.BackgroundTransparency = 1
-lock.ImageColor3 = Color3.fromHex("8A8F9A")
 lock.Visible = false
 lock.Parent = chip
+
+-- The shackle: a stroked circle whose lower half is covered by the body, leaving an arch.
+local shackle = Instance.new("Frame")
+shackle.Name = "Shackle"
+shackle.AnchorPoint = Vector2.new(0.5, 0)
+shackle.Position = UDim2.fromScale(0.5, 0)
+shackle.Size = UDim2.fromOffset(10, 11)
+shackle.BackgroundTransparency = 1
+shackle.Parent = lock
+
+local shackleCorner = Instance.new("UICorner")
+shackleCorner.CornerRadius = UDim.new(0.5, 0)
+shackleCorner.Parent = shackle
+
+local shackleStroke = Instance.new("UIStroke")
+shackleStroke.Thickness = 2
+shackleStroke.Color = Color3.fromHex("8A8F9A")
+shackleStroke.Parent = shackle
+
+local body = Instance.new("Frame")
+body.Name = "Body"
+body.AnchorPoint = Vector2.new(0.5, 1)
+body.Position = UDim2.fromScale(0.5, 1)
+body.Size = UDim2.fromOffset(14, 10)
+body.BackgroundColor3 = Color3.fromHex("8A8F9A")
+body.BorderSizePixel = 0
+body.Parent = lock
+
+local bodyCorner = Instance.new("UICorner")
+bodyCorner.CornerRadius = UDim.new(0, 2)
+bodyCorner.Parent = body
 
 return row:GetFullName() .. "  chipTemplate=" .. chip:GetFullName()
 ```
@@ -1395,8 +1447,8 @@ function SkinRowController.build(
 		chip.Name = palette.key
 		chip.Visible = true
 		chip.LayoutOrder = index
-		chip.BackgroundColor3 = palette.swatch
-		chip.BackgroundTransparency = locked and 0.65 or 0
+		chip.Swatch.BackgroundColor3 = palette.swatch
+		chip.Swatch.BackgroundTransparency = locked and 0.65 or 0
 		chip.Lock.Visible = locked
 		chip.Parent = row
 		chips[palette.key] = chip
