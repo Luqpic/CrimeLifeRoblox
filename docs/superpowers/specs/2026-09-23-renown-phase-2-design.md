@@ -127,14 +127,15 @@ figures are a starting point to play-test, not a balance claim.
 
 Four new palettes, keeping Phase 1's shape exactly — a `swatch` for the chip and a ramp of stops dark
 to light, applied by luminance. Chosen to be distinguishable from the existing eight (grey, near-black,
-tan, red, chartreuse, gold, purple, ice):
+tan, red, chartreuse, gold, purple, ice), each verified at least 60 apart in RGB space from every
+other swatch:
 
 | Key | Name | Price | Swatch |
 |---|---|---|---|
 | `Cobalt` | COBALT | 250 | `#1E3A8A` |
 | `Verdigris` | VERDIGRIS | 350 | `#2F7A6B` |
 | `Ember` | EMBER | 500 | `#C2410C` |
-| `Bone` | BONE | 750 | `#E8E0CC` |
+| `RoseGold` | ROSE GOLD | 750 | `#B76E79` |
 
 The catalogue grows from 8 chips to 12. The row already scrolls — canvas moves from 466 to 698 in the
 same 290px window — so no layout changes and nothing in the panel moves.
