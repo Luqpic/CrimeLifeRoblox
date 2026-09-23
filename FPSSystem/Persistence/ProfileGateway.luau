@@ -195,6 +195,30 @@ function ProfileGateway.migrate(data: { [string]: any }): boolean
 		changed = true
 	end
 
+	-- v2 -> v3: the per-weapon map reverts to one scalar for the whole player. Every weapon's own
+	-- balance in `spraypaint`, PLUS whatever sits in `spraypaintShared` (the v1 scalar's landing place
+	-- and the no-weapon-equipped level-up bucket), is summed into a single figure. Nobody's currency
+	-- changes, only its shape -- and `spraypaintShared` is retired outright: v3's template carries no
+	-- field for it, so this step is also what stops a stale copy surviving under the old meaning.
+	if data.version == 2 then
+		local total = if typeof(data.spraypaintShared) == "number" then data.spraypaintShared else 0
+		if typeof(data.spraypaint) == "table" then
+			for _, amount in data.spraypaint do
+				if typeof(amount) == "number" then
+					total += amount
+				end
+			end
+		elseif typeof(data.spraypaint) == "number" then
+			-- Not the shape v2 should ever be in, but a not-quite-clean v2 profile must still be
+			-- summed rather than silently dropped.
+			total += data.spraypaint
+		end
+		data.spraypaint = total
+		data.spraypaintShared = nil
+		data.version = 3
+		changed = true
+	end
+
 	for _, derived in Schema.DERIVED do
 		if data[derived] ~= nil then
 			data[derived] = nil
