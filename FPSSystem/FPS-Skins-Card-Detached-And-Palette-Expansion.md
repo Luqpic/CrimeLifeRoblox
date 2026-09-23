@@ -133,3 +133,46 @@ touched (`Palettes.luau`, `Palettes_Test.luau`, `WeaponaryShopController.luau`, 
 character-for-character against its repo mirror immediately after each edit. No drift found; the
 only drift-risk moment was the temporary diagnostic above, added, exercised, removed and re-diffed
 clean.
+
+---
+
+## Amendment: a priced chip now needs two clicks, not one
+
+Landed before this change log shipped, so the card described above is the card with this behaviour.
+
+The first implementation fired `BuySkinRequest` on a single click of an unowned Spraypaint chip. The
+reasoning given was that the fixed 240x580 card has no room for a confirm strip and the price is
+already printed on the chip, and that the Vip chip already prompts with no confirm step of its own.
+
+Both halves of that are true and the conclusion still does not hold. The Vip chip is not a
+counter-example: it opens Roblox's own Robux dialog, which IS the confirmation, and Roblox owns it.
+A Spraypaint chip had nothing equivalent. The old `DetailPanel` BuyStrip was a separate, deliberate
+confirm control, and this card retired it without replacing it -- so the revamp quietly removed a
+guard rather than deciding it was unnecessary.
+
+That was survivable when the top price was 250. This same round raised the curve to 4400, which is
+several hundred kills, and spending it needed one stray click on a scrolling grid of twenty chips
+with no undo anywhere in the system.
+
+**Now:** the first click PRIMES the chip -- accent stroke, and the price label reads `CONFIRM` -- and
+only a second click inside a 3 second window buys. Priming a different chip stands the first one
+down, and the primed state is cleared when the window lapses, when the card closes, when an owned
+chip is clicked to equip, and when the card is re-targeted at a different weapon. That last one
+matters on its own: without it the next click would buy against a weapon the player was no longer
+looking at when they primed it.
+
+The primed state deliberately reuses the accent stroke that marks the equipped chip. That is
+unambiguous rather than confusing, because only an UNOWNED chip can be primed and only an OWNED one
+can be equipped -- the two can never appear on the same chip at once -- and the word `CONFIRM` in
+place of the price is what separates them at a glance.
+
+Suite after the change: 146/146 across 12 suites, run in a real server VM through a temporary Script
+(added, read, removed, and the live source re-checksummed against the repo mirror: 18445 bytes, 480
+lines, both sides identical).
+
+**Still unverified, and it needs a person.** No screenshot of the finished card exists. This Studio
+session reports `ViewportSize` of 1,1 -- the window is collapsed -- so `screen_capture` hangs, input
+tools deliver nothing, and `RenderStepped` reports 0 FPS, which means the open/close tweens cannot
+advance and any `AbsolutePosition` reading is meaningless. Everything above is verified at the
+property level and by the suite. The card's actual appearance, the tween, and the two-click purchase
+as experienced by a hand on a mouse are all unconfirmed.

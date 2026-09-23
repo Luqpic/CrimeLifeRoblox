@@ -220,6 +220,65 @@ local function refreshLocks()
 	end
 end
 
+-- A priced chip is PRIMED on the first click and only bought on the second, within ARM_WINDOW.
+-- The old DetailPanel BuyStrip was a separate confirm control; this card replaced it, and without
+-- something in its place a single stray click spent the price outright with no undo. That was
+-- survivable at 250; the curve now reaches 4400, which is several hundred kills.
+--
+-- The primed state reuses the accent stroke the equipped ring uses, which is unambiguous here
+-- because only an UNOWNED chip can be primed and only an OWNED one can be equipped -- the two
+-- states can never appear on the same chip. The price label carrying the word CONFIRM is what
+-- tells them apart at a glance.
+local ARM_WINDOW = 3
+local armedPalette = nil
+local armedThread: thread? = nil
+
+local function disarm()
+	if armedThread then
+		task.cancel(armedThread)
+		armedThread = nil
+	end
+	local palette = armedPalette
+	armedPalette = nil
+	if not palette then
+		return
+	end
+	local chip = chips[palette.key]
+	if not chip then
+		return
+	end
+	local priceLabel = chip:FindFirstChild("PriceLabel")
+	if priceLabel and palette.price then
+		priceLabel.Text = tostring(palette.price)
+		priceLabel.TextColor3 = Color3.new(1, 1, 1)
+	end
+	local stroke = chip:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		TweenService:Create(stroke, STROKE_TWEEN, { Color = COLOR_CHIP_STROKE, Thickness = 1 }):Play()
+	end
+end
+
+local function arm(palette)
+	disarm() -- only ever one primed chip; priming a second stands the first down
+	local chip = chips[palette.key]
+	if not chip then
+		return
+	end
+	armedPalette = palette
+	local priceLabel = chip:FindFirstChild("PriceLabel")
+	if priceLabel then
+		priceLabel.Text = "CONFIRM"
+		priceLabel.TextColor3 = COLOR_ACCENT
+	end
+	local stroke = chip:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		TweenService:Create(stroke, STROKE_TWEEN, { Color = COLOR_ACCENT, Thickness = 2 }):Play()
+	end
+	-- Stands itself down rather than waiting indefinitely: a chip left primed across a whole
+	-- browsing session is the same accidental-purchase hazard one click later.
+	armedThread = task.delay(ARM_WINDOW, disarm)
+end
+
 for index, palette in Palettes.list do
 	local chip = Instance.new("TextButton")
 	chip.Name = palette.key
@@ -312,13 +371,20 @@ for index, palette in Palettes.list do
 		if not ownsPalette(palette) then
 			if palette.source == "Vip" then
 				-- MonetizationService already disables the prompt for an unconfigured pass id, so
-				-- this is safe to fire before the place is published.
+				-- this is safe to fire before the place is published. No priming needed: the
+				-- Robux prompt is itself a confirmation step, and Roblox owns that dialog.
+				disarm()
 				promptGamepass:FireServer("Vip")
-			else
+			elseif armedPalette == palette then
+				-- Second click on the primed chip: this is the purchase.
+				disarm()
 				buyRemote:FireServer(palette.key, currentWeaponName)
+			else
+				arm(palette)
 			end
 			return
 		end
+		disarm()
 		equipRemote:FireServer(currentWeaponName, palette.key)
 		if currentPreviewModel then
 			-- Guarded the same way every other cosmetics call site is: a failed skin must cost the
@@ -370,6 +436,9 @@ end
 function SkinsCardController.open(shopFrame: GuiObject, weaponName: string, previewModel: Instance?): () -> ()
 	currentWeaponName = weaponName
 	currentPreviewModel = previewModel
+	-- Re-targeting at another weapon must not carry a primed chip across: the player's next click
+	-- would then buy against a weapon they were no longer looking at when they primed it.
+	disarm()
 	refreshLocks()
 	repaint()
 
@@ -398,6 +467,7 @@ function SkinsCardController.close()
 	isCardOpen = false
 	currentWeaponName = nil
 	currentPreviewModel = nil
+	disarm()
 
 	local target = card.Position + UDim2.fromOffset(SLIDE_OFFSET, 0)
 	TweenService:Create(card, CLOSE_TWEEN, { Position = target }):Play()
