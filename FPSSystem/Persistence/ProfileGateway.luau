@@ -1,0 +1,132 @@
+-- The only module in this place that knows ProfileStore exists.
+--
+-- Services call waitFor/get and receive a plain table. That keeps ProfileStore swappable and keeps its
+-- API out of the seven services that hold progression state.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
+
+local ProfileStore = require(ServerStorage.ProfileStore)
+local Schema = require(ReplicatedStorage.Persistence.Schema)
+
+local STORE_NAME = "PlayerProfiles"
+local LOAD_ATTEMPTS = 3
+local RETRY_DELAY = 2
+
+local KICK_MESSAGE =
+	"Your saved data could not be loaded, so nothing has been changed. Please rejoin in a moment."
+
+local ProfileGateway = {}
+
+local store = ProfileStore.New(STORE_NAME, Schema.template)
+local profiles: { [any]: any } = {}
+local forcedFailure = false
+
+-- Tests point the gateway at ProfileStore's fake DataStore, which is forgotten at shutdown. Without
+-- this every test run would write to the same live keys as players.
+function ProfileGateway.useMockStore()
+	store = ProfileStore.New(STORE_NAME, Schema.template).Mock
+end
+
+-- Test seam only: makes the next load behave as a contended session would.
+function ProfileGateway._forceNextLoadFailure(active: boolean)
+	forcedFailure = active
+end
+
+function ProfileGateway.keyFor(userId: number): string
+	return "player_" .. userId
+end
+
+-- Loads one key, retrying a contended session a few times. Returns nil when it cannot be had.
+--
+-- `cancel` lets a load abandon itself when the player it was for has already left, so a departing
+-- player does not hold a session open while the server retries on their behalf.
+function ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): any?
+	for attempt = 1, LOAD_ATTEMPTS do
+		if cancel and cancel() then
+			return nil
+		end
+		local profile = if forcedFailure then nil else store:StartSessionAsync(key, { Cancel = cancel })
+		if profile then
+			profile:Reconcile()
+			if profile.Data.version == nil then
+				profile.Data.version = Schema.VERSION
+			end
+			return profile
+		end
+		if attempt < LOAD_ATTEMPTS then
+			task.wait(RETRY_DELAY)
+		end
+	end
+	return nil
+end
+
+function ProfileGateway.get(player: any): any?
+	return profiles[player]
+end
+
+function ProfileGateway.isLoaded(player: any): boolean
+	return profiles[player] ~= nil
+end
+
+-- Yields until the player's profile is available. Returns nil if they left or the load failed, and
+-- callers must treat nil as "do not persist anything for this player" rather than as "start fresh".
+function ProfileGateway.waitFor(player: Player): any?
+	while player.Parent == Players and profiles[player] == nil do
+		task.wait(0.1)
+	end
+	return profiles[player]
+end
+
+local function onPlayerAdded(player: Player)
+	local profile = ProfileGateway.loadForKey(
+		ProfileGateway.keyFor(player.UserId),
+		function()
+			return player.Parent ~= Players
+		end
+	)
+
+	if profile == nil then
+		-- Nothing was written and nothing will be. Kicking is the honest outcome: a session that
+		-- cannot save looks identical to one that can until the moment the player logs off.
+		if player.Parent == Players then
+			player:Kick(KICK_MESSAGE)
+		end
+		return
+	end
+
+	profile:AddUserId(player.UserId)
+
+	profile.OnSessionEnd:Connect(function()
+		profiles[player] = nil
+		-- The session can end without the player leaving -- another server stealing it, or a
+		-- shutdown. Continuing to play against a profile that no longer saves is the same silent
+		-- data loss this phase exists to prevent.
+		if player.Parent == Players then
+			player:Kick(KICK_MESSAGE)
+		end
+	end)
+
+	if player.Parent ~= Players then
+		profile:EndSession()
+		return
+	end
+
+	profiles[player] = profile
+end
+
+function ProfileGateway.start()
+	for _, player in Players:GetPlayers() do
+		task.spawn(onPlayerAdded, player)
+	end
+	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		local profile = profiles[player]
+		profiles[player] = nil
+		if profile then
+			profile:EndSession()
+		end
+	end)
+end
+
+return ProfileGateway
