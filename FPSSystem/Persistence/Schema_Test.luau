@@ -12,14 +12,14 @@ return function(t)
 	end)
 
 	t.test("the template carries every field the spec names", function()
-		for _, field in { "spraypaint", "skinsOwned", "equippedSkin", "cash", "level", "xp",
+		for _, field in { "spraypaint", "spraypaintShared", "skinsOwned", "equippedSkin", "cash", "level", "xp",
 		                  "kills", "weaponsOwned", "weaponUpgrades", "loadout" } do
 			expect.truthy(Schema.template[field] ~= nil)
 		end
 	end)
 
 	t.test("scalar defaults are sane for a brand new player", function()
-		expect.equal(Schema.template.spraypaint, 0)
+		expect.equal(Schema.template.spraypaintShared, 0)
 		-- Cash is the one non-zero starting balance: CashService.STARTING_CASH reads this value
 		-- directly (fix round 1), so a new player actually receives it rather than an empty wallet.
 		-- Pinned to the literal 500, not read back from the template and compared to itself, so this
@@ -33,7 +33,7 @@ return function(t)
 		-- A shared table in a template is how one player's progress leaks into another's: every
 		-- profile would reference the same table. ProfileStore deep-copies, but the template itself
 		-- must still start empty or a new player inherits whatever was written last.
-		for _, field in { "skinsOwned", "equippedSkin", "kills", "weaponsOwned", "weaponUpgrades", "loadout" } do
+		for _, field in { "spraypaint", "skinsOwned", "equippedSkin", "kills", "weaponsOwned", "weaponUpgrades", "loadout" } do
 			expect.equal(typeof(Schema.template[field]), "table")
 			expect.equal(next(Schema.template[field]), nil)
 		end

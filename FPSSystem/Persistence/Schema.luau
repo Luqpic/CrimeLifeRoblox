@@ -7,10 +7,17 @@ local Schema = {}
 -- Bumped when a field's MEANING changes, which makes that change a migration rather than a silent
 -- misreading of old data. Adding a field needs no bump: ProfileStore's Reconcile fills it from the
 -- template.
-Schema.VERSION = 1
+Schema.VERSION = 2
 
 Schema.template = {
-	spraypaint = 0,
+	-- v2: one balance PER WEAPON rather than one scalar for the whole player -- kills and level-ups
+	-- credit the weapon that earned them. [weaponName] = number. See ProfileGateway.migrate for how a
+	-- v1 profile's old scalar comes across.
+	spraypaint = {},
+	-- The v1 scalar's landing place after migration: a single figure any weapon may draw on once its
+	-- OWN balance in `spraypaint` above is exhausted. Grandfathering, not a second currency -- nothing
+	-- in normal play grants this except the level-up award when no weapon is equipped to credit.
+	spraypaintShared = 0,
 	skinsOwned = {},      -- [paletteKey] = true
 	equippedSkin = {},    -- [weaponName] = paletteKey
 	-- New-player starting balance -- not a placeholder zero. CashService.STARTING_CASH reads this

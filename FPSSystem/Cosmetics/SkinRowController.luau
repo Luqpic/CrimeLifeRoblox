@@ -185,8 +185,13 @@ function SkinRowController.build(
 		-- would leave the button reading "NOT ENOUGH" while the click handler's own live re-read below
 		-- would have allowed the purchase. Registered in buyConnections so hideBuyStrip tears this
 		-- down with everything else.
+		--
+		-- Affordability is THIS weapon's own balance plus the shared bucket it falls back to -- the
+		-- same total SpraypaintService.spend actually draws from, so this control can never show
+		-- affordable when the server would refuse, or the reverse.
 		local function refreshAffordability()
-			local affordable = (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) >= price
+			local affordable = ((player:GetAttribute(SpraypaintConstants.balanceAttributeFor(weaponName)) or 0)
+				+ (player:GetAttribute(SpraypaintConstants.SHARED_ATTRIBUTE) or 0)) >= price
 			-- The badge is part of the same price element as the text, so it follows the text's colour
 			-- rather than getting its own affordability check -- an unaffordable row with a stale accent
 			-- badge would read as half-styled.
@@ -202,13 +207,17 @@ function SkinRowController.build(
 		end
 		refreshAffordability()
 		table.insert(buyConnections,
-			player:GetAttributeChangedSignal(SpraypaintConstants.ATTRIBUTE):Connect(refreshAffordability))
+			player:GetAttributeChangedSignal(SpraypaintConstants.balanceAttributeFor(weaponName)):Connect(refreshAffordability))
+		table.insert(buyConnections,
+			player:GetAttributeChangedSignal(SpraypaintConstants.SHARED_ATTRIBUTE):Connect(refreshAffordability))
 
 		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
 			-- Re-read the balance at click time rather than trusting what it was when the strip
 			-- opened: Spraypaint can arrive from a kill while the strip is on screen, and the server
 			-- re-checks anyway, so this only avoids firing a request that is certain to be refused.
-			if (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) < price then
+			local available = (player:GetAttribute(SpraypaintConstants.balanceAttributeFor(weaponName)) or 0)
+				+ (player:GetAttribute(SpraypaintConstants.SHARED_ATTRIBUTE) or 0)
+			if available < price then
 				return
 			end
 			buyRemote:FireServer(palette.key, weaponName)

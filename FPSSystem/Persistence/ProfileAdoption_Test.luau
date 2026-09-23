@@ -38,6 +38,11 @@ return function(t)
 		end
 	end
 
+	-- A REAL weapon name: handleBuyRequest now validates the charged weapon has a backing Tool
+	-- template under ServerStorage.Weapons. grant/spend/hydrate do not, so this is only required at
+	-- the buy call sites below -- kept as one constant so every buy test names the same weapon.
+	local REAL_WEAPON = "Crowbar"
+
 	t.test("mirror hands the callback the profile itself, so a write only counts through profile.Data", function()
 		-- The contract every adoption in this phase is built on, and the one that was misread. `apply`
 		-- receives the PROFILE; a write to the argument's own top level lands on the ProfileStore profile
@@ -60,45 +65,46 @@ return function(t)
 
 		expect.equal(received, profile)
 		expect.equal(profile.Data.cash, 4242)
-		expect.equal(profile.Data.spraypaint, 0) -- the top-level write did NOT reach the saved table
+		expect.equal(next(profile.Data.spraypaint), nil) -- the top-level write did NOT reach the saved table
 
 		Gateway._unbind(player)
 		profile:EndSession()
 	end)
 
-	t.test("granting Spraypaint mirrors the new balance into the profile", function()
+	t.test("granting Spraypaint mirrors the new balance into the named weapon", function()
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-grant-" .. os.clock())
 		Gateway._bind(player, profile)
 
-		SpraypaintService.grant(player, 12, "test")
-		expect.equal(profile.Data.spraypaint, 12)
+		SpraypaintService.grant(player, REAL_WEAPON, 12, "test")
+		expect.equal(profile.Data.spraypaint[REAL_WEAPON], 12)
 
 		Gateway._unbind(player)
 		profile:EndSession()
 	end)
 
-	t.test("spending Spraypaint mirrors the deduction", function()
+	t.test("spending Spraypaint mirrors the deduction on the named weapon", function()
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-spend-" .. os.clock())
 		Gateway._bind(player, profile)
 
-		SpraypaintService.grant(player, 100, "test")
-		SpraypaintService.spend(player, 40)
-		expect.equal(profile.Data.spraypaint, 60)
+		SpraypaintService.grant(player, REAL_WEAPON, 100, "test")
+		SpraypaintService.spend(player, REAL_WEAPON, 40)
+		expect.equal(profile.Data.spraypaint[REAL_WEAPON], 60)
 
 		Gateway._unbind(player)
 		profile:EndSession()
 	end)
 
-	t.test("buying a skin mirrors ownership", function()
+	t.test("buying a skin mirrors ownership and charges the named weapon", function()
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-buy-" .. os.clock())
 		Gateway._bind(player, profile)
 
-		SpraypaintService.grant(player, 1000, "test")
-		expect.truthy(SpraypaintService.handleBuyRequest(player, "Cobalt"))
+		SpraypaintService.grant(player, REAL_WEAPON, 1000, "test")
+		expect.truthy(SpraypaintService.handleBuyRequest(player, "Cobalt", REAL_WEAPON))
 		expect.equal(profile.Data.skinsOwned.Cobalt, true)
+		expect.equal(profile.Data.spraypaint[REAL_WEAPON], 1000 - Palettes.priceOf("Cobalt"))
 
 		Gateway._unbind(player)
 		profile:EndSession()
@@ -113,13 +119,13 @@ return function(t)
 		-- all, so it could not tell a correct guard from a broken one that merely did not throw.
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-noprofile-" .. os.clock())
-		profile.Data.spraypaint = 42
+		profile.Data.spraypaint[REAL_WEAPON] = 42
 		Gateway._bind(player, profile)
 		Gateway._unbind(player)
 
-		expect.truthy(pcall(function() SpraypaintService.grant(player, 5, "test") end))
-		expect.equal(SpraypaintService.balanceOf(player), 5)
-		expect.equal(profile.Data.spraypaint, 42)
+		expect.truthy(pcall(function() SpraypaintService.grant(player, REAL_WEAPON, 5, "test") end))
+		expect.equal(SpraypaintService.balanceOf(player, REAL_WEAPON), 5)
+		expect.equal(profile.Data.spraypaint[REAL_WEAPON], 42)
 
 		profile:EndSession()
 	end)
@@ -131,11 +137,11 @@ return function(t)
 		local profile = Gateway.loadForKey("adopt-buy-equip-" .. os.clock())
 		Gateway._bind(player, profile)
 
-		SpraypaintService.grant(player, 1000, "test")
-		SpraypaintService.handleBuySkinRequest(player, "Cobalt", "Crowbar")
+		SpraypaintService.grant(player, REAL_WEAPON, 1000, "test")
+		SpraypaintService.handleBuySkinRequest(player, "Cobalt", REAL_WEAPON)
 
 		expect.equal(profile.Data.skinsOwned.Cobalt, true)
-		expect.equal(profile.Data.equippedSkin.Crowbar, "Cobalt")
+		expect.equal(profile.Data.equippedSkin[REAL_WEAPON], "Cobalt")
 
 		Gateway._unbind(player)
 		profile:EndSession()
@@ -173,13 +179,13 @@ return function(t)
 		-- registered at require time above) and fires mid-loop, exactly the window the bug lived in.
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-race-" .. os.clock())
-		profile.Data.spraypaint = 777 -- the real persisted balance
+		profile.Data.spraypaint[REAL_WEAPON] = 777 -- the real persisted balance
 
 		local getDuringHydration = "not set"
 		Gateway.registerHydrator(function(p, _profile)
 			if p == player then
 				getDuringHydration = Gateway.get(player)
-				SpraypaintService.grant(player, 5, "race-probe")
+				SpraypaintService.grant(player, REAL_WEAPON, 5, "race-probe")
 			end
 		end)
 
@@ -187,21 +193,25 @@ return function(t)
 		Gateway._bind(player, profile)
 
 		expect.equal(getDuringHydration, nil)
-		expect.equal(profile.Data.spraypaint, 777)
+		expect.equal(profile.Data.spraypaint[REAL_WEAPON], 777)
 
 		Gateway._unbind(player)
 		profile:EndSession()
 	end)
 
-	t.test("hydrating restores a balance and owned skins onto the attributes", function()
+	t.test("hydrating restores every weapon's balance, the shared bucket and owned skins onto the attributes", function()
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-hydrate-" .. os.clock())
-		profile.Data.spraypaint = 321
+		profile.Data.spraypaint[REAL_WEAPON] = 321
+		profile.Data.spraypaint.AK47 = 9
+		profile.Data.spraypaintShared = 44
 		profile.Data.skinsOwned.Ember = true
 		Gateway._bind(player, profile)
 
 		SpraypaintService.hydrate(player)
-		expect.equal(player:GetAttribute(SpraypaintConstants.ATTRIBUTE), 321)
+		expect.equal(player:GetAttribute(SpraypaintConstants.balanceAttributeFor(REAL_WEAPON)), 321)
+		expect.equal(player:GetAttribute(SpraypaintConstants.balanceAttributeFor("AK47")), 9)
+		expect.equal(player:GetAttribute(SpraypaintConstants.SHARED_ATTRIBUTE), 44)
 		expect.equal(player:GetAttribute(SpraypaintConstants.ownedAttributeFor("Ember")), true)
 
 		Gateway._unbind(player)
@@ -249,7 +259,10 @@ return function(t)
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-lastlevel-" .. os.clock())
 		profile.Data.level = 12
-		profile.Data.spraypaint = 40
+		-- standIn() carries no Character, so a level-up (were it wrongly paid here) would land in the
+		-- shared bucket -- see onLevelChanged's equipped-vs-shared split, verified for the equipped case
+		-- in "a level-up credits the weapon currently in hand" below.
+		profile.Data.spraypaintShared = 40
 
 		Gateway.registerHydrator(function(p, prof)
 			if p == player then
@@ -271,9 +284,38 @@ return function(t)
 		SpraypaintService.onLevelChanged(player)
 
 		expect.equal(player:GetAttribute("Level"), 12) -- the restore really happened
-		expect.equal(SpraypaintService.balanceOf(player), 40) -- not 40 + 275
-		expect.equal(profile.Data.spraypaint, 40) -- and nothing inflated was mirrored back
+		expect.equal(SpraypaintService.sharedBalanceOf(player), 40) -- not 40 + 275
+		expect.equal(profile.Data.spraypaintShared, 40) -- and nothing inflated was mirrored back
 
+		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
+	t.test("a level-up credits the weapon currently in the player's hand, not the shared bucket", function()
+		-- The design's other half: not-weapon-specific by nature, but credited to whatever is
+		-- equipped at the moment of the level-up. A distinctive tool name (not one already used
+		-- elsewhere in this file) rules out a handler that credits a hardcoded weapon.
+		local player = standIn()
+		local character = Instance.new("Model")
+		local tool = Instance.new("Tool")
+		tool.Name = "PlasmaRifle"
+		tool.Parent = character
+		player.Character = character
+
+		local profile = Gateway.loadForKey("adopt-levelup-equipped-" .. os.clock())
+		Gateway._bind(player, profile)
+
+		player:SetAttribute("Level", 1)
+		SpraypaintService.onLevelChanged(player) -- seeds the baseline, pays nothing
+		player:SetAttribute("Level", 2) -- one level gained
+
+		SpraypaintService.onLevelChanged(player)
+
+		expect.equal(SpraypaintService.balanceOf(player, "PlasmaRifle"), SpraypaintConstants.LEVEL_SPRAYPAINT)
+		expect.equal(SpraypaintService.sharedBalanceOf(player), 0)
+		expect.equal(profile.Data.spraypaint.PlasmaRifle, SpraypaintConstants.LEVEL_SPRAYPAINT)
+
+		character:Destroy()
 		Gateway._unbind(player)
 		profile:EndSession()
 	end)
@@ -331,7 +373,7 @@ return function(t)
 		-- load failed, and they are being kicked with nothing saving.
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-unbound-levelup-" .. os.clock())
-		profile.Data.spraypaint = 55
+		profile.Data.spraypaintShared = 55
 
 		SpraypaintService.hydrate(player, profile) -- restored balance, deliberately still UNBOUND
 		player:SetAttribute("Level", 1)
@@ -339,13 +381,13 @@ return function(t)
 		player:SetAttribute("Level", 12)
 		SpraypaintService.onLevelChanged(player) -- an eleven-level rise, while unbound
 
-		expect.equal(SpraypaintService.balanceOf(player), 55) -- not 55 + 275
-		expect.equal(profile.Data.spraypaint, 55)
+		expect.equal(SpraypaintService.sharedBalanceOf(player), 55) -- not 55 + 275
+		expect.equal(profile.Data.spraypaintShared, 55)
 
 		-- And the baseline moved anyway, so the bind does not then pay for the same rise a moment later.
 		Gateway._bind(player, profile)
 		SpraypaintService.onLevelChanged(player)
-		expect.equal(SpraypaintService.balanceOf(player), 55)
+		expect.equal(SpraypaintService.sharedBalanceOf(player), 55)
 
 		Gateway._unbind(player)
 		profile:EndSession()
@@ -359,7 +401,7 @@ return function(t)
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-late-composes-" .. os.clock())
 		profile.Data.level = 12
-		profile.Data.spraypaint = 60
+		profile.Data.spraypaintShared = 60
 
 		-- What safePlayerAdded records at join, before the load resolves: the pre-restore default.
 		player:SetAttribute("Level", 1)
@@ -389,8 +431,8 @@ return function(t)
 
 		expect.equal(levelSeenByPostHydrator, 12) -- the mechanism
 		SpraypaintService.onLevelChanged(player) -- the signal that SetAttribute fires
-		expect.equal(SpraypaintService.balanceOf(player), 60) -- the consequence: not 60 + 275
-		expect.equal(profile.Data.spraypaint, 60)
+		expect.equal(SpraypaintService.sharedBalanceOf(player), 60) -- the consequence: not 60 + 275
+		expect.equal(profile.Data.spraypaintShared, 60)
 
 		Gateway._unbind(player)
 		profile:EndSession()

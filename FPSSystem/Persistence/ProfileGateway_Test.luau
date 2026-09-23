@@ -13,7 +13,12 @@ return function(t)
 	t.test("a fresh key loads a profile matching the template", function()
 		local profile = Gateway.loadForKey("test-fresh-" .. os.clock())
 		expect.truthy(profile ~= nil)
-		expect.equal(profile.Data.spraypaint, Schema.template.spraypaint)
+		-- Not a reference-equality check against Schema.template.spraypaint: Reconcile deep-copies the
+		-- template into a NEW table per profile, and migrate hands back a NEW {} again on the v1->v2
+		-- step every fresh profile passes through -- two distinct empty tables are never `==` in Luau.
+		expect.equal(typeof(profile.Data.spraypaint), "table")
+		expect.equal(next(profile.Data.spraypaint), nil)
+		expect.equal(profile.Data.spraypaintShared, Schema.template.spraypaintShared)
 		expect.equal(profile.Data.cash, Schema.template.cash)
 		expect.equal(profile.Data.level, Schema.template.level)
 		profile:EndSession()
@@ -22,12 +27,14 @@ return function(t)
 	t.test("a profile round-trips what was written to it", function()
 		local key = "test-roundtrip-" .. os.clock()
 		local first = Gateway.loadForKey(key)
-		first.Data.spraypaint = 137
+		first.Data.spraypaint.AK47 = 137
+		first.Data.spraypaintShared = 12
 		first.Data.skinsOwned.Cobalt = true
 		first:EndSession()
 
 		local second = Gateway.loadForKey(key)
-		expect.equal(second.Data.spraypaint, 137)
+		expect.equal(second.Data.spraypaint.AK47, 137)
+		expect.equal(second.Data.spraypaintShared, 12)
 		expect.equal(second.Data.skinsOwned.Cobalt, true)
 		second:EndSession()
 	end)
@@ -36,13 +43,13 @@ return function(t)
 		-- Adding a field must not require a version bump; this is what makes that true.
 		local key = "test-reconcile-" .. os.clock()
 		local first = Gateway.loadForKey(key)
-		first.Data.spraypaint = 5
+		first.Data.level = 5
 		first.Data.cash = nil -- simulate a profile written before `cash` existed
 		first:EndSession()
 
 		local second = Gateway.loadForKey(key)
 		expect.equal(second.Data.cash, Schema.template.cash)
-		expect.equal(second.Data.spraypaint, 5)
+		expect.equal(second.Data.level, 5)
 		second:EndSession()
 	end)
 
@@ -85,7 +92,8 @@ return function(t)
 
 	t.test("a v0 profile migrates to the current version without losing fields", function()
 		-- v0 is any profile written before the version field existed. It must gain the version and
-		-- keep everything it already had.
+		-- keep everything it already had -- including its old scalar Spraypaint balance, which the
+		-- v1->v2 step below carries into the shared bucket rather than dropping.
 		local key = "migrate-v0-" .. os.clock()
 		local first = Gateway.loadForKey(key)
 		first.Data.version = nil
@@ -95,7 +103,8 @@ return function(t)
 
 		local second = Gateway.loadForKey(key)
 		expect.equal(second.Data.version, Schema.VERSION)
-		expect.equal(second.Data.spraypaint, 77)
+		expect.equal(second.Data.spraypaintShared, 77)
+		expect.equal(next(second.Data.spraypaint), nil)
 		expect.equal(second.Data.cash, 123)
 		second:EndSession()
 	end)
@@ -105,8 +114,43 @@ return function(t)
 		-- returns false when handed already-clean data, which a completely inert migrate would too.
 		local data = { spraypaint = 5, NextLevelXP = 999 }
 		Gateway.migrate(data)
+		-- Mutation check: a migrate that re-ran the v1->v2 step on an already-v2 profile would double
+		-- the shared bucket on every subsequent load. Asserting the exact value, not merely that
+		-- `changed` came back falsy, is what catches that -- an idempotent-in-name-only migrate that
+		-- quietly doubled spraypaintShared every call would still pass a bare falsy check.
 		expect.falsy(Gateway.migrate(data))
-		expect.equal(data.spraypaint, 5)
+		expect.equal(data.spraypaintShared, 5)
+		expect.equal(next(data.spraypaint), nil)
+	end)
+
+	t.test("a v1 profile (version already stamped) migrates its scalar into the shared bucket", function()
+		-- The literal case the design names: version explicitly 1 -- every profile that has loaded
+		-- under the live v1 code, which is every real profile today -- not merely the theoretical
+		-- no-version v0 case above.
+		local data = { version = 1, spraypaint = 42 }
+		expect.truthy(Gateway.migrate(data))
+		expect.equal(data.version, 2)
+		expect.equal(data.spraypaintShared, 42)
+		expect.equal(typeof(data.spraypaint), "table")
+		expect.equal(next(data.spraypaint), nil)
+	end)
+
+	t.test("a v1 profile that never earned Spraypaint migrates to an empty map and a zero shared bucket", function()
+		-- No `spraypaint` field at all must not migrate to a shared balance out of nothing.
+		local data = { version = 1 }
+		Gateway.migrate(data)
+		expect.equal(data.spraypaintShared, 0)
+		expect.equal(next(data.spraypaint), nil)
+	end)
+
+	t.test("a v1 migration adds to an existing spraypaintShared rather than overwriting it", function()
+		-- Reconcile runs before migrate and fills spraypaintShared from the template (0) on every real
+		-- v1 profile, since the field is new in v2. Adding, rather than assuming zero, is what stops a
+		-- migration step that somehow ran twice from silently dropping a balance instead of merely
+		-- double-counting it.
+		local data = { version = 1, spraypaint = 10, spraypaintShared = 5 }
+		Gateway.migrate(data)
+		expect.equal(data.spraypaintShared, 15)
 	end)
 
 	t.test("a derived field found in stored data is stripped", function()
@@ -133,7 +177,8 @@ return function(t)
 		Gateway.migrate(data)
 		expect.equal(data.version, Schema.VERSION)
 		expect.equal(data.NextLevelXP, nil)
-		expect.equal(data.spraypaint, 9)
+		expect.equal(data.spraypaintShared, 9)
+		expect.equal(next(data.spraypaint), nil)
 	end)
 
 	t.test("migrate refuses to silently accept a version with no migration step", function()

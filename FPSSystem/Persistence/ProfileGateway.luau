@@ -173,8 +173,25 @@ end
 function ProfileGateway.migrate(data: { [string]: any }): boolean
 	local changed = false
 
+	-- No version field at all is a profile from before version tracking existed, which is the same
+	-- SHAPE the first tracked version (v1) had -- including the old scalar `spraypaint` the step below
+	-- knows how to move. Stamping it 1 here, rather than straight to Schema.VERSION, is what lets that
+	-- step see it and run instead of skipping a genuinely old profile's field migration.
 	if data.version == nil then
-		data.version = Schema.VERSION
+		data.version = 1
+		changed = true
+	end
+
+	-- v1 -> v2: spraypaint changed shape from one scalar for the whole player to one balance PER
+	-- WEAPON. The old scalar becomes the shared bucket every weapon may draw on once its own balance
+	-- is gone -- moved whole, never split or dropped, and added to (rather than overwriting) whatever
+	-- Reconcile already filled into spraypaintShared from the template.
+	if data.version == 1 then
+		local oldScalar = data.spraypaint
+		local carriedShared = if typeof(data.spraypaintShared) == "number" then data.spraypaintShared else 0
+		data.spraypaintShared = carriedShared + (if typeof(oldScalar) == "number" then oldScalar else 0)
+		data.spraypaint = {}
+		data.version = 2
 		changed = true
 	end
 
