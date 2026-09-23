@@ -136,7 +136,7 @@ new networking. No remote is added for something an attribute already replicates
 
 - Ownership reuses `Monetization.Constants.ownedAttributeFor`; `Vip` gates a subset of palettes and
   the remainder are free in Phase 1. Which palettes fall either side is a plan-level content choice.
-  Renown gating is Phase 2.
+  Spraypaint gating is Phase 2.
 - `EquipSkinRequest` is server-authoritative: the server validates ownership before stamping `SkinId`,
   so a forged request naming an unowned skin is refused.
 - The equipped skin per weapon lives in a player attribute, republished the way `LoadoutSlot` already
@@ -185,13 +185,13 @@ cite a before and after is not finished.
 
 - **Phase 1 (this document).** Palettes, applier, both application points, the skins row, Vip gating,
   session persistence via attributes. Stop and report measurements before Phase 2 begins.
-- **Phase 2.** Renown currency and its earn path, a session-locked profile store, developer products.
+- **Phase 2.** Spraypaint currency and its earn path, a session-locked profile store, developer products.
 - **Phase 3.** Crates. Optional, highest reputational risk, may never be worth it.
 
 ## Non-goals for Phase 1
 
 - No texture skins. No art pipeline is required to prove the application path.
-- No Renown, no DataStore, no seasons, no trading, no gacha.
+- No Spraypaint, no DataStore, no seasons, no trading, no gacha.
 - No geometry-swapping skins, ever.
 - Robbery System is not touched.
 - No new purchase plumbing: the existing Monetization service is reused as-is.

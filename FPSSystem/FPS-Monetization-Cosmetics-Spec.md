@@ -1,4 +1,4 @@
-# Spec: Cosmetics Monetisation — Skins, Renown, and the Booster Pass
+# Spec: Cosmetics Monetisation — Skins, Spraypaint, and the Booster Pass
 
 **Date:** 2026-09-22
 **Status:** **SPEC — nothing implemented.** No Studio instance was read while writing this; Studio was
@@ -44,7 +44,7 @@ an advertising slot the game already renders and already pays the performance co
 The design below therefore does three things, in priority order:
 
 1. **Make cosmetics exist** and be visible in first person, third person, and on the surfaces above.
-2. **Make them earnable by playing** (a soft currency, Renown), so the catalogue has perceived value
+2. **Make them earnable by playing** (a soft currency, Spraypaint), so the catalogue has perceived value
    and free players are participants rather than spectators.
 3. **Sell the time-skip and the premium tier** for Robux — never the power.
 
@@ -63,21 +63,21 @@ Three currencies, with a hard wall between two of them.
 | Currency | Earned by | Spends on | Robux can buy it? |
 |---|---|---|---|
 | **Cash** (exists) | Enemy kills, cash drops | Weapons, damage upgrades | **No. Never.** |
-| **Renown** (new) | Kills, same `Eliminated` signal Cash uses | Cosmetics only | No (see note) |
+| **Spraypaint** (new) | Kills, same `Eliminated` signal Cash uses | Cosmetics only | No (see note) |
 | **Robux** | Real money | Premium skins, bundles, Booster pass | — |
 
-**The wall:** Cash buys power. Renown buys appearance. They are separate balances, and no code path
+**The wall:** Cash buys power. Spraypaint buys appearance. They are separate balances, and no code path
 converts one into the other in either direction. This is the whole non-pay-to-win guarantee, and it is
-one line of policy that the implementation must never violate: **there is no Cash↔Renown exchange, and
+one line of policy that the implementation must never violate: **there is no Cash↔Spraypaint exchange, and
 no Robux→Cash product.** The moment a "500 Cash for 99 Robux" product exists, the game is pay-to-win,
 because Cash buys the damage upgrades in `UpgradeConfig`.
 
-**Note on Renown and Robux:** Renown is deliberately *not* sold directly for Robux either, even though
+**Note on Spraypaint and Robux:** Spraypaint is deliberately *not* sold directly for Robux either, even though
 it only buys cosmetics. Selling the currency invites a treadmill design. Instead Robux buys *the
-items* directly, and buys the *Booster* that doubles Renown earn rate. This keeps the catalogue
+items* directly, and buys the *Booster* that doubles Spraypaint earn rate. This keeps the catalogue
 legible — a player always knows what they are getting for their money.
 
-### Why the XP multiplier boosts Renown and not combat level
+### Why the XP multiplier boosts Spraypaint and not combat level
 
 The original idea was a 2× XP game pass. `FPS-Kill-Leveling-System.md` records that every level-up
 grants **a small max-health bonus** plus a cash bonus. A pass that accelerates that curve is therefore
@@ -85,7 +85,7 @@ selling faster access to more health and more cash — mild, but it is pay-for-p
 exactly the thing that gets a game called pay-to-win in its own comments section.
 
 So: **combat level XP is never boosted.** Everyone levels at the same rate. The Booster multiplies
-**Renown only**, which buys appearance only. The convenience boost survives intact, the accusation
+**Spraypaint only**, which buys appearance only. The convenience boost survives intact, the accusation
 does not.
 
 This also creates the progression track a season pass would later hang off, without building seasons
@@ -117,7 +117,7 @@ Stated precisely, so it can be checked rather than believed:
    stacked incrementally (`FPS-Weapon-Stat-Billboard-And-Cash-Upgrade-System.md`). Cosmetics are not
    an input to that computation and adding one would require changing that function's signature —
    i.e. it cannot happen by accident.
-4. Renown cannot be spent on anything in `ServerStorage.Weapons` or `Weapons.UpgradeConfig`.
+4. Spraypaint cannot be spent on anything in `ServerStorage.Weapons` or `Weapons.UpgradeConfig`.
 
 **Acceptance test for the guarantee:** `grep -r "Cosmetics" ` over the server weapon/blaster scripts
 returns nothing outside the cosmetics services themselves. If it ever returns a hit inside
@@ -134,7 +134,7 @@ less this depends on place-local persistence before that merge, the better.
 | Phase | Ships | Needs persistence? | Revenue |
 |---|---|---|---|
 | **1** | Booster game pass + 4–6 flagship skin **game passes**, skin rendering, all four display surfaces | **No** — Roblox itself remembers game pass ownership, permanently, across places and rejoins | Live |
-| **2** | Renown currency, the earnable catalogue, `PlayerProfile` save module, developer products | Yes | Recurring |
+| **2** | Spraypaint currency, the earnable catalogue, `PlayerProfile` save module, developer products | Yes | Recurring |
 | **3** (optional) | Crates / gacha, seasonal rotation | Yes | Highest, highest risk |
 
 Phase 1 is the whole point of the phasing. `MarketplaceService:UserOwnsGamePassAsync` is authoritative
@@ -165,7 +165,7 @@ This is not stylistic. Three things in the archive break if it is violated:
 ### The two skin classes
 
 **Tint skins** — a map of `partName → Color3`. Zero texture memory, zero art pipeline, authored in
-seconds. This is the Renown-earnable tier and it lets the catalogue launch with real breadth on day
+seconds. This is the Spraypaint-earnable tier and it lets the catalogue launch with real breadth on day
 one without commissioning anything.
 
 **Texture skins** — a map of `partName → SurfaceAppearance` (ColorMap / NormalMap / RoughnessMap /
@@ -221,8 +221,8 @@ Cosmetics/                                  (new)
   SkinApplier           ModuleScript  — apply/remove, shared by server and client. ONE implementation.
   Remotes/
     EquipSkinRequest    RemoteEvent   — client asks to equip; server validates and decides
-    PurchaseSkinRequest RemoteEvent   — client asks to buy with Renown
-    RenownChanged       RemoteEvent   — server pushes balance changes to the owner
+    PurchaseSkinRequest RemoteEvent   — client asks to buy with Spraypaint
+    SpraypaintChanged       RemoteEvent   — server pushes balance changes to the owner
   Skins/                              — the actual appearance assets
     <SkinId>/           Folder        — SurfaceAppearance instances named for their target part
 ```
@@ -242,7 +242,7 @@ GuiTemplates/
 
 ```
 Cosmetics/Scripts/
-  RenownService         — listens to the existing Eliminated signal; grants Renown; applies Booster
+  SpraypaintService         — listens to the existing Eliminated signal; grants Spraypaint; applies Booster
   CosmeticsService      — ownership record, equip validation, applies skins to spawned weapons
   MonetisationService   — the ONLY script that talks to MarketplaceService. ProcessReceipt lives here.
 ```
@@ -269,7 +269,7 @@ Everything else is a small edit to an existing script, listed per phase below.
   tier     = "Premium",            -- Common | Rare | Premium | Exclusive
   class    = "Texture",            -- Tint | Texture
   tints    = { Body = Color3.fromRGB(...), Magazine = ... },   -- Tint class only
-  renown   = 800,                  -- nil = not earnable, Robux only
+  spraypaint   = 800,                  -- nil = not earnable, Robux only
   gamePass = 000000,               -- nil unless sold as its own pass (Phase 1 flagships)
   product  = 000000,               -- developer product id (Phase 2)
 }
@@ -291,7 +291,7 @@ user, sub-tables per system, so Robbery System and anything else slot in beside 
 ```lua
 {
   version   = 1,
-  Cosmetics = { owned = { ["AK47_Gilded"] = true }, equipped = { AK47 = "AK47_Gilded" }, renown = 1240 },
+  Cosmetics = { owned = { ["AK47_Gilded"] = true }, equipped = { AK47 = "AK47_Gilded" }, spraypaint = 1240 },
   -- Weapons = {...}, Leveling = {...}, Robbery = {...}  -- added later, by their own systems
 }
 ```
@@ -305,8 +305,8 @@ locking — it must not be reachable by other systems poking the table directly.
 | Remote | Direction | Payload | Server does |
 |---|---|---|---|
 | `EquipSkinRequest` | C→S | `skinId` or `nil` to clear | Validates ownership, then equips. **Never trusts the client.** |
-| `PurchaseSkinRequest` | C→S | `skinId` | Validates tier is Renown-earnable, balance sufficient, not already owned; debits; grants |
-| `RenownChanged` | S→C | `newBalance, delta` | Owner only |
+| `PurchaseSkinRequest` | C→S | `skinId` | Validates tier is Spraypaint-earnable, balance sufficient, not already owned; debits; grants |
+| `SpraypaintChanged` | S→C | `newBalance, delta` | Owner only |
 
 Validation mirrors `WeaponShopService`, which already *"validates every purchase: ownership, the
 four-weapon cap, the swap target, and funds are all checked before anything is charged"*. Same
@@ -322,7 +322,7 @@ renders; each needs a small addition.
 **1. The shop preview — the single highest-leverage change.** The detail panel already clones the
 selected weapon's model, frames it from its bounding box and spins it. Apply the skin to that clone
 and a player sees the skin *on the gun they already own* before paying. Locked skins must be
-previewable — hiding them behind the purchase kills the sale. Show the price, show the Renown progress
+previewable — hiding them behind the purchase kills the sale. Show the price, show the Spraypaint progress
 (`340 / 800`), let them spin it.
 
 Watch the pivot trap: the archive found that spinning about a weapon's *authored* pivot makes large
@@ -352,7 +352,7 @@ a chosen title. Keep it tasteful. Nameplate scale has already been tuned once
 - **A featured rotation.** A handful of skins highlighted weekly, driven entirely by data in
   `SkinConfig` (a `featuredUntil` field), no code change to rotate. Creates a reason to come back
   without a countdown-timer-and-flashing-red treatment.
-- **Visible Renown progress.** A locked skin showing `340 / 800` converts twice: some players grind,
+- **Visible Spraypaint progress.** A locked skin showing `340 / 800` converts twice: some players grind,
   some players buy. Both outcomes are good, and neither requires pressuring anyone.
 
 **Deliberately excluded:** first-purchase-only discounts that expire on a timer, pop-ups on join,
@@ -361,19 +361,19 @@ sentiment than they return.
 
 ---
 
-## 9. Earning Renown
+## 9. Earning Spraypaint
 
 `ShotResolver` fires an `Eliminated` signal. `CashService`, `LevelingService` and `QuestService` all
 already listen to it — *"All three listen to `Eliminated`, and none of them had to learn that bleeding
 exists"* (`FPS-Knife-Bleed-Melee.md`).
 
-So `RenownService` listens to the **same existing signal** and `ShotResolver` is not touched at all.
+So `SpraypaintService` listens to the **same existing signal** and `ShotResolver` is not touched at all.
 That is the correct seam and it is already proven by three consumers.
 
 ```
 on Eliminated(victim, killer, ...):
     if killer is a player:
-        base   = Renown for the victim's kind (mirror the tiered cash-drop values)
+        base   = Spraypaint for the victim's kind (mirror the tiered cash-drop values)
         amount = base * (ownsBooster(killer) and 2 or 1)
         credit(killer, amount)
 ```
@@ -429,7 +429,7 @@ added must do the same, or the shop leaks a running connection per open.
   authoritative on a rule that changes.
 - **Pricing.** Roblox takes a platform cut on in-experience sales (developer receives roughly 70% —
   verify the current rate). Suggested starting points, all tunable from data:
-  Booster pass ~199–399 R$; Tint skins ~49–99 R$ or Renown-only; Texture skins ~199–499 R$; a founder
+  Booster pass ~199–399 R$; Tint skins ~49–99 R$ or Spraypaint-only; Texture skins ~199–499 R$; a founder
   bundle ~799 R$. Price discovery matters more than any number here — ship, watch, adjust.
 
 ---
@@ -449,7 +449,7 @@ every Tool carrying a `Category` — which is why the Knife reached the shop wit
 **If adding the second skin requires touching a script, the data model is wrong and should be fixed
 before the catalogue grows.**
 
-The same property is what makes a season pass cheap to add later: the Renown track already exists, so a
+The same property is what makes a season pass cheap to add later: the Spraypaint track already exists, so a
 season is a reward table over a currency that is already earned and already spent.
 
 ---
@@ -497,7 +497,7 @@ These are the numbers this work should produce.
 | Skin survives respawn | Equip, die, respawn, read the appearance back off the new Tool |
 | No pay-to-win leak | `grep` for the cosmetics namespace inside `ShotResolver` and `WeaponUpgradeService` returns nothing |
 | Damage unchanged by skin | Fire the same weapon skinned and unskinned; damage figures identical |
-| Booster multiplies Renown only | Kill with and without the pass: Renown 2×, Cash unchanged, combat XP unchanged |
+| Booster multiplies Spraypaint only | Kill with and without the pass: Spraypaint 2×, Cash unchanged, combat XP unchanged |
 | Ownership is server-authoritative | Fire `EquipSkinRequest` with an unowned `skinId` from the client; server refuses |
 | Ownership call is not in a hot path | Count `UserOwnsGamePassAsync` calls across a session: one per player, plus one per purchase |
 | Purchase is durable | Buy, leave, rejoin, confirm the item is still owned |
@@ -512,10 +512,10 @@ Out of scope for this design. Each is a deliberate omission, not an oversight.
 
 - ~~**No Robux→Cash product, ever.** Cash buys damage. This is the single line that must not be
   crossed.~~ **Struck:** six such products already existed before this spec was written. See §3.
-- **No boosted combat XP.** The Booster touches Renown only.
+- **No boosted combat XP.** The Booster touches Spraypaint only.
 - **No stat-bearing cosmetics** — no "skins with +2 damage", no weapon variants that are cosmetics in
   name only.
-- **No seasons in Phase 1 or 2.** The Renown track is designed so seasons *can* be added; they are not
+- **No seasons in Phase 1 or 2.** The Spraypaint track is designed so seasons *can* be added; they are not
   being built now.
 - **No trading or player-to-player marketplace.** Enormously more surface area, including fraud and
   moderation, for no additional revenue at this stage.

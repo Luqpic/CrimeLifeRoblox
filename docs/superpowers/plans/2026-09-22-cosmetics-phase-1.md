@@ -15,7 +15,7 @@
 - **A skin never changes geometry.** It sets `Color` on existing parts. It never adds, removes, renames or re-parents a part. Renaming a Tool makes `WeaponViewmodelMotion` assert, which aborts `BlasterController.new` and kills first person for that weapon.
 - **Viewmodel skinning runs strictly AFTER `WeaponViewmodelMotion.new`.** Never before, never inside it.
 - **`ReplicatedStorage.Cosmetics` is never required by** `ServerScriptService.Blaster.Scripts.ShotResolver` **or** `ServerScriptService.Weapons.Scripts.WeaponUpgradeService`. Appearance data has no business in the damage path.
-- **No DataStore, no Renown, no texture skins, no new purchase plumbing.** All Phase 2 or later.
+- **No DataStore, no Spraypaint, no texture skins, no new purchase plumbing.** All Phase 2 or later.
 - **Restore-on-spawn must stay silent.** `WeaponShopService`'s restore path already distinguishes a grant from a purchase so a respawn handing back four weapons plays no purchase sound. Skin restore inherits that.
 - **Run unit tests in Play mode, not Edit mode.** Studio's Edit-mode module cache serves a stale module after an edit; Play gets a fresh require.
 - **Part naming is NOT a reliable target — measured today, and this is why the applier is not name-keyed.**
