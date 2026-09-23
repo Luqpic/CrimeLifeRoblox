@@ -17,6 +17,7 @@ local MenuFovBlur = require(ReplicatedStorage.Modules.MenuFovBlur)
 local Effects = require(ReplicatedStorage.UI.Effects)
 local CashBurst = require(ReplicatedStorage.UI.CashBurst)
 local SkinRowController = require(script.Parent.SkinRowController)
+local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 
 local FADE_TIME = 0.25
 
@@ -118,6 +119,10 @@ local pricePill = detailPanel:WaitForChild("ActionButton"):WaitForChild("Price")
 local pricePillLabel = pricePill:WaitForChild("Label")
 local categoryChip = detailPanel:WaitForChild("CategoryChip"):WaitForChild("Label")
 local descriptionLabel = detailPanel:WaitForChild("Description")
+-- The selected weapon's Spraypaint balance, shown as a pill between the 3D preview and the skin
+-- row -- the same dark-chip-plus-accent-text language CashChip and BuyStrip's price already use.
+local spraypaintChip = detailPanel:WaitForChild("SpraypaintChip")
+local spraypaintAmountLabel = spraypaintChip:WaitForChild("Amount") :: TextLabel
 
 -- Full-bar reference values for the stat tracks. A bar needs a ceiling to read against, and these
 -- are the top of each stat's range across the 32-weapon catalogue rather than per-weapon maxima,
@@ -424,6 +429,16 @@ local function formatFireRate(rpm: number): string
 	return `{rpm} RPM`
 end
 
+-- The figure shown is what the weapon can actually SPEND: its own balance plus the shared bucket it
+-- falls back to (SpraypaintService.spendableBalanceOf, mirrored here the same way SkinRowController
+-- already duplicates server logic it cannot require from ServerScriptService). Safe to call for any
+-- weaponName, including one the player does not own -- an unowned weapon simply reads 0.
+local function refreshSpraypaintBalance(weaponName: string)
+	local own = player:GetAttribute(SpraypaintConstants.balanceAttributeFor(weaponName)) or 0
+	local shared = player:GetAttribute(SpraypaintConstants.SHARED_ATTRIBUTE) or 0
+	spraypaintAmountLabel.Text = (own + shared) .. " SPRAYPAINT"
+end
+
 -- Refuses an action the player cannot pay for: flashes the button red and plays the denied tone,
 -- then puts the colour back. Checked on the client purely as feedback -- the server still validates
 -- every purchase and upgrade, so this cannot be used to buy anything.
@@ -631,6 +646,7 @@ function showDetail(weaponName: string)
 	currentSkinOwnershipConnection = skinOwnershipConnection
 
 	refreshDetailStats(weaponName)
+	refreshSpraypaintBalance(weaponName)
 end
 
 -- Everything in the detail panel EXCEPT the 3D model: name, stats, price and button state. Safe to
@@ -926,6 +942,12 @@ player.AttributeChanged:Connect(function(attributeName: string)
 			if currentDetailWeapon then
 				refreshDetailStats(currentDetailWeapon) -- Equip/Dequip button label flip
 			end
+		end
+	elseif attributeName:match("^Spraypaint_") or attributeName == SpraypaintConstants.SHARED_ATTRIBUTE then
+		-- A kill or level-up can credit ANY weapon's balance, or the shared bucket, while this panel
+		-- is open on a different weapon entirely -- refresh only matters when it is the one on screen.
+		if isOpen and currentDetailWeapon then
+			refreshSpraypaintBalance(currentDetailWeapon)
 		end
 	end
 end)
