@@ -4,6 +4,7 @@
 -- API out of the seven services that hold progression state.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local ProfileStore = require(ServerStorage.ProfileStore)
@@ -12,6 +13,7 @@ local Schema = require(ReplicatedStorage.Persistence.Schema)
 local STORE_NAME = "PlayerProfiles"
 local LOAD_ATTEMPTS = 3
 local RETRY_DELAY = 2
+local LOAD_DEADLINE = 30 -- seconds; after this a load is abandoned and the player is kicked
 
 local KICK_MESSAGE =
 	"Your saved data could not be loaded, so nothing has been changed. Please rejoin in a moment."
@@ -22,14 +24,22 @@ local store = ProfileStore.New(STORE_NAME, Schema.template)
 local profiles: { [any]: any } = {}
 local forcedFailure = false
 
--- Tests point the gateway at ProfileStore's fake DataStore, which is forgotten at shutdown. Without
--- this every test run would write to the same live keys as players.
+-- Both of these exist for tests and would be catastrophic in a live server: pointing at the mock store
+-- silently discards everything written afterwards, and there is deliberately no way to undo it. The
+-- guard is what stops a stray call in one of the seven services doing that by accident.
 function ProfileGateway.useMockStore()
+	if not RunService:IsStudio() then
+		warn("[Persistence] useMockStore ignored outside Studio")
+		return
+	end
 	store = ProfileStore.New(STORE_NAME, Schema.template).Mock
 end
 
 -- Test seam only: makes the next load behave as a contended session would.
 function ProfileGateway._forceNextLoadFailure(active: boolean)
+	if not RunService:IsStudio() then
+		return
+	end
 	forcedFailure = active
 end
 
@@ -55,6 +65,9 @@ function ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): any?
 			return profile
 		end
 		if attempt < LOAD_ATTEMPTS then
+			if cancel and cancel() then
+				return nil
+			end
 			task.wait(RETRY_DELAY)
 		end
 	end
@@ -79,10 +92,15 @@ function ProfileGateway.waitFor(player: Player): any?
 end
 
 local function onPlayerAdded(player: Player)
+	-- Cancel serves two purposes: abandon a load whose player has already left, and put an upper bound
+	-- on one that will never complete. Supplying Cancel at all disables ProfileStore's own session
+	-- timeout, so without the deadline a sustained DataStore outage would leave a connected player
+	-- waiting forever with no load, no kick and no explanation.
+	local deadline = os.clock() + LOAD_DEADLINE
 	local profile = ProfileGateway.loadForKey(
 		ProfileGateway.keyFor(player.UserId),
 		function()
-			return player.Parent ~= Players
+			return player.Parent ~= Players or os.clock() > deadline
 		end
 	)
 
