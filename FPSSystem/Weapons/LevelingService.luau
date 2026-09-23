@@ -49,9 +49,11 @@ setLevelRequest.OnServerEvent:Connect(function(player: Player, targetLevel: any)
 	player:SetAttribute("NextLevelXP", if capped then 0 else LevelingConstants.xpToNextLevel(level))
 	playerLevels[player] = level
 
-	ProfileGateway.mirror(player, function(data)
-		data.level = level
-		data.xp = 0
+	-- mirror hands the callback the PROFILE, not profile.Data -- see the note in CashService. Writing
+	-- `data.level` here landed on a stray top-level field that is never serialised.
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.level = level
+		profile.Data.xp = 0
 	end)
 
 	local character = player.Character
@@ -219,9 +221,9 @@ local function grantXp(player: Player, amount: number)
 	player:SetAttribute("XP", finalXp)
 	player:SetAttribute("NextLevelXP", if capped then 0 else LevelingConstants.xpToNextLevel(level))
 
-	ProfileGateway.mirror(player, function(data)
-		data.level = level
-		data.xp = finalXp
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.level = level
+		profile.Data.xp = finalXp
 	end)
 end
 

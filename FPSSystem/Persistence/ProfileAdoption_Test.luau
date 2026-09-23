@@ -35,6 +35,34 @@ return function(t)
 		end
 	end
 
+	t.test("mirror hands the callback the profile itself, so a write only counts through profile.Data", function()
+		-- The contract every adoption in this phase is built on, and the one that was misread. `apply`
+		-- receives the PROFILE; a write to the argument's own top level lands on the ProfileStore profile
+		-- object, which is never serialised, so it looks saved and is silently lost. That exact mistake
+		-- shipped in Task 4 as `function(data) data.cash = cash.Value end` and cost cash, level and XP
+		-- their persistence -- measured live at profile.Data.cash = 500 while the player held 9525.
+		--
+		-- This is the only part of Task 5's three services that is reachable from a test at all (they are
+		-- Scripts), and it is worth having: it is a real assertion against deployed ProfileGateway code.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-mirror-contract-" .. os.clock())
+		Gateway._bind(player, profile)
+
+		local received
+		Gateway.mirror(player, function(p)
+			received = p
+			p.Data.cash = 4242 -- correct
+			p.spraypaint = 99 -- the mistake
+		end)
+
+		expect.equal(received, profile)
+		expect.equal(profile.Data.cash, 4242)
+		expect.equal(profile.Data.spraypaint, 0) -- the top-level write did NOT reach the saved table
+
+		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
 	t.test("granting Spraypaint mirrors the new balance into the profile", function()
 		local player = standIn()
 		local profile = Gateway.loadForKey("adopt-grant-" .. os.clock())

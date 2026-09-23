@@ -55,11 +55,16 @@ end
 
 -- Applies a change to a player's profile, if they have one.
 --
+-- `apply` receives the PROFILE, so a write is `profile.Data.field = value`. Writing `field` directly on
+-- the argument silently lands on the ProfileStore profile object, which is never serialised -- the
+-- write appears to succeed and is simply lost. That bug shipped once already; hence the spelt-out
+-- parameter name in every call site.
+--
 -- Guarded because a persistence failure must cost a save and never the gameplay path it sits in --
 -- the same rule every cosmetics call site in Phases 1 and 2 follows. A player with no profile is not
 -- an error here: they are mid-load, or their load failed and they are about to be removed, and either
 -- way the correct behaviour is to change nothing.
-function ProfileGateway.mirror(player: any, apply: (any) -> ())
+function ProfileGateway.mirror(player: any, apply: (profile: any) -> ())
 	local profile = profiles[player]
 	if not profile then
 		return

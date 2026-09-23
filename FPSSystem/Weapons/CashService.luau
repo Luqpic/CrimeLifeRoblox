@@ -69,9 +69,14 @@ local function onPlayerAdded(player: Player)
 	-- Safe during hydration too: ProfileGateway.mirror no-ops until the profile is bound, which happens
 	-- strictly after every hydrator finishes, so a hydrate-triggered Value change firing this listener
 	-- cannot race a real mirror write with un-hydrated data.
+	--
+	-- mirror hands the callback the PROFILE, not profile.Data. Writing `data.cash` here put the balance
+	-- on a stray top-level field of the ProfileStore profile object, which is never serialised -- so
+	-- cash looked persisted and was not. Measured live: profile.Data.cash = 500 while the player held
+	-- 9525 and rawget(profile, "cash") = 9525.
 	cash:GetPropertyChangedSignal("Value"):Connect(function()
-		ProfileGateway.mirror(player, function(data)
-			data.cash = cash.Value
+		ProfileGateway.mirror(player, function(profile)
+			profile.Data.cash = cash.Value
 		end)
 	end)
 end
