@@ -125,6 +125,30 @@ function ProfileGateway.keyFor(userId: number): string
 	return "player_" .. userId
 end
 
+-- Brings stored data up to the current shape. Returns whether anything changed, so a caller can tell
+-- a migration from a no-op.
+--
+-- Adding a FIELD needs no migration -- Reconcile fills it from the template. This exists for the case
+-- Reconcile cannot handle: a field whose MEANING changed, and stale derived values that should never
+-- have been stored.
+function ProfileGateway.migrate(data: { [string]: any }): boolean
+	local changed = false
+
+	if data.version == nil then
+		data.version = Schema.VERSION
+		changed = true
+	end
+
+	for _, derived in Schema.DERIVED do
+		if data[derived] ~= nil then
+			data[derived] = nil
+			changed = true
+		end
+	end
+
+	return changed
+end
+
 -- Loads one key, retrying a contended session a few times. Returns nil when it cannot be had.
 --
 -- `cancel` lets a load abandon itself when the player it was for has already left, so a departing
@@ -137,9 +161,7 @@ function ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): any?
 		local profile = if forcedFailure then nil else store:StartSessionAsync(key, { Cancel = cancel })
 		if profile then
 			profile:Reconcile()
-			if profile.Data.version == nil then
-				profile.Data.version = Schema.VERSION
-			end
+			ProfileGateway.migrate(profile.Data)
 			return profile
 		end
 		if attempt < LOAD_ATTEMPTS then

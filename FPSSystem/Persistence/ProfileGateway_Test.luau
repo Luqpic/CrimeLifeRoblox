@@ -83,4 +83,44 @@ return function(t)
 		profile:EndSession()
 		expect.truthy(pcall(function() profile:EndSession() end))
 	end)
+
+	t.test("a v0 profile migrates to the current version without losing fields", function()
+		-- v0 is any profile written before the version field existed. It must gain the version and
+		-- keep everything it already had.
+		local key = "migrate-v0-" .. os.clock()
+		local first = Gateway.loadForKey(key)
+		first.Data.version = nil
+		first.Data.spraypaint = 77
+		first.Data.cash = 123
+		first:EndSession()
+
+		local second = Gateway.loadForKey(key)
+		expect.equal(second.Data.version, Schema.VERSION)
+		expect.equal(second.Data.spraypaint, 77)
+		expect.equal(second.Data.cash, 123)
+		second:EndSession()
+	end)
+
+	t.test("migration is idempotent", function()
+		local data = { version = Schema.VERSION, spraypaint = 5 }
+		expect.falsy(Gateway.migrate(data))
+		expect.equal(data.spraypaint, 5)
+	end)
+
+	t.test("a derived field found in stored data is stripped", function()
+		-- Older profiles, or a mirror bug, could have written one. Leaving it would let a stale value
+		-- outlive and then contradict the thing it was derived from.
+		local data = { version = Schema.VERSION, level = 3, NextLevelXP = 999 }
+		Gateway.migrate(data)
+		expect.equal(data.NextLevelXP, nil)
+		expect.equal(data.level, 3)
+	end)
+
+	t.test("an unrecognised field survives migration untouched", function()
+		-- An unrecognised field is more likely to be from a NEWER schema than garbage. migrate must
+		-- strip only what Schema.DERIVED actually names, never anything merely absent from the template.
+		local data = { version = Schema.VERSION, fieldFromANewerSchema = "keep me" }
+		Gateway.migrate(data)
+		expect.equal(data.fieldFromANewerSchema, "keep me")
+	end)
 end
