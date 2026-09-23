@@ -16,7 +16,7 @@ local UpgradeConfig = require(ReplicatedStorage.Weapons.UpgradeConfig)
 local MenuFovBlur = require(ReplicatedStorage.Modules.MenuFovBlur)
 local Effects = require(ReplicatedStorage.UI.Effects)
 local CashBurst = require(ReplicatedStorage.UI.CashBurst)
-local SkinRowController = require(script.Parent.SkinRowController)
+local SkinsCardController = require(script.Parent.SkinsCardController)
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 
 local FADE_TIME = 0.25
@@ -104,8 +104,6 @@ local weaponGrid = shopArea:WaitForChild("WeaponGrid")
 local detailPanel = shopArea:WaitForChild("DetailPanel")
 local backButton = detailPanel:WaitForChild("BackButton")
 local detailViewport = detailPanel:WaitForChild("DetailViewport") :: ViewportFrame
-local skinRow = detailPanel:WaitForChild("SkinRow")
-local skinChipTemplate = skinRow:WaitForChild("SkinChip")
 local detailName = detailPanel:WaitForChild("DetailName")
 local statsContainer = detailPanel:WaitForChild("StatsContainer")
 local priceLabel = detailPanel:WaitForChild("PriceLabel")
@@ -119,8 +117,8 @@ local pricePill = detailPanel:WaitForChild("ActionButton"):WaitForChild("Price")
 local pricePillLabel = pricePill:WaitForChild("Label")
 local categoryChip = detailPanel:WaitForChild("CategoryChip"):WaitForChild("Label")
 local descriptionLabel = detailPanel:WaitForChild("Description")
--- The selected weapon's Spraypaint balance, shown as a pill between the 3D preview and the skin
--- row -- the same dark-chip-plus-accent-text language CashChip and BuyStrip's price already use.
+-- The selected weapon's Spraypaint balance, shown as a pill below the 3D preview -- the same
+-- dark-chip-plus-accent-text language CashChip and the Skins card's chip prices already use.
 local spraypaintChip = detailPanel:WaitForChild("SpraypaintChip")
 local spraypaintAmountLabel = spraypaintChip:WaitForChild("Amount") :: TextLabel
 
@@ -256,7 +254,6 @@ local showDetail
 local refreshDetailStats
 local currentSpinConnection: RBXScriptConnection? = nil
 local currentSkinConnection: RBXScriptConnection? = nil
-local currentSkinOwnershipConnection: RBXScriptConnection? = nil
 
 local function stopSpin()
 	if currentSpinConnection then
@@ -628,20 +625,18 @@ function showDetail(weaponName: string)
 		end)
 	end
 
-	-- Rebuilt per weapon because the equipped chip and the locked chips both depend on which weapon
-	-- is on screen. Both attribute connections are stored and replaced the same way
-	-- currentSpinConnection is, so viewing twenty weapons leaves one of each rather than twenty.
+	-- Rebuilt per weapon because the equipped ring depends on which weapon is on screen. The
+	-- connection is stored and replaced the same way currentSpinConnection is, so viewing twenty
+	-- weapons leaves one behind rather than twenty. The Skins card's own ownership connection lives
+	-- for the whole session inside SkinsCardController -- it does not depend on which weapon is on
+	-- screen, so it is not rewired here.
 	if currentSkinConnection then
 		currentSkinConnection:Disconnect()
 	end
-	if currentSkinOwnershipConnection then
-		currentSkinOwnershipConnection:Disconnect()
-	end
-	local repaintSkins, skinOwnershipConnection = SkinRowController.build(skinRow, skinChipTemplate, weaponName, displayModel)
+	local repaintSkins = SkinsCardController.open(shop, weaponName, displayModel)
 	currentSkinConnection = player:GetAttributeChangedSignal(
 		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
 	):Connect(repaintSkins)
-	currentSkinOwnershipConnection = skinOwnershipConnection
 
 	refreshDetailStats(weaponName)
 	refreshSpraypaintBalance(weaponName)
@@ -751,6 +746,7 @@ end)
 
 backButton.MouseButton1Click:Connect(function()
 	stopSpin()
+	SkinsCardController.close()
 	detailPanel.Visible = false
 	categoryTabs.Visible = true
 	weaponGrid.Visible = true
@@ -877,6 +873,7 @@ function closeShop()
 	currentDetailWeapon = nil
 	awaitingPurchaseSound = false
 	stopSpin()
+	SkinsCardController.close()
 	setSlotPickMode(false)
 
 	local closeTween = TweenService:Create(
