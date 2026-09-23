@@ -93,18 +93,36 @@ local hydrators: { (player: any, profile: any) -> () } = {}
 -- is what stops the next adoption reopening it; the alternative is seven services each remembering.
 --
 -- Guarded exactly like the loops below, so a throwing late hydrator cannot take registration with it.
-local function runForBound(label: string, fn: (player: any, profile: any) -> ())
+--
+-- `andThenPostHydrate` is set for a late HYDRATOR and not for a late post-hydrator. A post-hydrator's
+-- whole contract is that it runs after every hydrator, so a hydrator arriving after the bind has to be
+-- followed by them, exactly as the join path follows _runHydrators with _runPostHydrators. Without it
+-- this is half a net, which is worse than none: it invites the trust it has not earned. Concretely, a
+-- LevelingService that registered late would restore `Level` here with nothing re-seeding
+-- SpraypaintService's level baseline afterwards, and the phantom level-up award returns by the new path
+-- the net was added to close.
+--
+-- Safe to re-run, verified in the two post-hydrators' own source rather than assumed. CosmeticsService's
+-- calls refresh -> applyToTool -> SkinApplier.applyKey, which calls remove() FIRST (restoring every part
+-- from its SkinOriginalColor attribute and clearing it) before re-applying, records that attribute only
+-- when it is nil, and ranks parts by their ORIGINAL luminance rather than the current one -- so N calls
+-- land exactly where one does, and remove() on an unskinned model changes nothing. SpraypaintService's
+-- is a plain assignment from the live Level attribute.
+local function runForBound(label: string, fn: (player: any, profile: any) -> (), andThenPostHydrate: boolean?)
 	for player, profile in profiles do
 		local ok, err = pcall(fn, player, profile)
 		if not ok then
 			warn("[Persistence] late " .. label .. " failed for " .. tostring(player) .. ": " .. tostring(err))
+		end
+		if andThenPostHydrate then
+			ProfileGateway._runPostHydrators(player, profile)
 		end
 	end
 end
 
 function ProfileGateway.registerHydrator(hydrator: (player: any, profile: any) -> ())
 	table.insert(hydrators, hydrator)
-	runForBound("hydrator", hydrator)
+	runForBound("hydrator", hydrator, true)
 end
 
 -- Test seam only: runs every registered hydrator directly, without a real Player or onPlayerAdded --

@@ -1,8 +1,9 @@
 -- Tests that each service's mirror points actually write into the profile, that hydration restores
 -- attributes from a profile, that hydration cannot be raced by a mirror (Finding 3), and that a
 -- post-hydrator sees every hydrator's result regardless of registration order (fix round 2), that a
--- restored level is not paid out as a level-up, and that a hydrator registered after a bind still
--- hydrates that player (final fix round).
+-- restored level is not paid out as a level-up, that a level rise before the bind is refused outright,
+-- and that a hydrator registered after a bind both hydrates that player and is followed by the
+-- post-hydrators (final fix round).
 --
 -- These use a stand-in player table, because a real Player cannot be constructed. The services read
 -- and write attributes, and CosmeticsService's post-hydrator calls refresh, which additionally reads
@@ -313,6 +314,83 @@ return function(t)
 			end
 		end)
 		expect.equal(latePostSaw, 808)
+
+		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
+	t.test("a genuine level rise before the bind is refused, not merely re-baselined", function()
+		-- The structural half of the Critical's fix. The post-hydrator re-seed above makes the baseline
+		-- honest; this guard makes an award during restoration UNREACHABLE, so the fix no longer rests on
+		-- the attribute signal being deferred and no hydrator yielding -- both true, both measured, both
+		-- one refactor from being neither.
+		--
+		-- This is a real 1 -> 12 rise with a non-nil `previous`, so `previous == nil` and `level <=
+		-- previous` both pass it through: the ONLY thing that can refuse the award here is the unbound
+		-- guard. Costs nothing in production -- the only player both unbound and playing is one whose
+		-- load failed, and they are being kicked with nothing saving.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-unbound-levelup-" .. os.clock())
+		profile.Data.spraypaint = 55
+
+		SpraypaintService.hydrate(player, profile) -- restored balance, deliberately still UNBOUND
+		player:SetAttribute("Level", 1)
+		SpraypaintService.onLevelChanged(player) -- seeds the baseline at 1
+		player:SetAttribute("Level", 12)
+		SpraypaintService.onLevelChanged(player) -- an eleven-level rise, while unbound
+
+		expect.equal(SpraypaintService.balanceOf(player), 55) -- not 55 + 275
+		expect.equal(profile.Data.spraypaint, 55)
+
+		-- And the baseline moved anyway, so the bind does not then pay for the same rise a moment later.
+		Gateway._bind(player, profile)
+		SpraypaintService.onLevelChanged(player)
+		expect.equal(SpraypaintService.balanceOf(player), 55)
+
+		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
+	t.test("a hydrator registered after a bind is followed by the post-hydrators", function()
+		-- Fix 2 was half a net without this. runForBound ran the late hydrator but nothing followed it,
+		-- so a LevelingService that registered late would restore Level with no post-hydrator re-seeding
+		-- SpraypaintService's baseline -- and the phantom award returns through the very mechanism added
+		-- to close it. A half net is worse than none: it invites trust it has not earned.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-late-composes-" .. os.clock())
+		profile.Data.level = 12
+		profile.Data.spraypaint = 60
+
+		-- What safePlayerAdded records at join, before the load resolves: the pre-restore default.
+		player:SetAttribute("Level", 1)
+		SpraypaintService.onLevelChanged(player)
+
+		Gateway._runHydrators(player, profile)
+		Gateway._runPostHydrators(player, profile)
+		Gateway._bind(player, profile)
+
+		-- A probe post-hydrator, to prove the MECHANISM independently of any service. It runs once now
+		-- (Fix 2 runs it for bound players at registration) seeing Level = 1, and must run again after
+		-- the late hydrator below, seeing 12.
+		local levelSeenByPostHydrator
+		Gateway.registerPostHydrator(function(p)
+			if p == player then
+				levelSeenByPostHydrator = p:GetAttribute("Level")
+			end
+		end)
+		expect.equal(levelSeenByPostHydrator, 1)
+
+		-- The late service: registers after the bind and restores Level, as LevelingService's does.
+		Gateway.registerHydrator(function(p, prof)
+			if p == player then
+				p:SetAttribute("Level", prof.Data.level)
+			end
+		end)
+
+		expect.equal(levelSeenByPostHydrator, 12) -- the mechanism
+		SpraypaintService.onLevelChanged(player) -- the signal that SetAttribute fires
+		expect.equal(SpraypaintService.balanceOf(player), 60) -- the consequence: not 60 + 275
+		expect.equal(profile.Data.spraypaint, 60)
 
 		Gateway._unbind(player)
 		profile:EndSession()

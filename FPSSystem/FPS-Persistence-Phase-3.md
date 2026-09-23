@@ -16,7 +16,7 @@ unobserved.
 
 **Amended after a whole-branch review.** Per-task review passed all seven tasks; reading the branch as
 one diff afterwards found one Critical and three Majors that no single task's diff could have shown.
-All four are fixed and mutation-tested (Notes 9-12) and the suite is now **135/135 across 12 suites**
+All four are fixed and mutation-tested (Notes 9-13) and the suite is now **137/137 across 12 suites**
 in a real server VM. The most instructive of the four: **row 2's own measurement was the Critical, and
 this document wrote it down as the feature.** Corrected in place below.
 
@@ -89,7 +89,7 @@ New:
   `weaponsOwned`, `weaponUpgrades`, `loadout`) and
   `DERIVED = { "NextLevelXP", "SkinId", "damage", "catalogue", "lastLevel" }`. `CashService.STARTING_CASH`
   reads `Schema.template.cash` directly rather than holding its own copy, so the two cannot drift.
-- `ServerScriptService.Persistence.Scripts.ProfileGateway` (ModuleScript, 13422 bytes) — `useMockStore`,
+- `ServerScriptService.Persistence.Scripts.ProfileGateway` (ModuleScript, 14774 bytes) — `useMockStore`,
   `mirror`, `registerHydrator` / `registerPostHydrator`, `keyFor`, `migrate`, `loadForKey`, `get`,
   `start`. Three load attempts, 2s between them, a kick on failure, and a 30s deadline on the join path
   that **has never executed** (Note 12). `isLoaded` and `waitFor` were published in the design and are
@@ -110,11 +110,11 @@ New:
   The file carries no version string of its own, so the commit is the version. Repo mirror sha256
   `ad43737203688b8e88cab34ebe8c483000c157e53bfb41e35f1b49ee89d0c95f`.
 - `ServerStorage.UnitTest.Cases.Schema_Test` (3280 bytes, 8 cases),
-  `ProfileGateway_Test` (9677 bytes, 15 cases), `ProfileAdoption_Test` (14478 bytes, 14 cases).
+  `ProfileGateway_Test` (9677 bytes, 15 cases), `ProfileAdoption_Test` (18152 bytes, 16 cases).
 
 Modified — the seven adopting services:
 
-- `SpraypaintService` (12244 bytes) — hydrator **and**, since the fix round, a post-hydrator that
+- `SpraypaintService` (14105 bytes) — hydrator **and**, since the fix round, a post-hydrator that
   re-seeds the level baseline from the restored `Level` (Note 9); mirrors on grant, spend, buy and
   buy-with-auto-equip. Its `safePlayerAdded` fallback no longer mirrors its own default (Note 10).
 - `CosmeticsService` (7185 bytes) — hydrator **and** the phase's only post-hydrator (re-dresses held Tools).
@@ -157,7 +157,7 @@ is never serialised (Notes 1), because it never exercises the mirror at all.
 | 10 | A failed load kicks | **HALF** | The `nil` half is measured (row 9). The kick half is **not** provoked by a failed load: `PlayerAdded` fires once and Studio Play Solo admits no second join, so there is no way to force a join to fail. What *was* observed live on a real `Player`: `profile:EndSession()` fired `OnSessionEnd`, whose handler kicked the player, and the Play Solo session terminated on its own. So the `Kick` path on a real Player is exercised; the failed-**load** kick is read, not run. |
 | 11 | Derived fields are not stored | **PASS** (mock) | None of `NextLevelXP`, `SkinId`, `damage`, `catalogue`, `lastLevel` present in `profile.Data`, before or after the round trip, while all of them were live at that moment: `NextLevelXP=195`, Crowbar `damage=55`, Crowbar `SkinId=Cobalt`, catalogue 29 entries in `ReplicatedStorage.Weapons.Catalog`. |
 | 12 | Migration from a v0 fixture | **PASS** (mock) | Fixture written to a scratch key: `version=nil`, `spraypaint=77`, `cash=123`, `NextLevelXP=999` (a leaked derived value), `fieldFromANewerSchema="keep me"`. After a real store round trip: `version=1`, `NextLevelXP` gone, `spraypaint=77`, `cash=123`, `fieldFromANewerSchema="keep me"` untouched. Console: `[Persistence] migrated profile <key> to version 1`. |
-| 13 | Phases 1 and 2 still pass | **PASS** | **135/135 across 12 suites**, run in a real server VM (133/133 before the fix round below added two cases). Table below. |
+| 13 | Phases 1 and 2 still pass | **PASS** | **137/137 across 12 suites**, run in a real server VM (133/133 before the fix round below added four cases). Table below. |
 | — | Durability across a real server restart | **DEFERRED** | Unmeasurable on an unpublished place. `DataStoreState = "NoAccess"`, so the "store" is an in-memory table inside the server VM and it is destroyed with the playtest. There is no restart that a profile can survive here, by construction. |
 | — | Cross-server session locking | **DEFERRED** | Unmeasurable on an unpublished place. Needs two live servers holding one key. The same-server case is observable (see Notes 7) and is a different mechanism. |
 | — | The load-abandonment policy — the 30s `LOAD_DEADLINE` and the departing-player cancel | **DEFERRED** | **Never executed, not once.** ProfileStore's `Mock` proxy is `StartSessionAsync = function(_, profile_key) MockFlag = true; return self:StartSessionAsync(profile_key) end` — it **drops the `params` argument**, so the `{ Cancel = cancel }` the gateway passes never arrives, `params.Cancel` is `nil` inside ProfileStore for every mock run, and ProfileStore's own `START_SESSION_TIMEOUT` is back in charge. Every measurement this place has ever taken is a mock run, so the gateway's whole abandonment policy is unexercised code. Row 9 does not reach it either: `_forceNextLoadFailure` never calls `StartSessionAsync`. **Deliberately not worked around** — the vendored file is pinned to an upstream commit with a recorded sha256, and that guarantee is worth more than reaching this branch. See Note 12. |
@@ -177,14 +177,14 @@ is never serialised (Notes 1), because it never exercises the mirror at all.
 | `SpraypaintTier_Test` | 8/8 | Phase 2 |
 | `Schema_Test` | 8/8 | Phase 3 |
 | `ProfileGateway_Test` | 15/15 | Phase 3 |
-| `ProfileAdoption_Test` | 14/14 | Phase 3 |
-| **Total** | **135/135** | |
+| `ProfileAdoption_Test` | 16/16 | Phase 3 |
+| **Total** | **137/137** | |
 
 The six Phase 1 and Phase 2 suites are unchanged at 8, 21, 8, 10, 14, 11 = **72**; Phase 3 adds
-8 + 15 + 14 = **37**; the three pre-existing movement/authority suites contribute 8 + 8 + 10 = **26**.
-Phase 3 took the total from 98 to 135 and `ProfileGateway_Test` from 7 cases to 15. The final fix round
-added the two `ProfileAdoption_Test` cases (12 → 14) and rewrote one `ProfileGateway_Test` case rather
-than adding one, so that suite's count is unchanged at 15 while one of its cases can now fail.
+8 + 15 + 16 = **39**; the three pre-existing movement/authority suites contribute 8 + 8 + 10 = **26**.
+Phase 3 took the total from 98 to 137 and `ProfileGateway_Test` from 7 cases to 15. The final fix round
+added four `ProfileAdoption_Test` cases (12 → 16) and rewrote one `ProfileGateway_Test` case rather than
+adding one, so that suite's count is unchanged at 15 while one of its cases can now fail.
 
 ### The damage path is still clean
 
@@ -426,24 +426,39 @@ restored `Level`. It has to be a post-hydrator and not a hydrator: it reads *ano
 restored attribute, and hydrator order is registration order, which is require order — exactly the
 thing that made the bug order-dependent in the first place.
 
-Two measurements underwrite it. `GetAttributeChangedSignal` is **deferred** in this place (probed
-directly: the handler had not run immediately after `SetAttribute` and had run after one `task.wait()`),
-so the signal cannot fire *between* `LevelingService`'s restore and the post-hydrator unless something
-in the hydrator loop yields; and nothing does — none of the seven hydrators nor either post-hydrator
-contains `WaitForChild`, `task.wait` or `task.spawn`. **That is an assumption, not a guarantee**: a
+**And a structural guard, which is what actually makes it unreachable.** The re-seed alone rested on two
+measurements: that `GetAttributeChangedSignal` is **deferred** in this place (probed directly — the
+handler had not run immediately after `SetAttribute` and had run after one `task.wait()`), and that
+nothing in the hydrator loop yields (none of the seven hydrators nor either post-hydrator contains
+`WaitForChild`, `task.wait` or `task.spawn`). Both are true. Both are one refactor from being neither: a
 future hydrator that yields, registered between `LevelingService`'s and this one's, would flush the
-deferred queue mid-loop and reopen the window. Recorded here rather than guarded, because the guard
-that would close it structurally — refusing to pay while `get(player)` is `nil` — also silences the
-award for any player who is legitimately unbound, and that is a behaviour change this round did not ask
-for.
+deferred queue mid-loop and reopen the window. This phase has twice watched "correct by ordering luck"
+become "broken", so the measurement is now supporting evidence rather than the load-bearing argument.
 
-Regression case: `ProfileAdoption_Test > "a restored level is not paid out as a level-up"`, which drives
-the **real** registered hydrator and post-hydrator lists through `_runHydrators` / `_runPostHydrators`.
-Note that `LevelingService` is a `Script`: its hydrator *is* registered at server start, but it throws
-on a stand-in player (`FindFirstChild` is not a method on a table), so the case registers a probe
-hydrator that writes the same attribute from the same field, and asserts `Level == 12` so it cannot
-pass blind. **Mutation: delete the post-hydrator from `SpraypaintService`.** Exactly one case goes red —
-this one — with `expected 40, got 315`, which is 40 + 275: the phantom award, measured.
+`onLevelChanged` refuses to pay while `ProfileGateway.get(player)` is `nil`. Before the bind every
+`Level` change is restoration rather than progression, **by construction** — the gateway runs every
+hydrator strictly before it sets `profiles[player]` — so re-baselining instead of paying is correct
+there whatever the signal timing. It costs nothing: the only player both unbound and still playing is
+one whose load failed, and they are being kicked with nothing saving, so an award paid there would have
+evaporated anyway. What it would *not* have done is evaporate quietly — `mirror` no-ops while unbound,
+so it would have inflated the live attribute, which is the base the next grant mirrors.
+
+Belt and braces, deliberately, because this is a currency. The guard makes the window unreachable; the
+re-seed keeps `lastLevel` honest once the bind lands, so the first real level-up after a rejoin is
+measured from the restored level rather than from a pre-restore default.
+
+Regression cases, both driving the **real** registered lists through `_runHydrators` /
+`_runPostHydrators`:
+
+- `"a restored level is not paid out as a level-up"` — the re-seed. **Mutation: delete the post-hydrator
+  from `SpraypaintService`.** Two cases go red, both legitimately: this one with `expected 40, got 315`
+  (40 + 275, the phantom award measured), and `"a hydrator registered after a bind is followed by the
+  post-hydrators"` with `expected 60, got 335`, whose consequence assertion genuinely depends on the
+  same re-seed.
+- `"a genuine level rise before the bind is refused, not merely re-baselined"` — the guard, in
+  isolation. A real 1 → 12 rise with a non-nil `previous`, so neither `previous == nil` nor
+  `level <= previous` can refuse it and only the unbound guard can. **Mutation: delete the guard.**
+  Exactly one case goes red — this one — with `expected 55, got 330`.
 
 **10. THE MAJOR: the ordering hole was closed at the instance, not the class.**
 `_runHydrators` runs whatever is registered at that instant and then binds unconditionally, so a service
@@ -459,10 +474,31 @@ loops are (`pcall` + `warn`) so a throwing late hydrator cannot take registratio
 late-registering service always hydrates, and the window closes structurally instead of seven services
 each having to remember.
 
-Regression case: `ProfileAdoption_Test > "a hydrator registered after a player is already bound still
-hydrates them"`, which binds first and registers second, for both phases, and includes a deliberately
-throwing late post-hydrator to prove registration survives it. **Mutation: delete both `runForBound`
-calls.** Exactly one case goes red — this one — with `expected 808, got nil`.
+**And the net has to be a whole net.** A late-registered HYDRATOR is now followed by the post-hydrators
+for that player, exactly as the join path follows `_runHydrators` with `_runPostHydrators`. Without
+that, the fix was half a net — which is worse than none, because it invites the trust it has not
+earned: a `LevelingService` registering late would have restored `Level` through the new mechanism with
+nothing re-seeding `SpraypaintService`'s baseline afterwards, and Note 9's phantom award would have
+returned through the very code added to close it.
+
+Re-running the post-hydrators is safe because both are idempotent, and that was verified in their source
+rather than assumed. `CosmeticsService`'s calls `refresh` → `applyToTool` → `SkinApplier.applyKey`,
+which calls `remove()` **first** — restoring every part from its `SkinOriginalColor` attribute and
+clearing it — before re-applying, records that attribute only when it is `nil`, and ranks parts by their
+**original** luminance rather than the current one; so N calls land exactly where one does, and
+`remove()` on an unskinned model changes nothing. `SpraypaintService`'s is a plain assignment.
+
+Regression cases:
+
+- `"a hydrator registered after a player is already bound still hydrates them"` — binds first and
+  registers second, for both phases, with a deliberately throwing late post-hydrator to prove
+  registration survives it. **Mutation: delete both `runForBound` calls.** Exactly one case goes red —
+  this one — with `expected 808, got nil`.
+- `"a hydrator registered after a bind is followed by the post-hydrators"` — asserts the mechanism with
+  a probe post-hydrator (it sees `Level = 1` when registered, and must see `12` after the late hydrator
+  runs) and the consequence with the balance. **Mutation: delete the post-hydrator sweep from
+  `runForBound`.** Exactly one case goes red — this one — with `expected 12, got 1`, failing on the
+  mechanism assertion rather than on a downstream symptom.
 
 **Also closed here: the one adoption that mirrored its own default.** `SpraypaintService`'s
 `safePlayerAdded` fallback wrote `player:SetAttribute(ATTRIBUTE, 0)` *and* mirrored `spraypaint = 0`
@@ -517,11 +553,35 @@ that survives one re-vendor and not the second. Recorded as DEFERRED beside rest
 cross-server locking, and marked `NEVER EXERCISED` in the gateway's own comment where the next reader
 will find it. Closing it needs either a published place or an upstream fix.
 
+**13. A trap for the next person writing a test here: half the hydrators cannot be exercised by one.**
+`LevelingService`, `CashService`, `WeaponShopService`, `WeaponUpgradeService` and `KillStatsService` are
+`Script`s, not ModuleScripts. Their hydrators therefore register **at server start** and not on
+`require` — so they ARE in the registered list during a test run — but they immediately throw on the
+table stand-in every adoption test uses, because they call `player:FindFirstChild("leaderstats")` and a
+plain table has no such method. The gateway `pcall`s them, so the failure is a warning rather than a
+crash, and every run of `ProfileAdoption_Test` carries a pair of them:
+
+```
+[Persistence] hydrator failed for table: 0x…: ServerScriptService.Weapons.Scripts.CashService:94: attempt to call missing method 'FindFirstChild' of table
+[Persistence] hydrator failed for table: 0x…: ServerScriptService.Weapons.Scripts.LevelingService:113: attempt to call missing method 'FindFirstChild' of table
+```
+
+The consequence is the dangerous part. A test that runs `_runHydrators` and then expects
+`LevelingService` to have restored `Level` **passes blind**: the attribute is never set, so whatever the
+case asserts about a level-up is asserted against a level that never changed. Note 9's regression case
+therefore registers a probe hydrator that writes the same attribute from the same field, and asserts
+`Level == 12` before asserting anything about the balance — so the case cannot report a clean pass on a
+restore that did not happen. Anything touching those five services' hydrators needs the same shape.
+
+Giving the stand-in a `FindFirstChild` stub would let the real hydrators run and remove the need for the
+probe. Worth doing, together with mirroring the three missing live suites (Note 5); neither is this
+round's job.
+
 ## Status
 
 - **Confirmed live this pass, against ProfileStore's Studio mock:** verification rows 1-9, 11, 12 and
   13, each with the numbers quoted above; the damage-path-clean check; the single-`require` check; and
-  all 12 unit suites at 135/135 in a real server VM. Every change was driven through the game's own
+  all 12 unit suites at 137/137 in a real server VM. Every change was driven through the game's own
   entry points — `BuyRequest`, `SetLoadoutSlotRequest`, `UpgradeRequest`, `SetLevelRequest`,
   `BuySkinRequest` fired from the Client datamodel, and one genuine kill through `Blaster.Remotes.Shoot`
   → `ShotResolver` → `Eliminated` — not by writing to `profile.Data` directly.
@@ -562,15 +622,14 @@ will find it. Closing it needs either a published place or an upstream fix.
   over a real balance (Note 10), and a test that could not fail (Note 11). Three mutations run, each
   naming exactly one red case: `expected 40, got 315` (the 275 award), `expected 808, got nil` (the
   un-hydrated late registration), and `reload took 4.03s` (the leaked session lock). Two API functions
-  with no callers, `waitFor` and `isLoaded`, deleted. Suite total 133 -> 135.
-- **Open, recorded, not done here:** the three live test suites missing from this repo (Note 5), and the
-  client-facing remote audit (Note 6).
-- **Open, recorded, not guarded.** Note 9's fix depends on no hydrator yielding between
-  `LevelingService`'s restore and `SpraypaintService`'s re-seed; today none does, and that was measured,
-  not assumed. A hydrator that yields would flush the deferred attribute signal mid-loop and reopen the
-  window. The structural guard (refuse a level award while `get(player)` is `nil`) also silences the
-  award for a legitimately unbound player, so it is named here rather than shipped unasked. Similarly,
-  Note 10's late-registration re-run does not itself re-seed the level baseline: a service registering
-  `LevelingService`'s hydrator after a bind would restore `Level` without `SpraypaintService`'s
-  post-hydrator following it. No service registers late today; this is the shape the next one must not
-  take.
+  with no callers, `waitFor` and `isLoaded`, deleted.
+- **Hardened in a second pass, after the first one shipped two measured invariants rather than
+  structural ones.** Note 9's award is now refused outright while the profile is unbound, so it no
+  longer depends on the attribute signal being deferred or on no hydrator yielding — those are
+  supporting evidence now, not the argument. Note 10's net now follows a late-registered hydrator with
+  the post-hydrators, so it cannot restore `Level` with nothing re-seeding the level baseline behind it.
+  Two further mutations, each one red case: guard deleted -> `expected 55, got 330`; post-hydrator sweep
+  deleted -> `expected 12, got 1`. Suite total 133 -> 137.
+- **Open, recorded, not done here:** the three live test suites missing from this repo (Note 5), the
+  client-facing remote audit (Note 6), and a `FindFirstChild` stub on the adoption stand-in so the five
+  `Script` services' hydrators can run in a test at all (Note 13).

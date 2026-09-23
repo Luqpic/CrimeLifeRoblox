@@ -115,14 +115,32 @@ function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown)
 end
 
 -- Level handler. Awards per level GAINED, so a multi-level jump pays for each one rather than once,
--- and never awards on the join-time set.
+-- and never awards on the join-time set or on a restore.
 function SpraypaintService.onLevelChanged(player: any)
 	local level = player:GetAttribute("Level")
 	if typeof(level) ~= "number" then
 		return
 	end
 	local previous = lastLevel[player]
+	-- Recorded before either guard below, so the baseline tracks the level even when nothing is paid.
 	lastLevel[player] = level
+
+	-- Before the bind, EVERY Level change is restoration rather than progression, by construction: the
+	-- gateway runs every hydrator strictly before it sets profiles[player]. Re-baselining instead of
+	-- paying is what makes a level change whose `previous` predates the bind impossible to read as a
+	-- level-up -- structurally, and not because the attribute signal happens to be deferred and no
+	-- hydrator happens to yield today. Both of those are true and both were measured, but a measured
+	-- invariant is one refactor away from being neither, and this phase has twice watched "correct by
+	-- ordering luck" become "broken".
+	--
+	-- It costs nothing. The only player who is both unbound and still playing is one whose load failed,
+	-- and they are being kicked with nothing saving -- an award paid here would have evaporated anyway.
+	-- What it would NOT have done is evaporate quietly: mirror no-ops while unbound, so the award would
+	-- have inflated the live attribute, and that attribute is the base the next grant or spend mirrors.
+	if ProfileGateway.get(player) == nil then
+		return
+	end
+
 	if previous == nil or level <= previous then
 		return
 	end
@@ -231,9 +249,16 @@ ProfileGateway.registerHydrator(SpraypaintService.hydrate)
 
 -- Re-seeds the level baseline from the level LevelingService has just restored.
 --
+-- Braces to onLevelChanged's belt: the unbound guard up there makes an award during restoration
+-- unreachable, and this keeps `lastLevel` HONEST once the bind lands, so the first real level-up after a
+-- rejoin is measured from the restored level rather than from a pre-restore default. Neither alone is
+-- enough for a currency -- the guard without this would re-baseline correctly only by luck of which
+-- change arrived last, and this without the guard depends on nothing in the hydrator loop yielding.
+--
 -- A POST-hydrator, not a hydrator: it reads another service's restored `Level` attribute, and hydrator
 -- order is registration order, which is require order. Post-hydrators run after EVERY hydrator, so this
--- reads the restored level whichever service registered first.
+-- reads the restored level whichever service registered first -- including after a hydrator that
+-- registers LATE, which the gateway now follows with the post-hydrators for exactly this reason.
 --
 -- Without it a returning level-12 player was paid (12 - 1) * 25 = 275 spraypaint on every rejoin. The
 -- seed in safePlayerAdded above is taken before the gateway's yielding load resolves, so hydration's
