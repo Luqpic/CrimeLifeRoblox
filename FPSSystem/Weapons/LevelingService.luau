@@ -131,6 +131,22 @@ local function hydrate(player: any, profile: any?)
 	player:SetAttribute("XP", xp)
 	local capped = level >= LevelingConstants.LEVEL_CAP
 	player:SetAttribute("NextLevelXP", if capped then 0 else LevelingConstants.xpToNextLevel(level))
+
+	-- The fourth of four level-changing paths, and previously the only one that skipped this.
+	-- CharacterAutoLoads can spawn a character before this hydrator's profile load resolves (it does
+	-- not yield, ProfileGateway's does), so onPlayerAdded's CharacterAdded connection can already have
+	-- applied MaxHealth for the level-1 default by the time this runs -- a level-70 returning player
+	-- would otherwise spend their whole first life at 100 HP instead of 238, uncorrectable by a
+	-- level-up at the cap. Guarded on Character existing: if it doesn't exist yet, onPlayerAdded's
+	-- CharacterAdded connection fires later and reads the playerLevels value this just set, so both
+	-- orderings land on the correct health.
+	--
+	-- This is a full heal (applyMaxHealth also sets Health = MaxHealth), which is only safe here
+	-- because hydration runs once at join, before any combat -- do not reuse this call elsewhere a
+	-- mid-fight full heal would be exploitable.
+	if player.Character then
+		applyMaxHealth(player.Character, level)
+	end
 end
 
 Players.PlayerAdded:Connect(onPlayerAdded)
