@@ -22,12 +22,10 @@ local SpraypaintService = {}
 -- The level each player was last seen at. A baseline, not a cache: LevelingService sets Level inside
 -- onPlayerAdded, so without this every player would collect a level-up award simply for joining.
 --
--- Correct independent of script load order, since LevelingService and SpraypaintRunner are both plain
--- Scripts with no guaranteed relative order. If SpraypaintRunner runs first, lastLevel[player] is nil when
--- LevelingService's join-time SetAttribute("Level", 1) fires onLevelChanged; previous == nil early-
--- returns and seeds the baseline instead of paying. If LevelingService runs first, the join-time Level
--- is simply read directly as the baseline below, before this listener is even connected. Both land on
--- Spraypaint = 0.
+-- Named in Schema.DERIVED and therefore never persisted, so a RESTORE has to re-seed it: see the
+-- post-hydrator at the bottom of this file. The seed taken in safePlayerAdded below is taken before the
+-- gateway's yielding load resolves, so it is only ever nil or LevelingService's default 1 -- never the
+-- restored level.
 local lastLevel: { [Player]: number } = {}
 
 function SpraypaintService.balanceOf(player: any): number
@@ -205,13 +203,17 @@ function SpraypaintService.start()
 		-- any code here could observe a bound profile the attribute is already restored. This
 		-- initialiser is only a fallback for a player whose load failed and who is about to be kicked --
 		-- no hydrator ever runs for them, and without this the attribute would stay nil for that window.
+		--
+		-- The attribute set is NOT mirrored. This was the one adoption in the phase that mirrored its
+		-- own default, justified as a fallback for a failed load -- but mirror no-ops without a bound
+		-- profile, so on a failed load it did nothing at all, and the only state in which the write was
+		-- live was the one where it put 0 over a real saved balance.
 		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
 			player:SetAttribute(Constants.ATTRIBUTE, 0)
-			ProfileGateway.mirror(player, function(profile)
-				profile.Data.spraypaint = 0
-			end)
 		end
-		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up.
+		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up. This seed
+		-- is provisional: the gateway's load yields, so a RESTORED level always lands after it, which is
+		-- what the post-hydrator at the bottom of this file re-seeds from.
 		lastLevel[player] = player:GetAttribute("Level")
 		player:GetAttributeChangedSignal("Level"):Connect(function()
 			SpraypaintService.onLevelChanged(player)
@@ -226,5 +228,21 @@ end
 -- Registered at require time, so the gateway can restore this service's attributes before any other
 -- code -- including this same service's own safePlayerAdded above -- can observe a bound profile.
 ProfileGateway.registerHydrator(SpraypaintService.hydrate)
+
+-- Re-seeds the level baseline from the level LevelingService has just restored.
+--
+-- A POST-hydrator, not a hydrator: it reads another service's restored `Level` attribute, and hydrator
+-- order is registration order, which is require order. Post-hydrators run after EVERY hydrator, so this
+-- reads the restored level whichever service registered first.
+--
+-- Without it a returning level-12 player was paid (12 - 1) * 25 = 275 spraypaint on every rejoin. The
+-- seed in safePlayerAdded above is taken before the gateway's yielding load resolves, so hydration's
+-- SetAttribute("Level", 12) always lands afterwards and fires the listener with `previous` = 1. It was
+-- silent only when SpraypaintRunner happened to win the require race and the seed was nil -- correct by
+-- ordering luck, not by construction. Nothing was written (mirror no-ops before the bind), but the
+-- inflated ATTRIBUTE survived as the base the next grant or spend mirrored, so the award was durable.
+ProfileGateway.registerPostHydrator(function(player: any)
+	lastLevel[player] = player:GetAttribute("Level")
+end)
 
 return SpraypaintService

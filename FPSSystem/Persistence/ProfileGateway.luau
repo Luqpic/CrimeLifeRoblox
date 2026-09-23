@@ -1,6 +1,6 @@
 -- The only module in this place that knows ProfileStore exists.
 --
--- Services call waitFor/get and receive a plain table. That keeps ProfileStore swappable and keeps its
+-- Services call get and receive a plain table. That keeps ProfileStore swappable and keeps its
 -- API out of the seven services that hold progression state.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -83,8 +83,28 @@ end
 -- reward is recoverable; overwriting a real balance with a partial one is not.
 local hydrators: { (player: any, profile: any) -> () } = {}
 
+-- Runs a just-registered hydrator for every player whose profile is ALREADY bound.
+--
+-- _runHydrators runs whatever is registered at that instant and then binds unconditionally, so a
+-- service that registers AFTER a bind never hydrates that player at all. Its own guarded PlayerAdded
+-- default then wins, and the next ordinary action mirrors that default over real saved data: level 1
+-- over a saved level 12 on the first kill, {Crowbar} over real ownership on the first purchase, a fresh
+-- kills table over a real count. Closing the window here -- at the class -- rather than in each service
+-- is what stops the next adoption reopening it; the alternative is seven services each remembering.
+--
+-- Guarded exactly like the loops below, so a throwing late hydrator cannot take registration with it.
+local function runForBound(label: string, fn: (player: any, profile: any) -> ())
+	for player, profile in profiles do
+		local ok, err = pcall(fn, player, profile)
+		if not ok then
+			warn("[Persistence] late " .. label .. " failed for " .. tostring(player) .. ": " .. tostring(err))
+		end
+	end
+end
+
 function ProfileGateway.registerHydrator(hydrator: (player: any, profile: any) -> ())
 	table.insert(hydrators, hydrator)
+	runForBound("hydrator", hydrator)
 end
 
 -- Test seam only: runs every registered hydrator directly, without a real Player or onPlayerAdded --
@@ -109,6 +129,7 @@ local postHydrators: { (player: any, profile: any) -> () } = {}
 
 function ProfileGateway.registerPostHydrator(postHydrator: (player: any, profile: any) -> ())
 	table.insert(postHydrators, postHydrator)
+	runForBound("post-hydrator", postHydrator)
 end
 
 -- Test seam only: same rationale as _runHydrators -- production reuses this below.
@@ -219,24 +240,18 @@ function ProfileGateway.get(player: any): any?
 	return profiles[player]
 end
 
-function ProfileGateway.isLoaded(player: any): boolean
-	return profiles[player] ~= nil
-end
-
--- Yields until the player's profile is available. Returns nil if they left or the load failed, and
--- callers must treat nil as "do not persist anything for this player" rather than as "start fresh".
-function ProfileGateway.waitFor(player: Player): any?
-	while player.Parent == Players and profiles[player] == nil do
-		task.wait(0.1)
-	end
-	return profiles[player]
-end
-
 local function onPlayerAdded(player: Player)
 	-- Cancel serves two purposes: abandon a load whose player has already left, and put an upper bound
 	-- on one that will never complete. Supplying Cancel at all disables ProfileStore's own session
 	-- timeout, so without the deadline a sustained DataStore outage would leave a connected player
 	-- waiting forever with no load, no kick and no explanation.
+	--
+	-- NEVER EXERCISED. ProfileStore's Mock proxy calls `self:StartSessionAsync(profile_key)` and drops
+	-- the params argument, so under useMockStore -- which is every test run and every measurement this
+	-- place has ever taken -- `params.Cancel` is nil inside ProfileStore and its own START_SESSION_TIMEOUT
+	-- is back in charge. Neither the deadline below nor the departing-player cancel has run even once.
+	-- Deliberately not worked around: the vendored file is pinned to an upstream sha256 and that
+	-- guarantee is worth more than reaching this branch. See FPS-Persistence-Phase-3.md, DEFERRED.
 	local deadline = os.clock() + LOAD_DEADLINE
 	local profile = ProfileGateway.loadForKey(
 		ProfileGateway.keyFor(player.UserId),
@@ -272,8 +287,8 @@ local function onPlayerAdded(player: Player)
 	end
 
 	-- Hydrators run here, strictly before the bind below, so nothing outside this function can ever
-	-- observe a bound profile whose attributes are not yet restored. get() and isLoaded() stay false
-	-- for the whole of this loop. Post-hydrators run after EVERY hydrator has finished, so anything
+	-- observe a bound profile whose attributes are not yet restored. get() stays nil for the whole of
+	-- this loop. Post-hydrators run after EVERY hydrator has finished, so anything
 	-- that depends on another service's restored state -- not just its own -- sees it regardless of
 	-- which service happened to register first.
 	ProfileGateway._runHydrators(player, profile)

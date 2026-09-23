@@ -1,6 +1,8 @@
 -- Tests that each service's mirror points actually write into the profile, that hydration restores
 -- attributes from a profile, that hydration cannot be raced by a mirror (Finding 3), and that a
--- post-hydrator sees every hydrator's result regardless of registration order (fix round 2).
+-- post-hydrator sees every hydrator's result regardless of registration order (fix round 2), that a
+-- restored level is not paid out as a level-up, and that a hydrator registered after a bind still
+-- hydrates that player (final fix round).
 --
 -- These use a stand-in player table, because a real Player cannot be constructed. The services read
 -- and write attributes, and CosmeticsService's post-hydrator calls refresh, which additionally reads
@@ -228,6 +230,91 @@ return function(t)
 
 		expect.equal(ownedSeenByProbe, true)
 
+		profile:EndSession()
+	end)
+
+	t.test("a restored level is not paid out as a level-up", function()
+		-- The Critical the whole-branch review found. `lastLevel` is DERIVED and never persisted, and
+		-- SpraypaintService.start seeds it inside safePlayerAdded -- which runs BEFORE the gateway's
+		-- yielding load resolves, so the seed is LevelingService's default 1. Hydration's
+		-- SetAttribute("Level", 12) then lands afterwards and reads as an 11-level level-up worth
+		-- (12 - 1) * 25 = 275 spraypaint, paid on every single rejoin. It was silent only when
+		-- SpraypaintRunner happened to require first and the seed was nil: correct by ordering luck.
+		--
+		-- Runs the REAL registered hydrator and post-hydrator lists. LevelingService is a Script, so its
+		-- hydrator registers at server start rather than on require and this file cannot make it
+		-- present; the probe below writes the same attribute from the same field, so the case measures
+		-- the same thing either way, and the Level assertion catches it if neither ran.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-lastlevel-" .. os.clock())
+		profile.Data.level = 12
+		profile.Data.spraypaint = 40
+
+		Gateway.registerHydrator(function(p, prof)
+			if p == player then
+				p:SetAttribute("Level", prof.Data.level)
+			end
+		end)
+
+		-- What safePlayerAdded sees at join: the pre-restore default, never the saved level.
+		player:SetAttribute("Level", 1)
+		SpraypaintService.onLevelChanged(player) -- seeds the baseline at 1, pays nothing (previous nil)
+
+		Gateway._runHydrators(player, profile)
+		Gateway._runPostHydrators(player, profile)
+		Gateway._bind(player, profile)
+
+		-- The GetAttributeChangedSignal that hydration's SetAttribute fires. Measured deferred in this
+		-- place, so it lands after the post-hydrators; a stand-in table has no signals, so it is driven
+		-- directly here, which is exactly what that connection does.
+		SpraypaintService.onLevelChanged(player)
+
+		expect.equal(player:GetAttribute("Level"), 12) -- the restore really happened
+		expect.equal(SpraypaintService.balanceOf(player), 40) -- not 40 + 275
+		expect.equal(profile.Data.spraypaint, 40) -- and nothing inflated was mirrored back
+
+		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
+	t.test("a hydrator registered after a player is already bound still hydrates them", function()
+		-- The Major the whole-branch review found. _runHydrators runs whatever is registered at that
+		-- instant and then binds unconditionally, so a service that registers late never hydrates that
+		-- player -- and its own guarded default then gets mirrored over real saved data by the next
+		-- ordinary action. registerHydrator now runs the new function for every already-bound player.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-late-register-" .. os.clock())
+		profile.Data.spraypaint = 808
+
+		Gateway._runHydrators(player, profile)
+		Gateway._runPostHydrators(player, profile)
+		Gateway._bind(player, profile) -- bound BEFORE the service below exists
+
+		local lateSaw
+		Gateway.registerHydrator(function(p, prof)
+			if p == player then
+				lateSaw = prof.Data.spraypaint
+			end
+		end)
+		expect.equal(lateSaw, 808)
+
+		-- Same for post-hydrators, and a throwing one must not break registration for the next service.
+		expect.truthy(pcall(function()
+			Gateway.registerPostHydrator(function(p)
+				if p == player then
+					error("a late post-hydrator that throws")
+				end
+			end)
+		end))
+		local latePostSaw
+		Gateway.registerPostHydrator(function(p, prof)
+			if p == player then
+				latePostSaw = prof.Data.spraypaint
+			end
+		end)
+		expect.equal(latePostSaw, 808)
+
+		Gateway._unbind(player)
 		profile:EndSession()
 	end)
 

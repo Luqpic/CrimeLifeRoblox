@@ -56,7 +56,6 @@ return function(t)
 	t.test("get returns nil for a player with no profile", function()
 		local stranger = { UserId = -1, Name = "NoSuchPlayer" }
 		expect.equal(Gateway.get(stranger), nil)
-		expect.falsy(Gateway.isLoaded(stranger))
 	end)
 
 	t.test("a failed load yields no profile and writes nothing", function()
@@ -191,10 +190,25 @@ return function(t)
 		local failed = Gateway.loadForKey(key)
 		expect.equal(failed, nil)
 
-		-- If EndSession truly ran on the failed attempt above, the lock is free and this reload returns
-		-- promptly instead of exhausting LOAD_ATTEMPTS x RETRY_DELAY of contended retries (contrast this
-		-- case's reported duration against "a failed load yields no profile and writes nothing" above).
+		-- The reload's `nil` proves nothing on its own, and this case used to assert only that. Delete
+		-- `profile:EndSession()` from loadForKey and the reload still returns nil: the leaked session
+		-- makes StartSessionAsync throw "already loaded", our own pcall swallows it, the attempts are
+		-- exhausted and nil comes back for the WRONG reason. The old comment conceded it by asking a
+		-- human to compare this case's duration against another -- a timing a person reads is not an
+		-- assertion. The DURATION is the only thing that separates the two, so it is asserted here.
+		--
+		-- Freed lock: StartSessionAsync succeeds on attempt 1 and migrate throws again, so nil comes
+		-- back in milliseconds. Leaked lock: three throwing attempts with RETRY_DELAY between them,
+		-- ~4s. The 1s threshold sits four times below the failure and far above the success.
+		local started = os.clock()
 		local reread = Gateway.loadForKey(key)
+		local elapsed = os.clock() - started
 		expect.equal(reread, nil)
+		if elapsed >= 1 then
+			error(string.format(
+				"reload took %.2fs, so it went down the contended-retry path: the failed attempt did not end the session",
+				elapsed
+			), 0)
+		end
 	end)
 end
