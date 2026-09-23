@@ -43,6 +43,33 @@ function ProfileGateway._forceNextLoadFailure(active: boolean)
 	forcedFailure = active
 end
 
+-- Test seams only. Production binding happens in onPlayerAdded; these let a test attach a stand-in
+-- player to a profile without a real Player instance, which cannot be constructed.
+function ProfileGateway._bind(player: any, profile: any)
+	profiles[player] = profile
+end
+
+function ProfileGateway._unbind(player: any)
+	profiles[player] = nil
+end
+
+-- Applies a change to a player's profile, if they have one.
+--
+-- Guarded because a persistence failure must cost a save and never the gameplay path it sits in --
+-- the same rule every cosmetics call site in Phases 1 and 2 follows. A player with no profile is not
+-- an error here: they are mid-load, or their load failed and they are about to be removed, and either
+-- way the correct behaviour is to change nothing.
+function ProfileGateway.mirror(player: any, apply: (any) -> ())
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	local ok, err = pcall(apply, profile)
+	if not ok then
+		warn("[Persistence] mirror failed for " .. tostring(player) .. ": " .. tostring(err))
+	end
+end
+
 function ProfileGateway.keyFor(userId: number): string
 	return "player_" .. userId
 end

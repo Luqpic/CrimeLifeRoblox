@@ -4,12 +4,14 @@
 -- The viewmodel is NOT dressed here. It is built client-side and is dressed there, after the motion
 -- module has solved its joints.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
+local ProfileGateway = require(ServerScriptService.Persistence.Scripts.ProfileGateway)
 
 local CosmeticsService = {}
 
@@ -46,6 +48,18 @@ function CosmeticsService.equippedKeyFor(player: Player, weaponName: string): st
 		return Palettes.DEFAULT_KEY
 	end
 	return key
+end
+
+-- Restores each weapon's persisted equipped skin onto the attribute the rest of the game reads.
+-- Attributes stay the live source during a session; the profile is the copy that outlives it.
+function CosmeticsService.hydrate(player: any)
+	local profile = ProfileGateway.get(player)
+	if not profile then
+		return
+	end
+	for weaponName, paletteKey in profile.Data.equippedSkin do
+		player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+	end
 end
 
 -- Called by WeaponShopService wherever it hands a weapon to a player, including the respawn restore.
@@ -95,6 +109,9 @@ function CosmeticsService.handleEquipRequest(player: Player, weaponName: unknown
 		return
 	end
 	player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.equippedSkin[weaponName] = paletteKey
+	end)
 	CosmeticsService.refresh(player, weaponName)
 end
 

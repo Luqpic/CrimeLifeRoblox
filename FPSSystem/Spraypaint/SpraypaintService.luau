@@ -15,6 +15,7 @@ local Constants = require(ReplicatedStorage.Spraypaint.Constants)
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 local CosmeticsService = require(ServerScriptService.Cosmetics.Scripts.CosmeticsService)
+local ProfileGateway = require(ServerScriptService.Persistence.Scripts.ProfileGateway)
 
 local SpraypaintService = {}
 
@@ -34,6 +35,19 @@ function SpraypaintService.balanceOf(player: any): number
 	return if typeof(value) == "number" then value else 0
 end
 
+-- Restores the persisted balance and owned skins onto the attributes the rest of the game reads.
+-- Attributes stay the live source during a session; the profile is the copy that outlives it.
+function SpraypaintService.hydrate(player: any)
+	local profile = ProfileGateway.get(player)
+	if not profile then
+		return
+	end
+	player:SetAttribute(Constants.ATTRIBUTE, profile.Data.spraypaint or 0)
+	for paletteKey in profile.Data.skinsOwned do
+		player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
+	end
+end
+
 function SpraypaintService.grant(player: any, amount: number, reason: string): number
 	local balance = SpraypaintService.balanceOf(player)
 	-- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
@@ -46,6 +60,9 @@ function SpraypaintService.grant(player: any, amount: number, reason: string): n
 	end
 	local updated = balance + math.floor(amount)
 	player:SetAttribute(Constants.ATTRIBUTE, updated)
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.spraypaint = updated
+	end)
 	return updated
 end
 
@@ -57,7 +74,11 @@ function SpraypaintService.spend(player: any, amount: number): boolean
 	if balance < amount then
 		return false
 	end
-	player:SetAttribute(Constants.ATTRIBUTE, balance - amount)
+	local updated = balance - amount
+	player:SetAttribute(Constants.ATTRIBUTE, updated)
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.spraypaint = updated
+	end)
 	return true
 end
 
@@ -129,6 +150,9 @@ function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown): b
 		return false
 	end
 	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.skinsOwned[paletteKey] = true
+	end)
 	return true
 end
 
@@ -164,8 +188,18 @@ function SpraypaintService.start()
 	)
 
 	safePlayerAdded(function(player: Player)
+		-- Waits for the profile before doing anything else, so hydrate is what sets the starting
+		-- balance whenever one exists; the join initialiser below only ever fires as a fallback, for
+		-- a player whose load failed and who is about to be kicked.
+		ProfileGateway.waitFor(player)
+		SpraypaintService.hydrate(player)
+		CosmeticsService.hydrate(player)
+
 		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
 			player:SetAttribute(Constants.ATTRIBUTE, 0)
+			ProfileGateway.mirror(player, function(profile)
+				profile.Data.spraypaint = 0
+			end)
 		end
 		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up.
 		lastLevel[player] = player:GetAttribute("Level")
