@@ -488,12 +488,28 @@ clearing it — before re-applying, records that attribute only when it is `nil`
 **original** luminance rather than the current one; so N calls land exactly where one does, and
 `remove()` on an unskinned model changes nothing. `SpraypaintService`'s is a plain assignment.
 
+That claim covers **table state, not pending signals**, and the distinction matters. `SpraypaintService`'s
+post-hydrator is a *re-baseline* rather than a pure restore: re-running it while a level-change signal is
+still sitting deferred would move the baseline past a rise that had not been paid yet, swallowing a
+legitimate 25. It cannot fire today — no service registers late, so the sweep never runs — but a future
+late-registering service would need this checked rather than inheriting the idempotency claim above,
+which was made about the tables and not about the queue.
+
 Regression cases:
 
 - `"a hydrator registered after a player is already bound still hydrates them"` — binds first and
   registers second, for both phases, with a deliberately throwing late post-hydrator to prove
-  registration survives it. **Mutation: delete both `runForBound` calls.** Exactly one case goes red —
-  this one — with `expected 808, got nil`.
+  registration survives it. **Mutation: delete both `runForBound` calls.** Two cases go red: this one
+  with `expected 808, got nil`, and `"a hydrator registered after a bind is followed by the
+  post-hydrators"`, whose `expect.equal(levelSeenByPostHydrator, 1)` also depends on
+  `registerPostHydrator`'s `runForBound`. Both reds are independent rather than shared-fixture
+  collateral — each case builds its own stand-in against an `os.clock()`-suffixed key.
+
+  This document previously claimed exactly one red here. That was measured against the 135-case suite
+  and went stale when the suite grew to 137; the same staleness was caught and corrected for the
+  neighbouring mutation and missed for this one. Recorded rather than quietly amended, because a
+  mutation count is the evidence a test's worth rests on, and one that silently drifts is worse than
+  none.
 - `"a hydrator registered after a bind is followed by the post-hydrators"` — asserts the mechanism with
   a probe post-hydrator (it sees `Level = 1` when registered, and must see `12` after the late hydrator
   runs) and the consequence with the balance. **Mutation: delete the post-hydrator sweep from
