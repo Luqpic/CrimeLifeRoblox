@@ -14,6 +14,7 @@ local BlasterConstants = require(ReplicatedStorage.Blaster.Constants)
 local UpgradeConfig = require(ReplicatedStorage.Weapons.UpgradeConfig)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 local CosmeticsService = require(game:GetService("ServerScriptService").Cosmetics.Scripts.CosmeticsService)
+local ProfileGateway = require(game:GetService("ServerScriptService").Persistence.Scripts.ProfileGateway)
 
 local WEAPONS_FOLDER = ServerStorage.Weapons
 local buyRequest = ReplicatedStorage.Weapons.Remotes.BuyRequest
@@ -60,8 +61,8 @@ end
 catalogFolder.Parent = ReplicatedStorage.Weapons
 
 -- ============================================
--- OWNERSHIP (permanent once purchased, uncapped, session-only -- matches how Cash/Leveling already
--- work, no DataStore) + LOADOUT SLOTS (exactly 4, govern only what's granted into the Backpack)
+-- OWNERSHIP (permanent once purchased, uncapped, PERSISTED via ProfileGateway) + LOADOUT SLOTS
+-- (exactly 4, govern only what's granted into the Backpack)
 -- ============================================
 local MAX_LOADOUT_SLOTS = 4
 
@@ -147,11 +148,127 @@ local function isWeaponOwned(player: Player, weaponName: string): boolean
 	return owned ~= nil and owned[weaponName] == true
 end
 
-safePlayerAdded(function(player: Player)
-	ownedWeapons[player] = { [STARTING_WEAPON] = true }
-	equippedSlots[player] = { [1] = STARTING_WEAPON }
-	player:SetAttribute(UpgradeConfig.ownedAttributeFor(STARTING_WEAPON), true)
+-- Writes the WHOLE ownership and loadout tables, never just the slot that changed: equipping moves a
+-- weapon OUT of one slot and INTO another, so writing only the destination would leave the source slot
+-- stale in the profile and duplicate the weapon on the next join. Both tables are tiny (<= 37 keys,
+-- <= 4 slots), so a full copy each time is cheaper than tracking deltas correctly.
+--
+-- Copied rather than aliased: ownedWeapons[player] is cleared on PlayerRemoving and mutated in place
+-- elsewhere, and ProfileStore may be serialising Data on its own autosave timer at that moment.
+--
+-- Slot indices are written as STRINGS, and that is not cosmetic. A DataStore serialises through JSON,
+-- which has no integer keys, and a sparse integer-keyed table does not survive it. Measured with
+-- HttpService, which uses the same encoder:
+--
+--   { [1] = "Crowbar", [3] = "Glock 17" }  ->  ["Crowbar"]          -- slot 3 destroyed outright
+--   { [2] = "Glock 17" }                   ->  { "2": "Glock 17" }  -- key comes back as a string
+--   { ["1"] = "Crowbar", ["3"] = "Glock 17" } -> round-trips exactly
+--
+-- ProfileStore's Studio mock keeps the table in memory and reproduces none of this, so the integer
+-- version passes every Studio test and drops a live player's third and fourth slots. hydrate reads
+-- these back through tonumber, so it accepts either form.
+local function loadoutForProfile(player: Player): { [string]: string }
+	local out = {}
+	for index, weaponName in equippedSlots[player] or {} do
+		out[tostring(index)] = weaponName
+	end
+	return out
+end
+
+local function mirrorLoadout(player: Player)
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.weaponsOwned = table.clone(ownedWeapons[player] or {})
+		profile.Data.loadout = loadoutForProfile(player)
+	end)
+end
+
+-- Restores ownership and the 4 slots, then hands out the Tools.
+--
+-- Registered as a plain hydrator, NOT a post-hydrator, and that is load-bearing: CosmeticsService
+-- registers a POST-hydrator that re-dresses every Tool the player is carrying, so the Tools have to
+-- exist by the time that runs. Restoring here means the persisted skin lands on a restored weapon for
+-- free, with no cosmetics code in this file beyond the applyToTool call grantWeapon already makes.
+--
+-- May run before or after the safePlayerAdded handler below (the gateway yields on a DataStore round
+-- trip, so it usually lands last, but that is not guaranteed) -- it builds the tables itself either
+-- way, and the handler's own seed is guarded on them not existing.
+local function hydrate(player: any, profile: any?)
+	profile = profile or ProfileGateway.get(player)
+	if not profile then
+		return
+	end
+
+	local owned = {}
+	for weaponName in profile.Data.weaponsOwned do
+		owned[weaponName] = true
+		player:SetAttribute(UpgradeConfig.ownedAttributeFor(weaponName), true)
+	end
+
+	local slots = {}
+	for slotIndex, weaponName in profile.Data.loadout do
+		-- tonumber because a sparse integer-keyed table does NOT round-trip through a real DataStore as
+		-- integers: JSON has no integer keys, so { [2] = "Glock 17" } comes back as { ["2"] = ... }.
+		-- ProfileStore's Studio mock keeps them as numbers, so reading only one of the two forms would
+		-- pass every Studio test and silently empty every live player's loadout.
+		local index = tonumber(slotIndex)
+		if index and index >= 1 and index <= MAX_LOADOUT_SLOTS and typeof(weaponName) == "string" and owned[weaponName] then
+			slots[index] = weaponName
+		end
+	end
+
+	-- Seeded ONLY when the profile holds no weapons AT ALL, which is what distinguishes a brand-new
+	-- profile from a returning player who deliberately re-slotted or sold their starting weapon.
+	-- Keying this off an empty LOADOUT instead would hand the Crowbar back on every single join to
+	-- anyone who moved it out of a slot.
+	if next(owned) == nil then
+		owned[STARTING_WEAPON] = true
+		slots[1] = STARTING_WEAPON
+		player:SetAttribute(UpgradeConfig.ownedAttributeFor(STARTING_WEAPON), true)
+		-- Written straight into the profile rather than through mirror, which is deliberately a no-op
+		-- for the whole of the hydrator phase. Recording the seed makes "no weapons at all" a state a
+		-- profile passes through exactly once in its life.
+		profile.Data.weaponsOwned = table.clone(owned)
+		profile.Data.loadout = { ["1"] = STARTING_WEAPON }
+	end
+
+	ownedWeapons[player] = owned
+	equippedSlots[player] = slots
 	publishSlots(player)
+
+	-- The Backpack is a disposable view of the slots (see the header), so it is reconciled, not added
+	-- to: if the safePlayerAdded handler below already ran and granted the default Crowbar before this
+	-- did, that Tool is stale the moment the real loadout is restored, and restoreEquippedWeapons only
+	-- ever ADDS. Measured: without this the player joins holding Crowbar plus their restored weapons.
+	local wanted = {}
+	for _, weaponName in slots do
+		wanted[weaponName] = true
+	end
+	for _, container in { player:FindFirstChildOfClass("Backpack"), player.Character } do
+		if container then
+			for _, tool in container:GetChildren() do
+				if tool:IsA("Tool") and not wanted[tool.Name] then
+					tool:Destroy()
+				end
+			end
+		end
+	end
+	restoreEquippedWeapons(player)
+end
+
+safePlayerAdded(function(player: Player)
+	-- Defaults only when hydrate has not already built this player's state. An unconditional seed here
+	-- would overwrite a just-restored loadout whenever this handler happened to run second. The
+	-- symmetry is what makes both orderings land on restored state: whichever runs first creates, and
+	-- hydrate always wins because it overwrites rather than merges.
+	if not ownedWeapons[player] then
+		ownedWeapons[player] = { [STARTING_WEAPON] = true }
+		equippedSlots[player] = { [1] = STARTING_WEAPON }
+		player:SetAttribute(UpgradeConfig.ownedAttributeFor(STARTING_WEAPON), true)
+		publishSlots(player)
+		-- No-op during the hydrator phase by design; this covers the case where this handler runs after
+		-- the bind, for a player whose profile was already loaded.
+		mirrorLoadout(player)
+	end
 
 	player.CharacterAdded:Connect(function()
 		restoreEquippedWeapons(player)
@@ -164,6 +281,8 @@ safePlayerAdded(function(player: Player)
 		restoreEquippedWeapons(player)
 	end
 end)
+
+ProfileGateway.registerHydrator(hydrate)
 
 Players.PlayerRemoving:Connect(function(player: Player)
 	ownedWeapons[player] = nil
@@ -207,6 +326,8 @@ buyRequest.OnServerEvent:Connect(function(player: Player, weaponName: any)
 	cash.Value -= price
 	owned[weaponName] = true
 	player:SetAttribute(UpgradeConfig.ownedAttributeFor(weaponName), true)
+	-- After the live grant, never instead of it: a persistence failure must cost a save, not a weapon.
+	mirrorLoadout(player)
 end)
 
 -- ============================================
@@ -286,4 +407,8 @@ setLoadoutSlotRequest.OnServerEvent:Connect(function(player: Player, weaponName:
 	end
 
 	publishSlots(player)
+	-- One mirror for all three slot write sites (dequip, vacate-old-slot, occupy-new-slot). Every path
+	-- that mutates `slots` reaches here -- the early returns above all happen before any mutation -- so
+	-- a single call after publishSlots cannot miss a branch the way three separate calls could.
+	mirrorLoadout(player)
 end)

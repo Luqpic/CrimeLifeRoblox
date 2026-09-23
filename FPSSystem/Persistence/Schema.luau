@@ -20,9 +20,15 @@ Schema.template = {
 	cash = 500,
 	level = 1,
 	xp = 0,
-	kills = {},           -- { Criminal = n, Police = n }
+	-- Keyed by Stats.Constants' ATTRIBUTE names, not the faction names, so the saved table and
+	-- KillStatsService's in-memory counts are the same shape with no translation between them.
+	kills = {},           -- { CriminalKills = n, PoliceKills = n }
 	weaponsOwned = {},    -- [weaponName] = true
+	-- The upgrade LEVEL. The damage it implies is in DERIVED below and is recomputed on every grant.
 	weaponUpgrades = {},  -- [weaponName] = level
+	-- Sparse integer keys do not survive a real DataStore round trip as integers (JSON has no integer
+	-- keys), so readers must accept string keys too. ProfileStore's Studio mock does NOT reproduce
+	-- this, which is what makes it an invisible-in-testing failure.
 	loadout = {},         -- [slotIndex] = weaponName
 }
 
