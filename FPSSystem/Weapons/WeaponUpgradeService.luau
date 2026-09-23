@@ -87,6 +87,20 @@ upgradeRequest.OnServerEvent:Connect(function(player: Player, weaponName: any)
 		return
 	end
 
+	-- You may only upgrade a weapon you own. Checked against the replicated ownership attribute rather
+	-- than WeaponShopService's private table, because the attribute is this project's established
+	-- ownership signal and is set on all four paths that can grant a weapon (hydrate's restore loop,
+	-- both starting-weapon seeds, and purchase) -- and because reaching across for the private table
+	-- would couple these two services for no gain.
+	--
+	-- This gap predates persistence: the client could always fire this remote for an unowned weapon and
+	-- buy a level on it. It only became worth closing here because Task 5 made the level DURABLE -- what
+	-- used to evaporate at logout now survives forever, so the same exploit went from session-scoped to
+	-- permanent.
+	if player:GetAttribute(UpgradeConfig.ownedAttributeFor(weaponName)) ~= true then
+		return
+	end
+
 	local leaderstats = player:FindFirstChild("leaderstats")
 	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
 	if not cash then

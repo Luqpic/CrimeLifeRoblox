@@ -265,9 +265,13 @@ safePlayerAdded(function(player: Player)
 		equippedSlots[player] = { [1] = STARTING_WEAPON }
 		player:SetAttribute(UpgradeConfig.ownedAttributeFor(STARTING_WEAPON), true)
 		publishSlots(player)
-		-- No-op during the hydrator phase by design; this covers the case where this handler runs after
-		-- the bind, for a player whose profile was already loaded.
-		mirrorLoadout(player)
+		-- Deliberately NOT mirrored. During the hydrator phase mirror is a no-op anyway, and after the
+		-- bind this branch is reachable only when ownedWeapons[player] is still nil -- which means
+		-- hydrate threw and _runHydrators swallowed it. Mirroring here would then write the default
+		-- { Crowbar } over the player's real saved ownership and loadout, so the one case it could
+		-- "cover" is the exact case where it destroys data. The fresh-profile seed is recorded by
+		-- hydrate, straight into profile.Data, which is the only place that can tell a new profile from
+		-- a failed restore.
 	end
 
 	player.CharacterAdded:Connect(function()
