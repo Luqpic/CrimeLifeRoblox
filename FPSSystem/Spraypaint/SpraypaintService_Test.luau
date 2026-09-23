@@ -88,6 +88,17 @@ return function(t)
 		expect.equal(SpraypaintService.balanceOf(player, "AK47"), 25)
 	end)
 
+	t.test("granting credits whichever weapon name was passed in, not a fixed one", function()
+		-- Every other grant test in this file happens to use "AK47" as the credited weapon, which
+		-- alone cannot distinguish real attribution from a grant() that ignores its weaponName
+		-- parameter and always writes to a hardcoded "AK47" attribute. A second, different weapon
+		-- name is the only thing that closes that gap.
+		local player = fakePlayer()
+		expect.equal(SpraypaintService.grant(player, "M4A1", 15, "test"), 15)
+		expect.equal(SpraypaintService.balanceOf(player, "M4A1"), 15)
+		expect.equal(SpraypaintService.balanceOf(player, "AK47"), 0)
+	end)
+
 	t.test("granting a weapon does not affect another weapon's balance or the shared bucket", function()
 		-- Mutation target: a grant that wrote to the wrong attribute, or to Constants.SHARED_ATTRIBUTE
 		-- instead of the weapon's own, would pass every other grant test in this file and fail only
@@ -225,6 +236,18 @@ return function(t)
 		expect.equal(SpraypaintService.balanceOf(player, "AK47"), Constants.KILL_SPRAYPAINT.Police)
 		expect.equal(SpraypaintService.balanceOf(player, "M4A1"), 0)
 		expect.equal(SpraypaintService.sharedBalanceOf(player), 0)
+	end)
+
+	t.test("a kill credits whichever weapon name was passed in, not a fixed one", function()
+		-- Every award test above uses "AK47", which alone cannot distinguish real attribution from
+		-- an awardForVictim that ignores its weaponName parameter and always credits a hardcoded
+		-- "AK47". This is the ONLY case in the whole suite that credits a kill to a weapon other
+		-- than "AK47" -- without it, the kill-credit path could be silently hardcoded and nothing
+		-- here would notice.
+		local player = fakePlayer()
+		SpraypaintService.awardForVictim(player, fakeVictim("Police"), "M4A1")
+		expect.equal(SpraypaintService.balanceOf(player, "M4A1"), Constants.KILL_SPRAYPAINT.Police)
+		expect.equal(SpraypaintService.balanceOf(player, "AK47"), 0)
 	end)
 
 	t.test("a PvP kill awards nothing", function()
