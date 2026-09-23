@@ -61,4 +61,12 @@ return function(t)
 			expect.falsy(typeof(value) == "function" or typeof(value) == "Instance")
 		end
 	end)
+
+	t.test("version is never part of the template", function()
+		-- Reconcile fills anything present in the template, unconditionally, for every profile including
+		-- a v0 one. If `version` ever became a template field, Reconcile would stamp every v0 profile
+		-- current BEFORE ProfileGateway.migrate ever saw it, and version-based migration would die
+		-- silently with no test here to catch it.
+		expect.equal(Schema.template.version, nil)
+	end)
 end

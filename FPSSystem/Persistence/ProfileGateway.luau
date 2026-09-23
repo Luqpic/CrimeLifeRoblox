@@ -146,6 +146,14 @@ function ProfileGateway.migrate(data: { [string]: any }): boolean
 		end
 	end
 
+	-- A stamped, non-nil version with no case above that resolves it means VERSION was bumped without
+	-- a step for it. Failing loudly here beats silently reading (and saving back) v-old data under a
+	-- vN meaning -- the exact case the comment above this function names as migrate's reason to exist.
+	assert(
+		data.version == Schema.VERSION,
+		string.format("ProfileGateway.migrate: no migration step for stored version %s (current is %s)", tostring(data.version), tostring(Schema.VERSION))
+	)
+
 	return changed
 end
 
@@ -161,7 +169,19 @@ function ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): any?
 		local profile = if forcedFailure then nil else store:StartSessionAsync(key, { Cancel = cancel })
 		if profile then
 			profile:Reconcile()
-			ProfileGateway.migrate(profile.Data)
+			-- migrate can throw (its own version assert), so it is pcall'd like every other step that runs
+			-- between a successful StartSessionAsync and the bind: an uncaught throw here would otherwise
+			-- escape loadForKey uncaught, skip the kick at onPlayerAdded's profile==nil branch, and leave
+			-- the session open -- a player playing fully unbound AND a leaked lock on their next join.
+			local migrateOk, migrateResult = pcall(ProfileGateway.migrate, profile.Data)
+			if not migrateOk then
+				warn("[Persistence] migrate failed for " .. key .. ": " .. tostring(migrateResult))
+				profile:EndSession()
+				return nil
+			end
+			if migrateResult then
+				print("[Persistence] migrated profile " .. key .. " to version " .. tostring(Schema.VERSION))
+			end
 			return profile
 		end
 		if attempt < LOAD_ATTEMPTS then

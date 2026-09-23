@@ -102,7 +102,10 @@ return function(t)
 	end)
 
 	t.test("migration is idempotent", function()
-		local data = { version = Schema.VERSION, spraypaint = 5 }
+		-- Idempotent means a SECOND call after a REAL migration is a no-op -- not merely that migrate
+		-- returns false when handed already-clean data, which a completely inert migrate would too.
+		local data = { spraypaint = 5, NextLevelXP = 999 }
+		Gateway.migrate(data)
 		expect.falsy(Gateway.migrate(data))
 		expect.equal(data.spraypaint, 5)
 	end)
@@ -111,7 +114,7 @@ return function(t)
 		-- Older profiles, or a mirror bug, could have written one. Leaving it would let a stale value
 		-- outlive and then contradict the thing it was derived from.
 		local data = { version = Schema.VERSION, level = 3, NextLevelXP = 999 }
-		Gateway.migrate(data)
+		expect.truthy(Gateway.migrate(data))
 		expect.equal(data.NextLevelXP, nil)
 		expect.equal(data.level, 3)
 	end)
@@ -122,5 +125,42 @@ return function(t)
 		local data = { version = Schema.VERSION, fieldFromANewerSchema = "keep me" }
 		Gateway.migrate(data)
 		expect.equal(data.fieldFromANewerSchema, "keep me")
+	end)
+
+	t.test("a v0 profile with a leaked derived field gets both fixed in one pass", function()
+		-- Neither branch's own case calls migrate with BOTH conditions true at once, so neither would
+		-- catch a bug where handling one (for example via an early return) skips the other.
+		local data = { spraypaint = 9, NextLevelXP = 500 }
+		Gateway.migrate(data)
+		expect.equal(data.version, Schema.VERSION)
+		expect.equal(data.NextLevelXP, nil)
+		expect.equal(data.spraypaint, 9)
+	end)
+
+	t.test("migrate refuses to silently accept a version with no migration step", function()
+		-- If VERSION is bumped without adding a step for the version a stored profile was written at,
+		-- migrate must fail loudly rather than let mismatched-meaning data through unflagged.
+		local data = { version = -1 }
+		expect.throws(function() Gateway.migrate(data) end)
+	end)
+
+	t.test("a migrate failure ends the session and returns nil, rather than binding an unmigrated profile", function()
+		-- Simulates a stored version with no migration step (migrate's own assert fires). loadForKey must
+		-- not hand back a profile that failed to migrate, and must not leak the session lock doing so -- a
+		-- leaked lock would push the player's very next load onto the contended-retry path instead of
+		-- loading promptly.
+		local key = "migrate-throws-" .. os.clock()
+		local seed = Gateway.loadForKey(key)
+		seed.Data.version = -1 -- no migration step exists for this version
+		seed:EndSession()
+
+		local failed = Gateway.loadForKey(key)
+		expect.equal(failed, nil)
+
+		-- If EndSession truly ran on the failed attempt above, the lock is free and this reload returns
+		-- promptly instead of exhausting LOAD_ATTEMPTS x RETRY_DELAY of contended retries (contrast this
+		-- case's reported duration against "a failed load yields no profile and writes nothing" above).
+		local reread = Gateway.loadForKey(key)
+		expect.equal(reread, nil)
 	end)
 end
