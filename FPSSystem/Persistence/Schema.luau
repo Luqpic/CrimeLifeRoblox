@@ -13,7 +13,11 @@ Schema.template = {
 	spraypaint = 0,
 	skinsOwned = {},      -- [paletteKey] = true
 	equippedSkin = {},    -- [weaponName] = paletteKey
-	cash = 0,
+	-- New-player starting balance -- not a placeholder zero. CashService.STARTING_CASH reads this
+	-- value directly rather than holding its own copy, so the two cannot drift. This is written
+	-- durably into every new player's saved profile, so a debug/test amount belongs as a session-only
+	-- override in CashService, never as a change here.
+	cash = 500,
 	level = 1,
 	xp = 0,
 	kills = {},           -- { Criminal = n, Police = n }

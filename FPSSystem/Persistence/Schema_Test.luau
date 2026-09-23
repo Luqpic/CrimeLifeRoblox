@@ -20,7 +20,11 @@ return function(t)
 
 	t.test("scalar defaults are sane for a brand new player", function()
 		expect.equal(Schema.template.spraypaint, 0)
-		expect.equal(Schema.template.cash, 0)
+		-- Cash is the one non-zero starting balance: CashService.STARTING_CASH reads this value
+		-- directly (fix round 1), so a new player actually receives it rather than an empty wallet.
+		-- Pinned to the literal 500, not read back from the template and compared to itself, so this
+		-- still fails if someone changes the starting balance to something a new player should not get.
+		expect.equal(Schema.template.cash, 500)
 		expect.equal(Schema.template.level, 1)
 		expect.equal(Schema.template.xp, 0)
 	end)

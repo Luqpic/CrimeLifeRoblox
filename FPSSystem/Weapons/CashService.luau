@@ -15,11 +15,16 @@ local Workspace = game:GetService("Workspace")
 local BlasterConstants = require(ReplicatedStorage.Blaster.Constants)
 local Constants = require(ReplicatedStorage.Enemy.Constants)
 local ProfileGateway = require(ServerScriptService.Persistence.Scripts.ProfileGateway)
+local Schema = require(ReplicatedStorage.Persistence.Schema)
 
 local cashTemplate = ServerStorage:WaitForChild("Cash")
 
--- Placeholders, not balance: tune freely.
-local STARTING_CASH = 10000 -- DEBUG: raised from 500 to buy-test the new weapons. Revert to 500.
+-- Placeholders, not balance: tune freely (by editing Schema.template.cash, the single source of
+-- truth -- see that file's comment). This used to be a local literal here, DEBUG-overridden to
+-- 10000 for buy-testing new weapons, but that override stopped meaning anything once hydrate
+-- (below) always governs Cash.Value for any player with a profile: a fresh profile's cash comes
+-- from this exact same template value, so the two could never have been allowed to drift anyway.
+local STARTING_CASH = Schema.template.cash
 local DROP_CHANCE = 0.3
 local DESPAWN_TIME = 10
 local IMPLODE_TIME = 0.4
