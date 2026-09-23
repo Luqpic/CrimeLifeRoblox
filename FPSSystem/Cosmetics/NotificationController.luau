@@ -1,0 +1,174 @@
+-- Bottom-right stacked-card notification toast. `show` clones the template, arrives it as the
+-- front card, then re-seats every older card one layer back so the stack always reads like a
+-- physical pile of cards rather than a list. There is no UIListLayout here on purpose: a list
+-- owns the position (and often the size) of what it stacks, which would fight every re-seat tween
+-- below on the very next layout pass.
+--
+-- The ScreenGui and container are built once, the first time any client requires this module; Luau
+-- caches the module table per client, so every later require anywhere shares the same stack without
+-- the callers having to coordinate.
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local HOLD_TIME = 4 -- unchanged from the old list version: time a card stays fully readable
+local ARRIVAL_TIME = 0.22
+local RESEAT_TIME = 0.18
+local EXPIRE_TIME = 0.18
+local MAX_VISIBLE = 3
+local CARD_WIDTH = 420
+local CARD_HEIGHT = 100
+local DEPTH_Y_STEP = 10 -- each older card sits this much higher than the one in front of it
+local DEPTH_INSET_STEP = 14 -- ...and this much narrower on each side
+local ARRIVAL_OFFSET_X = 40 -- new/expiring cards travel this far past their resting X
+local RIGHT_MARGIN = 20
+-- Bottom-right is already claimed by GuiController's ammo/weapon HUD, built at runtime
+-- (AutomaticSize) rather than sized in the template -- measured live below.
+local BOTTOM_MARGIN = 160
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local guiTemplates = ReplicatedStorage:WaitForChild("GuiTemplates")
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "NotificationGui"
+-- Every GUI in this game opts out of respawn reset. It matters more here than most: this module is
+-- required once and holds a reference to the container below, which a reset would destroy and leave
+-- every later notification parented to nothing.
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local container = Instance.new("Frame")
+container.Name = "Container"
+container.BackgroundTransparency = 1
+container.AnchorPoint = Vector2.new(1, 1)
+container.Position = UDim2.new(1, -RIGHT_MARGIN, 1, -BOTTOM_MARGIN)
+container.Size = UDim2.fromOffset(CARD_WIDTH, CARD_HEIGHT + DEPTH_Y_STEP * (MAX_VISIBLE - 1))
+container.Parent = gui
+
+local ARRIVE_INFO = TweenInfo.new(ARRIVAL_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local RESEAT_INFO = TweenInfo.new(RESEAT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local EXPIRE_INFO = TweenInfo.new(EXPIRE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+
+-- Newest-first: stack[1] is always the front card (depth 0, full detail, highest ZIndex).
+local stack = {}
+
+-- Depth 0 is the front card at full width; each step back is narrower (inset on both sides) and
+-- higher (peeking out above the card in front), with its own detail dimmed toward the rounded
+-- background only -- matching the reference, where the cards behind read as plain shapes, not text.
+local function depthGeometry(depth: number)
+	local inset = DEPTH_INSET_STEP * depth
+	local position = UDim2.new(1, -inset, 1, -DEPTH_Y_STEP * depth)
+	local size = UDim2.fromOffset(CARD_WIDTH - inset * 2, CARD_HEIGHT)
+	local dim = math.min(depth * 0.3, 0.6)
+	return position, size, dim
+end
+
+local function reseat(card, depth: number, tweenInfo: TweenInfo)
+	local position, size, dim = depthGeometry(depth)
+	-- ZIndex isn't tweenable and doesn't need to be: siblings under the same parent (the
+	-- container) already draw in ZIndex order, so setting it once here is enough.
+	card.instance.ZIndex = MAX_VISIBLE + 1 - depth
+
+	local contentTransparency = if depth == 0 then 0 else 1
+
+	TweenService:Create(card.instance, tweenInfo, {
+		Position = position,
+		Size = size,
+		BackgroundTransparency = dim,
+	}):Play()
+	TweenService:Create(card.titleLabel, tweenInfo, { TextTransparency = contentTransparency }):Play()
+	TweenService:Create(card.messageLabel, tweenInfo, { TextTransparency = contentTransparency }):Play()
+	TweenService:Create(card.accentEdge, tweenInfo, { BackgroundTransparency = contentTransparency }):Play()
+end
+
+-- Re-seats every card except `skipIndex` (the one arriving or leaving under its own tween).
+local function reflow(tweenInfo: TweenInfo, skipIndex: number?)
+	for index, card in ipairs(stack) do
+		if index ~= skipIndex then
+			reseat(card, index - 1, tweenInfo)
+		end
+	end
+end
+
+local function expireAndDestroy(card)
+	if card.dead then
+		return
+	end
+	card.dead = true
+
+	local position = card.instance.Position + UDim2.fromOffset(ARRIVAL_OFFSET_X, 0)
+	local tween = TweenService:Create(card.instance, EXPIRE_INFO, {
+		Position = position,
+		BackgroundTransparency = 1,
+	})
+	TweenService:Create(card.titleLabel, EXPIRE_INFO, { TextTransparency = 1 }):Play()
+	TweenService:Create(card.messageLabel, EXPIRE_INFO, { TextTransparency = 1 }):Play()
+	TweenService:Create(card.accentEdge, EXPIRE_INFO, { BackgroundTransparency = 1 }):Play()
+	tween.Completed:Connect(function()
+		card.instance:Destroy()
+	end)
+	tween:Play()
+end
+
+local NotificationController = {}
+
+-- `title` is the acid headline on the plate. It is optional so every existing single-argument call
+-- keeps working unchanged; the Figma plate always shows one, so there is a default rather than a
+-- blank line.
+function NotificationController.show(message: string, title: string?)
+	local template = guiTemplates:WaitForChild("Notification")
+	local instance = template:Clone()
+	instance.Name = "Card"
+	instance.AnchorPoint = Vector2.new(1, 1)
+	instance.MessageLabel.Text = message
+	instance.TitleLabel.Text = title or "NOTICE"
+	instance.Parent = container
+
+	local card = {
+		instance = instance,
+		titleLabel = instance.TitleLabel,
+		messageLabel = instance.MessageLabel,
+		accentEdge = instance.AccentEdge,
+		dead = false,
+		expireThread = nil,
+	}
+
+	-- Start off-screen to the right and fully transparent -- content included, so it doesn't
+	-- flash into view a frame before the tween below catches up with it.
+	local restPosition, restSize = depthGeometry(0)
+	instance.Position = restPosition + UDim2.fromOffset(ARRIVAL_OFFSET_X, 0)
+	instance.Size = restSize
+	instance.BackgroundTransparency = 1
+	card.titleLabel.TextTransparency = 1
+	card.messageLabel.TextTransparency = 1
+	card.accentEdge.BackgroundTransparency = 1
+
+	table.insert(stack, 1, card)
+	reseat(card, 0, ARRIVE_INFO)
+	reflow(RESEAT_INFO, 1)
+
+	-- A fourth card pushes the oldest (now past MAX_VISIBLE, at the tail) out immediately --
+	-- always the tail, since every card shares the same HOLD_TIME and so always expires FIFO.
+	while #stack > MAX_VISIBLE do
+		local evicted = table.remove(stack)
+		if evicted.expireThread then
+			task.cancel(evicted.expireThread)
+			evicted.expireThread = nil
+		end
+		expireAndDestroy(evicted)
+	end
+
+	card.expireThread = task.delay(ARRIVAL_TIME + HOLD_TIME, function()
+		card.expireThread = nil
+		local index = table.find(stack, card)
+		if not index then
+			return
+		end
+		table.remove(stack, index)
+		reflow(RESEAT_INFO)
+		expireAndDestroy(card)
+	end)
+end
+
+return NotificationController
