@@ -279,6 +279,7 @@ git commit -m "Add the persistence schema and vendor ProfileStore"
   - `ProfileGateway.useMockStore()` — points the gateway at `ProfileStore.Mock`, for tests
   - `ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): Profile?` — one key, retried; nil when it cannot be had
   - `ProfileGateway.keyFor(userId: number): string`
+  - `ProfileGateway.mirror(player, apply: (profile) -> ())` — guarded write; a no-op when the player has no profile (added in Task 3 Step 3a)
 
 - [ ] **Step 1: Write the failing test**
 
@@ -690,6 +691,29 @@ function ProfileGateway._unbind(player: any)
 end
 ```
 
+- [ ] **Step 3a: Add the shared mirror helper to the gateway**
+
+Every service writes through this one function, so the guard exists once:
+
+```lua
+-- Applies a change to a player's profile, if they have one.
+--
+-- Guarded because a persistence failure must cost a save and never the gameplay path it sits in --
+-- the same rule every cosmetics call site in Phases 1 and 2 follows. A player with no profile is not
+-- an error here: they are mid-load, or their load failed and they are about to be removed, and either
+-- way the correct behaviour is to change nothing.
+function ProfileGateway.mirror(player: any, apply: (any) -> ())
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	local ok, err = pcall(apply, profile)
+	if not ok then
+		warn("[Persistence] mirror failed for " .. tostring(player) .. ": " .. tostring(err))
+	end
+end
+```
+
 - [ ] **Step 4: Add hydrate and mirror to SpraypaintService**
 
 Add a require for the gateway, then a hydrate function:
@@ -709,22 +733,10 @@ function SpraypaintService.hydrate(player: any)
 end
 ```
 
-And a mirror helper used at each write site:
-
-```lua
--- Guarded because a persistence failure must cost a save, never a gameplay path -- the same rule
--- every cosmetics call site in Phases 1 and 2 follows.
-local function mirror(player: any, apply: (any) -> ())
-	local profile = ProfileGateway.get(player)
-	if not profile then
-		return
-	end
-	local ok, err = pcall(apply, profile)
-	if not ok then
-		warn("[Persistence] failed to mirror for " .. tostring(player) .. ": " .. tostring(err))
-	end
-end
-```
+Mirroring uses `ProfileGateway.mirror`, which Step 3a adds to the gateway. It is NOT redefined per
+service: seven copies of the same eight lines is the "five panels each reimplementing one widget"
+pattern this project's rules single out, and a guard duplicated seven times is a guard that gets fixed
+in six places.
 
 Call `mirror` at the three balance writes (`grant`, `spend`, the join initialiser) and at the ownership
 write in `handleBuyRequest`, each setting the corresponding `profile.Data` field. Call
@@ -800,8 +812,8 @@ Hydrate sets `leaderstats.Cash.Value` from `profile.Data.cash` instead of `START
 profile exists — a returning player must not be handed the starting amount again. Mirror at both write
 sites (`:54` and `:171`) so the profile follows `cash.Value`.
 
-Use the same guarded `mirror` helper shape as Task 3, so a persistence failure costs a save and never
-the cash award itself.
+Write through `ProfileGateway.mirror`, so a persistence failure costs a save and never the cash award
+itself. Do not define a local copy of it.
 
 - [ ] **Step 3: Add hydrate and mirror to LevelingService**
 
