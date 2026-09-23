@@ -140,8 +140,42 @@ return function(t)
 	t.test("migrate refuses to silently accept a version with no migration step", function()
 		-- If VERSION is bumped without adding a step for the version a stored profile was written at,
 		-- migrate must fail loudly rather than let mismatched-meaning data through unflagged.
+		--
+		-- The type check and the message check are both load-bearing. A bare expect.throws passes when
+		-- Gateway.migrate is NIL, because calling nil throws -- so it cannot tell "migrate asserts
+		-- correctly" from "migrate does not exist". That is not hypothetical: during Task 7's
+		-- verification pass a stale module cache served a migrate-less gateway, four cases in this file
+		-- failed with "attempt to call a nil value", and this one reported a clean pass throughout.
+		expect.equal(typeof(Gateway.migrate), "function")
 		local data = { version = -1 }
-		expect.throws(function() Gateway.migrate(data) end)
+		local err = tostring(expect.throws(function() Gateway.migrate(data) end))
+		expect.truthy(string.find(err, "no migration step for stored version", 1, true) ~= nil)
+		expect.truthy(string.find(err, "-1", 1, true) ~= nil)
+	end)
+
+	t.test("a key already loaded in this server returns nil rather than throwing out of loadForKey", function()
+		-- ProfileStore raises "Profile ... is already loaded in this session" instead of returning nil
+		-- when the key is held by a live session in this same server -- what a rejoin hits inside the
+		-- window between EndSession and the session actually ending. Unguarded, that throw escaped
+		-- loadForKey and onPlayerAdded together, skipping the profile == nil kick.
+		--
+		-- The return value alone would not prove the fix: this asserts the OUTCOME the kick path
+		-- depends on. loadForKey returns nil, the live session is left ACTIVE (the failed attempt
+		-- neither ended nor stole it), and a write made after the failed attempt still saves.
+		local key = "test-already-loaded-" .. os.clock()
+		local first = Gateway.loadForKey(key)
+		expect.truthy(first ~= nil)
+
+		local second = Gateway.loadForKey(key)
+		expect.equal(second, nil)
+		expect.truthy(first:IsActive())
+
+		first.Data.spraypaint = 5150
+		first:EndSession()
+
+		local reread = Gateway.loadForKey(key)
+		expect.equal(reread.Data.spraypaint, 5150)
+		reread:EndSession()
 	end)
 
 	t.test("a migrate failure ends the session and returns nil, rather than binding an unmigrated profile", function()

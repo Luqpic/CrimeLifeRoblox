@@ -166,7 +166,28 @@ function ProfileGateway.loadForKey(key: string, cancel: (() -> boolean)?): any?
 		if cancel and cancel() then
 			return nil
 		end
-		local profile = if forcedFailure then nil else store:StartSessionAsync(key, { Cancel = cancel })
+		-- StartSessionAsync is the only call in this function that makes a network round trip, and it
+		-- THROWS rather than returning nil in at least one reachable case: a key already loaded in this
+		-- same server, which is what a rejoin lands on inside the window between PlayerRemoving calling
+		-- EndSession and the session actually ending. Unguarded, that throw escaped loadForKey AND
+		-- onPlayerAdded, so the profile == nil kick never ran and the player played a full session
+		-- unbound -- mirror silently no-opping, nothing saved. Exactly the outcome the kick exists to
+		-- prevent, arrived at by the one line nobody had wrapped.
+		--
+		-- Treated as a failed ATTEMPT rather than an immediate nil: a contended or transient failure is
+		-- what LOAD_ATTEMPTS is for, and the rejoin window is short enough that the next attempt often
+		-- succeeds. If every attempt throws, the nil return hands the player to the existing kick path.
+		local profile
+		if not forcedFailure then
+			local ok, result = pcall(function()
+				return store:StartSessionAsync(key, { Cancel = cancel })
+			end)
+			if ok then
+				profile = result
+			else
+				warn("[Persistence] StartSessionAsync failed for " .. key .. " (attempt " .. attempt .. "): " .. tostring(result))
+			end
+		end
 		if profile then
 			profile:Reconcile()
 			-- migrate can throw (its own version assert), so it is pcall'd like every other step that runs
