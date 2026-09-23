@@ -11,6 +11,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Panels = require(ReplicatedStorage.UI:WaitForChild("Panels"))
+
 local HOLD_TIME = 4 -- unchanged from the old list version: time a card stays fully readable
 local ARRIVAL_TIME = 0.22
 local RESEAT_TIME = 0.18
@@ -115,8 +117,9 @@ local NotificationController = {}
 
 -- `title` is the acid headline on the plate. It is optional so every existing single-argument call
 -- keeps working unchanged; the Figma plate always shows one, so there is a default rather than a
--- blank line.
-function NotificationController.show(message: string, title: string?)
+-- blank line. Split out of the old `show` so `show` itself can queue instead of drawing while a
+-- panel is open, with callers none the wiser.
+local function displayNow(message: string, title: string?)
 	local template = guiTemplates:WaitForChild("Notification")
 	local instance = template:Clone()
 	instance.Name = "Card"
@@ -169,6 +172,57 @@ function NotificationController.show(message: string, title: string?)
 		reflow(RESEAT_INFO)
 		expireAndDestroy(card)
 	end)
+end
+
+-- Held back while a panel is open -- the weapon shop's own BUY button sits directly under this
+-- stack (measured, not guessed). Capped so a long shopping trip cannot grow this unbounded; the
+-- OLDEST is dropped on overflow, since a player who shopped for ten minutes wants their recent
+-- gains shown, not the first ones from when they walked in.
+local QUEUE_CAP = 8
+local FLUSH_STAGGER = 0.12 -- seconds between cards on flush, so they arrive in sequence, not a dump
+local queue: { { message: string, title: string? } } = {}
+local flushThread: thread? = nil
+
+local function stopFlush()
+	if flushThread then
+		task.cancel(flushThread)
+		flushThread = nil
+	end
+end
+
+local function flushQueue()
+	stopFlush()
+	flushThread = task.spawn(function()
+		while #queue > 0 do
+			local entry = table.remove(queue, 1)
+			displayNow(entry.message, entry.title)
+			if #queue > 0 then
+				task.wait(FLUSH_STAGGER)
+			end
+		end
+		flushThread = nil
+	end)
+end
+
+-- A panel reopening mid-flush cancels this thread via stopFlush; whatever flushQueue had not yet
+-- pulled off `queue` is simply still sitting there, so it re-flushes on the next close for free.
+Panels.onChanged(function(current: string?)
+	if current == nil then
+		flushQueue()
+	else
+		stopFlush()
+	end
+end)
+
+function NotificationController.show(message: string, title: string?)
+	if Panels.current() ~= nil then
+		table.insert(queue, { message = message, title = title })
+		if #queue > QUEUE_CAP then
+			table.remove(queue, 1) -- oldest dropped, newest kept -- see cap comment above
+		end
+		return
+	end
+	displayNow(message, title)
 end
 
 return NotificationController
