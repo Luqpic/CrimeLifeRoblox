@@ -1,4 +1,4 @@
--- Renown: a currency earned by killing NPCs and levelling up, spent on skins.
+-- Spraypaint: a currency earned by killing NPCs and levelling up, spent on skins.
 --
 -- The earn path is two LISTENERS on signals the game already broadcasts, so no existing file is
 -- modified. ShotResolver, KillStatsService and LevelingService are working code in the damage and
@@ -11,31 +11,31 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Constants = require(ReplicatedStorage.Renown.Constants)
+local Constants = require(ReplicatedStorage.Spraypaint.Constants)
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 local CosmeticsService = require(ServerScriptService.Cosmetics.Scripts.CosmeticsService)
 
-local RenownService = {}
+local SpraypaintService = {}
 
 -- The level each player was last seen at. A baseline, not a cache: LevelingService sets Level inside
 -- onPlayerAdded, so without this every player would collect a level-up award simply for joining.
 --
--- Correct independent of script load order, since LevelingService and RenownRunner are both plain
--- Scripts with no guaranteed relative order. If RenownRunner runs first, lastLevel[player] is nil when
+-- Correct independent of script load order, since LevelingService and SpraypaintRunner are both plain
+-- Scripts with no guaranteed relative order. If SpraypaintRunner runs first, lastLevel[player] is nil when
 -- LevelingService's join-time SetAttribute("Level", 1) fires onLevelChanged; previous == nil early-
 -- returns and seeds the baseline instead of paying. If LevelingService runs first, the join-time Level
 -- is simply read directly as the baseline below, before this listener is even connected. Both land on
--- Renown = 0.
+-- Spraypaint = 0.
 local lastLevel: { [Player]: number } = {}
 
-function RenownService.balanceOf(player: any): number
+function SpraypaintService.balanceOf(player: any): number
 	local value = player:GetAttribute(Constants.ATTRIBUTE)
 	return if typeof(value) == "number" then value else 0
 end
 
-function RenownService.grant(player: any, amount: number, reason: string): number
-	local balance = RenownService.balanceOf(player)
+function SpraypaintService.grant(player: any, amount: number, reason: string): number
+	local balance = SpraypaintService.balanceOf(player)
 	-- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
 	-- rate tables that a later edit could get wrong. NaN and infinity both pass a bare `amount <= 0`
 	-- check (NaN compares false to everything; infinity is merely large) -- reachable only through the
@@ -49,11 +49,11 @@ function RenownService.grant(player: any, amount: number, reason: string): numbe
 	return updated
 end
 
-function RenownService.spend(player: any, amount: number): boolean
+function SpraypaintService.spend(player: any, amount: number): boolean
 	if typeof(amount) ~= "number" or amount <= 0 or amount % 1 ~= 0 then
 		return false
 	end
-	local balance = RenownService.balanceOf(player)
+	local balance = SpraypaintService.balanceOf(player)
 	if balance < amount then
 		return false
 	end
@@ -63,11 +63,11 @@ end
 
 -- Production entry point for the Eliminated BindableEvent. Validates the signal's shape strictly,
 -- because this receives whatever ShotResolver passes, then delegates the award rule.
-function RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)
+function SpraypaintService.onEliminated(attacker: unknown, victimHumanoid: unknown)
 	if typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
 		return
 	end
-	RenownService.awardForVictim(attacker, victimHumanoid)
+	SpraypaintService.awardForVictim(attacker, victimHumanoid)
 end
 
 -- The award rule, split from the guard above so it can be tested. A Player cannot be constructed with
@@ -76,7 +76,7 @@ end
 --
 -- Reads the victim's faction exactly as KillStatsService does, which is what makes PvP worthless here:
 -- a player's own character carries no Faction attribute, so it resolves to nil and pays zero.
-function RenownService.awardForVictim(player: any, victimHumanoid: unknown)
+function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown)
 	if typeof(victimHumanoid) ~= "Instance" then
 		return
 	end
@@ -84,15 +84,15 @@ function RenownService.awardForVictim(player: any, victimHumanoid: unknown)
 	if not character then
 		return
 	end
-	local amount = Constants.renownForFaction(character:GetAttribute("Faction"))
+	local amount = Constants.spraypaintForFaction(character:GetAttribute("Faction"))
 	if amount > 0 then
-		RenownService.grant(player, amount, "kill")
+		SpraypaintService.grant(player, amount, "kill")
 	end
 end
 
 -- Level handler. Awards per level GAINED, so a multi-level jump pays for each one rather than once,
 -- and never awards on the join-time set.
-function RenownService.onLevelChanged(player: any)
+function SpraypaintService.onLevelChanged(player: any)
 	local level = player:GetAttribute("Level")
 	if typeof(level) ~= "number" then
 		return
@@ -102,17 +102,17 @@ function RenownService.onLevelChanged(player: any)
 	if previous == nil or level <= previous then
 		return
 	end
-	RenownService.grant(player, (level - previous) * Constants.LEVEL_RENOWN, "level")
+	SpraypaintService.grant(player, (level - previous) * Constants.LEVEL_SPRAYPAINT, "level")
 end
 
 -- The client asks; the server decides. Every condition is re-checked here rather than trusted, so a
 -- forged request cannot buy a palette the player cannot afford, nor reach the Vip tier at all.
-function RenownService.handleBuyRequest(player: any, paletteKey: unknown): boolean
+function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown): boolean
 	if typeof(paletteKey) ~= "string" then
 		return false
 	end
 	local palette = Palettes.byKey(paletteKey)
-	if not palette or palette.source ~= "Renown" then
+	if not palette or palette.source ~= "Spraypaint" then
 		return false
 	end
 	if player:GetAttribute(Constants.ownedAttributeFor(paletteKey)) == true then
@@ -120,24 +120,24 @@ function RenownService.handleBuyRequest(player: any, paletteKey: unknown): boole
 	end
 	local price = Palettes.priceOf(paletteKey)
 	if not price then
-		-- Reaching here means a Renown-sourced palette carries no price, which is a catalogue bug
+		-- Reaching here means a Spraypaint-sourced palette carries no price, which is a catalogue bug
 		-- rather than a player action. Refusing loudly beats selling at an unknown price.
-		warn("[Renown] palette " .. paletteKey .. " is Renown-sourced but has no price")
+		warn("[Spraypaint] palette " .. paletteKey .. " is Spraypaint-sourced but has no price")
 		return false
 	end
-	if not RenownService.spend(player, price) then
+	if not SpraypaintService.spend(player, price) then
 		return false
 	end
 	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
 	return true
 end
 
-function RenownService.start()
-	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(RenownService.onEliminated)
+function SpraypaintService.start()
+	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(SpraypaintService.onEliminated)
 
-	ReplicatedStorage.Renown.Remotes.BuySkinRequest.OnServerEvent:Connect(
+	ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest.OnServerEvent:Connect(
 		function(player: Player, paletteKey: unknown, weaponName: unknown)
-			if not RenownService.handleBuyRequest(player, paletteKey) then
+			if not SpraypaintService.handleBuyRequest(player, paletteKey) then
 				return
 			end
 			-- Equipped by the SERVER in the same call rather than by a second client remote. The
@@ -170,7 +170,7 @@ function RenownService.start()
 		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up.
 		lastLevel[player] = player:GetAttribute("Level")
 		player:GetAttributeChangedSignal("Level"):Connect(function()
-			RenownService.onLevelChanged(player)
+			SpraypaintService.onLevelChanged(player)
 		end)
 	end)
 
@@ -179,4 +179,4 @@ function RenownService.start()
 	end)
 end
 
-return RenownService
+return SpraypaintService

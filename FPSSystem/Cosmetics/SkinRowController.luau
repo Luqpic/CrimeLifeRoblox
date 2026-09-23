@@ -7,12 +7,12 @@ local TweenService = game:GetService("TweenService")
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
-local RenownConstants = require(ReplicatedStorage.Renown.Constants)
+local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 
 local player = Players.LocalPlayer
 local equipRemote = ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest
 local promptGamepass = ReplicatedStorage.Monetization.Remotes.PromptGamepassPurchase
-local buyRemote = ReplicatedStorage.Renown.Remotes.BuySkinRequest
+local buyRemote = ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest
 
 local STROKE_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local ACCENT_HOVER_TRANSPARENCY = 0.6
@@ -32,14 +32,14 @@ end
 -- Mirrors CosmeticsService.ownsPalette on the server, branch for branch. The client duplicates it
 -- because ServerScriptService is unreachable from here, so the two must be kept in step deliberately:
 -- if they drift, the row rings a chip the weapon is not actually wearing. Gated on SOURCE, not on a
--- price existing, for the same fail-closed reason as the server: a Renown palette added without a
+-- price existing, for the same fail-closed reason as the server: a Spraypaint palette added without a
 -- price must never fall through to `return true`.
 local function ownsPalette(palette): boolean
 	if palette.source == "Vip" then
 		return ownsVip()
 	end
-	if palette.source == "Renown" then
-		return player:GetAttribute(RenownConstants.ownedAttributeFor(palette.key)) == true
+	if palette.source == "Spraypaint" then
+		return player:GetAttribute(SpraypaintConstants.ownedAttributeFor(palette.key)) == true
 	end
 	return true
 end
@@ -85,7 +85,7 @@ function SkinRowController.build(
 		-- the server showing Stock while the row still rings (and locks) the old Gold chip, or a
 		-- palette removed from Palettes.list leaves the server on Stock while the row rings nothing.
 		local currentPalette = Palettes.byKey(current)
-		-- Unowned now covers a Renown skin as well as a Vip one, matching equippedKeyFor on the
+		-- Unowned now covers a Spraypaint skin as well as a Vip one, matching equippedKeyFor on the
 		-- server. Without this the row would ring a Cobalt chip the server had already degraded to
 		-- Stock -- the same disagreement the Vip branch was added to prevent.
 		if not currentPalette or not ownsPalette(currentPalette) then
@@ -124,19 +124,19 @@ function SkinRowController.build(
 			end
 			local owned = ownsPalette(palette)
 			chip.Swatch.BackgroundTransparency = owned and 0 or 0.65
-			-- A Vip chip shows a lock, a Renown chip a coin: one says "pay", the other says "play".
+			-- A Vip chip shows a lock, a Spraypaint chip a coin: one says "pay", the other says "play".
 			chip.Lock.Visible = not owned and palette.source == "Vip"
-			chip.Coin.Visible = not owned and palette.source == "Renown"
+			chip.Coin.Visible = not owned and palette.source == "Spraypaint"
 		end
 	end
 
 	-- Timed rather than unbounded: a missing BuyStrip must not hang showDetail with no chips and no
 	-- error. If it never arrives, the row still builds and equips normally -- only the buy path (an
-	-- unowned Renown chip's click) goes inert, which is recoverable; a hung panel is not. A shop that
+	-- unowned Spraypaint chip's click) goes inert, which is recoverable; a hung panel is not. A shop that
 	-- cannot sell beats a shop that will not open.
 	local buyStrip = row.Parent:WaitForChild("BuyStrip", 5)
 	if not buyStrip then
-		warn("[Cosmetics] BuyStrip not found under " .. row.Parent:GetFullName() .. "; the Renown buy path is inert for this session")
+		warn("[Cosmetics] BuyStrip not found under " .. row.Parent:GetFullName() .. "; the Spraypaint buy path is inert for this session")
 	end
 
 	local function hideBuyStrip()
@@ -162,15 +162,15 @@ function SkinRowController.build(
 		local price = palette.price or 0
 
 		buyStrip.PaletteName.Text = palette.name
-		buyStrip.PriceLabel.Text = price .. " RENOWN"
+		buyStrip.PriceLabel.Text = price .. " SPRAYPAINT"
 
 		-- Re-painted on every balance change while the strip is open, not just once at open time: a
-		-- one-shot `affordable` here left the control lying -- Renown arriving from a kill mid-strip
+		-- one-shot `affordable` here left the control lying -- Spraypaint arriving from a kill mid-strip
 		-- would leave the button reading "NOT ENOUGH" while the click handler's own live re-read below
 		-- would have allowed the purchase. Registered in buyConnections so hideBuyStrip tears this
 		-- down with everything else.
 		local function refreshAffordability()
-			local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
+			local affordable = (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) >= price
 			buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
 			buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
 			buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
@@ -181,13 +181,13 @@ function SkinRowController.build(
 		end
 		refreshAffordability()
 		table.insert(buyConnections,
-			player:GetAttributeChangedSignal(RenownConstants.ATTRIBUTE):Connect(refreshAffordability))
+			player:GetAttributeChangedSignal(SpraypaintConstants.ATTRIBUTE):Connect(refreshAffordability))
 
 		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
 			-- Re-read the balance at click time rather than trusting what it was when the strip
-			-- opened: Renown can arrive from a kill while the strip is on screen, and the server
+			-- opened: Spraypaint can arrive from a kill while the strip is on screen, and the server
 			-- re-checks anyway, so this only avoids firing a request that is certain to be refused.
-			if (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) < price then
+			if (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) < price then
 				return
 			end
 			buyRemote:FireServer(palette.key, weaponName)
@@ -256,12 +256,12 @@ function SkinRowController.build(
 	end
 
 	-- The loop above only ever painted Lock inline (Vip's initial-build state was already known per
-	-- chip); it never painted Coin, so an unowned Renown chip's badge stayed hidden until the first
+	-- chip); it never painted Coin, so an unowned Spraypaint chip's badge stayed hidden until the first
 	-- ownership change happened to fire refreshLocks. One call here covers the initial build too.
 	refreshLocks()
 
 	-- One connection covering every ownership signal, rather than one per palette: AttributeChanged
-	-- fires with the name, so a Renown skin added later needs no new wiring here.
+	-- fires with the name, so a Spraypaint skin added later needs no new wiring here.
 	local ownershipConnection = player.AttributeChanged:Connect(function(name: string)
 		if name == MonetizationConstants.ownedAttributeFor("Vip") or name:sub(1, 10) == "SkinOwned_" then
 			refreshLocks()

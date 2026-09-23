@@ -9,7 +9,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
-local RenownConstants = require(ReplicatedStorage.Renown.Constants)
+local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 
 local CosmeticsService = {}
 
@@ -32,10 +32,10 @@ function CosmeticsService.ownsPalette(player: Player, key: string): boolean
 	end
 	-- Gated on SOURCE, not on a price existing. Those are equivalent in today's catalogue, but they
 	-- are separate invariants maintained by hand, and if they ever diverge this branch must fail
-	-- CLOSED: a Renown palette added without a price would otherwise fall through to `return true`
+	-- CLOSED: a Spraypaint palette added without a price would otherwise fall through to `return true`
 	-- and be free for everyone, permanently. The Vip branch above fails closed for the same reason.
-	if palette.source == "Renown" then
-		return player:GetAttribute(RenownConstants.ownedAttributeFor(key)) == true
+	if palette.source == "Spraypaint" then
+		return player:GetAttribute(SpraypaintConstants.ownedAttributeFor(key)) == true
 	end
 	return true
 end

@@ -1,4 +1,4 @@
-# Renown — Phase 2 Design
+# Spraypaint — Phase 2 Design
 
 ## Why this document exists
 
@@ -7,7 +7,7 @@ as luminance ramps over each weapon's visible parts. It is live, reviewed and pu
 monetisation design is that a player who will never spend Robux has nothing to work towards — the free
 palettes are handed over at once and the rest are a paywall.
 
-Phase 2 adds **Renown**: a currency earned by playing, spent on a third tier of skins. It gives the
+Phase 2 adds **Spraypaint**: a currency earned by playing, spent on a third tier of skins. It gives the
 non-paying player a path to cosmetics without weakening the pass, and it gives the paying player a
 reason to keep playing after buying it.
 
@@ -48,9 +48,9 @@ Read from the running place on 2026-09-23, not assumed:
 1. **Full progression is the eventual target; nothing persists this phase.** The profile schema below
    names every field that will eventually be saved. No `DataStoreService` code is written now, because
    an unexercised save path is untested risk whose bugs only appear once saving is real.
-2. **Renown is earned by kills and level-ups.** Not by survival time, which rewards idling and would
+2. **Spraypaint is earned by kills and level-ups.** Not by survival time, which rewards idling and would
    need anti-AFK machinery for a weaker signal.
-3. **Renown buys a third tier of skins.** It never unlocks the `Vip` palettes; that would undercut the
+3. **Spraypaint buys a third tier of skins.** It never unlocks the `Vip` palettes; that would undercut the
    pass being sold.
 4. **The spend surface reuses the existing row's footprint.** No new panel, no modal.
 
@@ -62,16 +62,16 @@ New instances:
 
 | Path | Responsibility |
 |---|---|
-| `ReplicatedStorage.Renown.Constants` (ModuleScript) | Earn rates and palette prices. Data only. |
-| `ServerScriptService.Renown.Scripts.RenownService` (ModuleScript) | Balance authority: grant, spend, validate. |
-| `ReplicatedStorage.Renown.Remotes.BuySkinRequest` (RemoteEvent) | Client asks, server decides. |
+| `ReplicatedStorage.Spraypaint.Constants` (ModuleScript) | Earn rates and palette prices. Data only. |
+| `ServerScriptService.Spraypaint.Scripts.SpraypaintService` (ModuleScript) | Balance authority: grant, spend, validate. |
+| `ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest` (RemoteEvent) | Client asks, server decides. |
 
-The balance replicates as a player attribute, `Renown`, matching `Level`, `XP`, `CriminalKills` and
+The balance replicates as a player attribute, `Spraypaint`, matching `Level`, `XP`, `CriminalKills` and
 `PoliceKills`. No remote is needed to read it and no `leaderstats` column is added: Cash is public
 because it is the combat economy, and a second column for a cosmetic currency clutters the player list
 for every player in the server.
 
-`RenownService` is a ModuleScript, not a Script, because the remote handler and the purchase logic must
+`SpraypaintService` is a ModuleScript, not a Script, because the remote handler and the purchase logic must
 be reachable from a unit test. Phase 1 established this: its equip handler was extracted into
 `CosmeticsService.handleEquipRequest` precisely so the security ordering could be tested rather than
 proven once by hand.
@@ -86,29 +86,29 @@ That property is the point. `ShotResolver`, `KillStatsService` and `LevelingServ
 reviewed code in the damage and progression paths; Phase 1's hardest-won lesson was that appearance and
 economy code must not be able to break them.
 
-**Kills.** `RenownService` connects `ServerScriptService.Blaster.Events.Eliminated` independently of
+**Kills.** `SpraypaintService` connects `ServerScriptService.Blaster.Events.Eliminated` independently of
 `KillStatsService`, and determines the victim exactly as that service does: `victimCharacter:GetAttribute("Faction")`,
 which reads `"Police"` or `"Criminal"`.
 
-**PvP kills earn no Renown, deliberately.** A player's own character carries no `Faction` attribute, so
+**PvP kills earn no Spraypaint, deliberately.** A player's own character carries no `Faction` attribute, so
 player kills fall out of that check and count for nothing — which is already how `KillStatsService`
-behaves, and how `CashService` behaves, both explicitly so the economy cannot be farmed. Renown must
+behaves, and how `CashService` behaves, both explicitly so the economy cannot be farmed. Spraypaint must
 inherit it: without the exclusion two players could trade kills indefinitely and the earn path becomes
 meaningless. This is not an edge case to handle later; it is the difference between a currency worth
 having and a number players print at will.
 
-**Level-ups.** `RenownService` connects `player:GetAttributeChangedSignal("Level")`.
+**Level-ups.** `SpraypaintService` connects `player:GetAttributeChangedSignal("Level")`.
 
 **The join guard.** `LevelingService.onPlayerAdded` sets `Level`, so a naive attribute listener pays
-out 25 Renown to every player for logging in. `RenownService` records the level seen at join as a
+out 25 Spraypaint to every player for logging in. `SpraypaintService` records the level seen at join as a
 baseline and awards only on a strict increase, by the difference — so a multi-level jump pays for each
 level rather than once.
 
 ### Rates
 
-All in `Renown.Constants`, tunable without touching logic:
+All in `Spraypaint.Constants`, tunable without touching logic:
 
-| Source | Renown |
+| Source | Spraypaint |
 |---|---|
 | Thug kill | 2 |
 | Police kill | 5 |
@@ -123,7 +123,7 @@ figures are a starting point to play-test, not a balance claim.
 
 ---
 
-## Catalogue: the Renown tier
+## Catalogue: the Spraypaint tier
 
 Four new palettes, keeping Phase 1's shape exactly — a `swatch` for the chip and a ramp of stops dark
 to light, applied by luminance. Chosen to be distinguishable from the existing eight (grey, near-black,
@@ -140,15 +140,15 @@ other swatch:
 The catalogue grows from 8 chips to 12. The row already scrolls — canvas moves from 466 to 698 in the
 same 290px window — so no layout changes and nothing in the panel moves.
 
-`Palette` gains two fields: `source` extends to `"Free" | "Vip" | "Renown"`, and `price: number?`,
-present only on Renown entries. `Palettes.isVipOnly` is unchanged; a new `Palettes.priceOf(key)`
+`Palette` gains two fields: `source` extends to `"Free" | "Vip" | "Spraypaint"`, and `price: number?`,
+present only on Spraypaint entries. `Palettes.isVipOnly` is unchanged; a new `Palettes.priceOf(key)`
 returns the price or nil.
 
 ---
 
 ## Spend surface
 
-An unowned Renown chip renders as a dimmed swatch with a small coin badge in place of the lock glyph —
+An unowned Spraypaint chip renders as a dimmed swatch with a small coin badge in place of the lock glyph —
 distinguishable at a glance from a Vip chip, which stays locked.
 
 Clicking one swaps the row's contents **in place** for a confirm strip: the palette name, the price,
@@ -171,11 +171,11 @@ listener catches first person.
 
 ## Server authority
 
-`RenownService.handleBuyRequest(player, paletteKey)`, reachable by test, called by the remote:
+`SpraypaintService.handleBuyRequest(player, paletteKey)`, reachable by test, called by the remote:
 
 1. `paletteKey` is a string.
 2. The palette exists.
-3. Its `source` is `"Renown"` — a free or Vip key is refused, so this path can never be used to
+3. Its `source` is `"Spraypaint"` — a free or Vip key is refused, so this path can never be used to
    sidestep the pass.
 4. It is not already owned.
 5. The balance is at least the price.
@@ -183,17 +183,17 @@ listener catches first person.
 Then deduct, set `SkinOwned_<key>` on the player, and publish the new balance. Ownership mirrors the
 existing `WeaponOwned_*` convention.
 
-The attribute name is built by `Renown.Constants.ownedAttributeFor(key)`, living beside the rates in
+The attribute name is built by `Spraypaint.Constants.ownedAttributeFor(key)`, living beside the rates in
 ReplicatedStorage so both sides derive it from one place rather than hardcoding a prefix twice — the
 same reason `Monetization.Constants.ownedAttributeFor` exists. It must sanitise as
 `CosmeticsService.attributeFor` does: Phase 1 measured that 16 of the 29 weapon names contain
 characters Roblox rejects in an attribute name, and a palette key added later could do the same.
 
-`CosmeticsService.ownsPalette` extends by one branch: a Renown palette is owned when
+`CosmeticsService.ownsPalette` extends by one branch: a Spraypaint palette is owned when
 `SkinOwned_<key>` is true. Free and Vip behaviour is untouched, and Phase 1's eleven ownership tests
 must continue to pass unchanged.
 
-Every Renown mutation is server-side. The client displays a balance it is told and asks for purchases
+Every Spraypaint mutation is server-side. The client displays a balance it is told and asks for purchases
 it cannot grant itself.
 
 ---
@@ -205,8 +205,8 @@ Nothing below is implemented this phase. It is the contract a later phase implem
 ```
 Profile = {
     version        = 1,          -- migration marker; bump when a field's meaning changes
-    renown         = 0,          -- RenownService
-    skinsOwned     = {},         -- [paletteKey] = true         RenownService
+    spraypaint         = 0,          -- SpraypaintService
+    skinsOwned     = {},         -- [paletteKey] = true         SpraypaintService
     equippedSkin   = {},         -- [weaponName] = paletteKey   CosmeticsService
     cash           = 0,          -- CashService (leaderstats.Cash today)
     level          = 1,          -- LevelingService
@@ -238,39 +238,39 @@ cite a before and after is not finished.
 
 | Claim | Measured how |
 |---|---|
-| Kills award Renown | Kill a Thug and a Police rig; balance moves by exactly 2 and 5 |
-| Level-ups award Renown | Grant XP to cross a level; balance moves by exactly 25 |
-| Joining awards nothing | Join a fresh session; `Renown` is 0 after `Level` is published |
+| Kills award Spraypaint | Kill a Thug and a Police rig; balance moves by exactly 2 and 5 |
+| Level-ups award Spraypaint | Grant XP to cross a level; balance moves by exactly 25 |
+| Joining awards nothing | Join a fresh session; `Spraypaint` is 0 after `Level` is published |
 | PvP kills award nothing | Kill another player; balance unchanged, matching CashService's anti-farm rule |
 | A multi-level jump pays per level | Force a two-level gain; balance moves by 50, not 25 |
 | Purchase deducts and grants | Buy Cobalt at 250; balance falls by 250 and `SkinOwned_Cobalt` is true |
 | Insufficient funds refused | Attempt a purchase below price; balance and ownership both unchanged |
 | Double purchase refused | Buy the same palette twice; balance falls once |
-| A Vip key cannot be bought with Renown | Fire `BuySkinRequest("Gold")`; refused, balance unchanged |
+| A Vip key cannot be bought with Spraypaint | Fire `BuySkinRequest("Gold")`; refused, balance unchanged |
 | Forged request refused | Fire `BuySkinRequest` for an unowned palette with a zero balance; refused |
 | Phase 1 still passes | Palettes, SkinApplier and CosmeticsOwnership suites all still green |
 | The panel is undisturbed | `AbsolutePosition` of the five panel witnesses unchanged, same-session A/B |
-| Nothing persists | A rejoin starts at 0 Renown with no skins owned |
+| Nothing persists | A rejoin starts at 0 Spraypaint with no skins owned |
 
 ---
 
 ## Phase boundaries
 
 - **Phase 1 (shipped).** Palettes, applier, both application points, the skins row, Vip gating.
-- **Phase 2 (this document).** Renown, its earn path, the Renown skin tier, the spend surface, and the
+- **Phase 2 (this document).** Spraypaint, its earn path, the Spraypaint skin tier, the spend surface, and the
   profile schema on paper. Stop and report measurements before Phase 3.
 - **Phase 3.** Persistence: the session-locked profile store implementing the schema above. Optionally
-  a Robux→Renown product, decided deliberately rather than by drift.
+  a Robux→Spraypaint product, decided deliberately rather than by drift.
 - **Phase 4.** Crates. Optional, highest reputational risk, may never be worth it.
 
 ## Non-goals for Phase 2
 
 - No `DataStoreService`, no persistence, no session locking.
-- No Robux→Renown developer product. It is a legitimate lever and most games ship one, but it competes
+- No Robux→Spraypaint developer product. It is a legitimate lever and most games ship one, but it competes
   directly with the earn path this phase exists to create. Deciding it deliberately in Phase 3 is
   better than absorbing it now.
 - No new purchase plumbing: `MonetizationService` and its Cash tiers are reused as-is.
-- Renown never unlocks a `Vip` palette.
+- Spraypaint never unlocks a `Vip` palette.
 - No changes to `ShotResolver`, `KillStatsService`, `LevelingService`, `CashService`,
   `WeaponShopService` or `WeaponUpgradeService`. The earn path is listeners only.
 - Robbery System is not touched.
@@ -278,9 +278,9 @@ cite a before and after is not finished.
 ## Open items
 
 - The earn rates and the four prices are starting points for play-testing, not balance claims.
-- Whether Renown should appear on the HUD during play, or only in the shop. Phase 2 announces gains
+- Whether Spraypaint should appear on the HUD during play, or only in the shop. Phase 2 announces gains
   through the existing `NotificationController` and shows the balance in the shop; a persistent HUD
   counter can follow if it turns out players cannot find it.
-- The coin badge for an unowned Renown chip needs a glyph. Phase 1's lock was built from two Frames
+- The coin badge for an unowned Spraypaint chip needs a glyph. Phase 1's lock was built from two Frames
   after `upload_image` refused the Figma export as an untrusted URL; the same approach applies unless
   that upload path starts working.

@@ -1,22 +1,22 @@
-# Renown Phase 2 Implementation Plan
+# Spraypaint Phase 2 Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add Renown — a currency earned by killing NPCs and levelling up, spent on a third tier of weapon skins — so a player who never spends Robux has a path to cosmetics, without weakening the `Vip` pass.
+**Goal:** Add Spraypaint — a currency earned by killing NPCs and levelling up, spent on a third tier of weapon skins — so a player who never spends Robux has a path to cosmetics, without weakening the `Vip` pass.
 
-**Architecture:** Renown is a server-authoritative number replicated as a player attribute, matching how `Level`, `XP` and the kill counters already work. Its earn path is two listeners on things the game already broadcasts, so no existing file is modified. Four new palettes carry `source = "Renown"` and a price; buying one is a server-validated remote, and the buy surface reuses the skins row's exact 290x60 footprint.
+**Architecture:** Spraypaint is a server-authoritative number replicated as a player attribute, matching how `Level`, `XP` and the kill counters already work. Its earn path is two listeners on things the game already broadcasts, so no existing file is modified. Four new palettes carry `source = "Spraypaint"` and a price; buying one is a server-validated remote, and the buy surface reuses the skins row's exact 290x60 footprint.
 
 **Tech Stack:** Roblox Luau. Existing in-place unit framework at `ServerStorage.UnitTest` (`RunUnitTest(filter, timeout)`, assertions `expect.equal / truthy / falsy / near / throws / deepEqual`). Existing `ReplicatedStorage.Cosmetics.*` from Phase 1. Existing `ReplicatedStorage.Modules.NotificationController`.
 
-**Spec:** `docs/superpowers/specs/2026-09-23-renown-phase-2-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-23-spraypaint-phase-2-design.md`
 
 ## Global Constraints
 
 - **No `DataStoreService`. Nothing persists this phase.** The profile schema in the spec is a contract for a later phase, not something to build.
-- **The earn path modifies no existing file.** `ShotResolver`, `KillStatsService`, `LevelingService`, `CashService`, `WeaponShopService` and `WeaponUpgradeService` are not touched. Renown listens to what they already broadcast.
-- **PvP kills award no Renown.** A player's character carries no `Faction` attribute, so player kills fall out of the faction check. This is deliberate anti-farming that `KillStatsService` and `CashService` already share — without it two players trade kills and print currency at will.
-- **Renown never unlocks a `Vip` palette.** `handleBuyRequest` refuses any key whose `source` is not `"Renown"`.
-- **Every Renown mutation is server-side.** The client displays a balance it is told and asks for purchases it cannot grant itself.
+- **The earn path modifies no existing file.** `ShotResolver`, `KillStatsService`, `LevelingService`, `CashService`, `WeaponShopService` and `WeaponUpgradeService` are not touched. Spraypaint listens to what they already broadcast.
+- **PvP kills award no Spraypaint.** A player's character carries no `Faction` attribute, so player kills fall out of the faction check. This is deliberate anti-farming that `KillStatsService` and `CashService` already share — without it two players trade kills and print currency at will.
+- **Spraypaint never unlocks a `Vip` palette.** `handleBuyRequest` refuses any key whose `source` is not `"Spraypaint"`.
+- **Every Spraypaint mutation is server-side.** The client displays a balance it is told and asks for purchases it cannot grant itself.
 - **A failed skin costs a colour, never a weapon.** Every cosmetics call site in Phase 1 is `pcall`-wrapped; anything added here matches.
 - **Do not touch the Robbery System place or any `RobberySystem/` directory.**
 - **British spelling in prose comments; comments explain WHY, never restate WHAT.**
@@ -43,7 +43,7 @@ Also: `AbsolutePosition` differs BETWEEN Play sessions, because `WeaponaryShopGu
 Cases are ModuleScripts at `ServerStorage.UnitTest.Cases.<Name>_Test` returning `function(t)`, using `t.test(name, fn)` and `t.expect`. Run in a Play session, Server datamodel:
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("Renown")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("Spraypaint")
 ```
 
 Start and stop Play with `mcp__Roblox_Studio__start_stop_play`, and leave Studio in Edit mode when done.
@@ -56,83 +56,83 @@ Roblox instances, not files. Created:
 
 | Path | Responsibility |
 |---|---|
-| `ReplicatedStorage.Renown.Constants` (ModuleScript) | Earn rates, prices, `ownedAttributeFor`. Data only. |
-| `ReplicatedStorage.Renown.Remotes.BuySkinRequest` (RemoteEvent) | Client asks, server decides |
-| `ServerScriptService.Renown.Scripts.RenownService` (ModuleScript) | Balance authority: grant, earn listeners, purchase |
-| `ServerScriptService.Renown.Scripts.RenownRunner` (Script) | Requires the service so its listeners connect |
-| `StarterPlayer.StarterPlayerScripts.RenownHud` (LocalScript) | Announces gains through `NotificationController` |
-| `ServerStorage.UnitTest.Cases.RenownConstants_Test` | Task 1 |
-| `ServerStorage.UnitTest.Cases.RenownService_Test` | Tasks 2 and 4 |
-| `ServerStorage.UnitTest.Cases.RenownTier_Test` | Task 3 (named so the `Palettes` filter still isolates Phase 1's suite) |
+| `ReplicatedStorage.Spraypaint.Constants` (ModuleScript) | Earn rates, prices, `ownedAttributeFor`. Data only. |
+| `ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest` (RemoteEvent) | Client asks, server decides |
+| `ServerScriptService.Spraypaint.Scripts.SpraypaintService` (ModuleScript) | Balance authority: grant, earn listeners, purchase |
+| `ServerScriptService.Spraypaint.Scripts.SpraypaintRunner` (Script) | Requires the service so its listeners connect |
+| `StarterPlayer.StarterPlayerScripts.SpraypaintHud` (LocalScript) | Announces gains through `NotificationController` |
+| `ServerStorage.UnitTest.Cases.SpraypaintConstants_Test` | Task 1 |
+| `ServerStorage.UnitTest.Cases.SpraypaintService_Test` | Tasks 2 and 4 |
+| `ServerStorage.UnitTest.Cases.SpraypaintTier_Test` | Task 3 (named so the `Palettes` filter still isolates Phase 1's suite) |
 
 Modified:
 
 | Path | Change |
 |---|---|
-| `ReplicatedStorage.Cosmetics.Palettes` | Four Renown entries; `priceOf`; `source` type widened |
-| `ServerScriptService.Cosmetics.Scripts.CosmeticsService` | `ownsPalette` gains a Renown branch |
+| `ReplicatedStorage.Cosmetics.Palettes` | Four Spraypaint entries; `priceOf`; `source` type widened |
+| `ServerScriptService.Cosmetics.Scripts.CosmeticsService` | `ownsPalette` gains a Spraypaint branch |
 | `StarterPlayer.StarterPlayerScripts.SkinRowController` | Coin badge, buy strip, purchase click path |
 | `ReplicatedStorage.GuiTemplates.WeaponaryShop.ShopArea.DetailPanel` | `BuyStrip` frame + `Coin` badge on the chip template |
 
-Mirrors go to `FPSSystem/Renown/*.luau`, except modified Phase 1 files which overwrite their existing mirrors in `FPSSystem/Cosmetics/`.
+Mirrors go to `FPSSystem/Spraypaint/*.luau`, except modified Phase 1 files which overwrite their existing mirrors in `FPSSystem/Cosmetics/`.
 
 ---
 
-## Task 1: Renown constants
+## Task 1: Spraypaint constants
 
 **Files:**
-- Create: `ReplicatedStorage.Renown.Constants` (ModuleScript)
-- Test: `ServerStorage.UnitTest.Cases.RenownConstants_Test` (ModuleScript)
+- Create: `ReplicatedStorage.Spraypaint.Constants` (ModuleScript)
+- Test: `ServerStorage.UnitTest.Cases.SpraypaintConstants_Test` (ModuleScript)
 
 **Interfaces:**
 - Consumes: nothing
 - Produces:
-  - `Constants.KILL_RENOWN: { [string]: number }` — keyed by faction string
-  - `Constants.LEVEL_RENOWN: number`
-  - `Constants.ATTRIBUTE: string` — `"Renown"`
+  - `Constants.KILL_SPRAYPAINT: { [string]: number }` — keyed by faction string
+  - `Constants.LEVEL_SPRAYPAINT: number`
+  - `Constants.ATTRIBUTE: string` — `"Spraypaint"`
   - `Constants.ownedAttributeFor(paletteKey: string): string`
-  - `Constants.renownForFaction(faction: unknown): number` — 0 for anything unrecognised
+  - `Constants.spraypaintForFaction(faction: unknown): number` — 0 for anything unrecognised
 
 - [ ] **Step 1: Write the failing test**
 
-Create `ServerStorage.UnitTest.Cases.RenownConstants_Test`:
+Create `ServerStorage.UnitTest.Cases.SpraypaintConstants_Test`:
 
 ```lua
--- Tests for ReplicatedStorage.Renown.Constants.
+-- Tests for ReplicatedStorage.Spraypaint.Constants.
 -- The faction lookup carries the anti-farming rule, so it is tested harder than a data table usually
 -- would be: anything that is not a recognised NPC faction must be worth zero.
 return function(t)
-	local Constants = require(game.ReplicatedStorage.Renown.Constants)
+	local Constants = require(game.ReplicatedStorage.Spraypaint.Constants)
 	local expect = t.expect
 
-	t.test("the balance attribute is named Renown", function()
-		expect.equal(Constants.ATTRIBUTE, "Renown")
+	t.test("the balance attribute is named Spraypaint", function()
+		expect.equal(Constants.ATTRIBUTE, "Spraypaint")
 	end)
 
 	t.test("both NPC factions are worth something, and Police more than Criminal", function()
-		expect.truthy(Constants.renownForFaction("Criminal") > 0)
-		expect.truthy(Constants.renownForFaction("Police") > Constants.renownForFaction("Criminal"))
+		expect.truthy(Constants.spraypaintForFaction("Criminal") > 0)
+		expect.truthy(Constants.spraypaintForFaction("Police") > Constants.spraypaintForFaction("Criminal"))
 	end)
 
 	t.test("a level-up is worth more than a single kill", function()
-		expect.truthy(Constants.LEVEL_RENOWN > Constants.renownForFaction("Police"))
+		expect.truthy(Constants.LEVEL_SPRAYPAINT > Constants.spraypaintForFaction("Police"))
 	end)
 
 	t.test("PvP earns nothing -- nil faction is worth zero", function()
 		-- A player's own character carries no Faction attribute, which is what excludes PvP. If this
 		-- ever returns non-zero, two players can trade kills and print currency at will.
-		expect.equal(Constants.renownForFaction(nil), 0)
+		expect.equal(Constants.spraypaintForFaction(nil), 0)
 	end)
 
 	t.test("an unrecognised faction is worth zero", function()
-		expect.equal(Constants.renownForFaction("Civilian"), 0)
-		expect.equal(Constants.renownForFaction(""), 0)
+		expect.equal(Constants.spraypaintForFaction("Civilian"), 0)
+		expect.equal(Constants.spraypaintForFaction(""), 0)
 	end)
 
 	t.test("a non-string faction is worth zero and does not throw", function()
-		expect.equal(Constants.renownForFaction(42), 0)
-		expect.equal(Constants.renownForFaction({}), 0)
-		expect.equal(Constants.renownForFaction(true), 0)
+		expect.equal(Constants.spraypaintForFaction(42), 0)
+		expect.equal(Constants.spraypaintForFaction({}), 0)
+		expect.equal(Constants.spraypaintForFaction(true), 0)
 	end)
 
 	t.test("ownedAttributeFor is stable and legal", function()
@@ -154,17 +154,17 @@ end
 - [ ] **Step 2: Run it and confirm it fails**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownConstants")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintConstants")
 ```
 
-Expected: fails — `Renown is not a valid member of ReplicatedStorage`.
+Expected: fails — `Spraypaint is not a valid member of ReplicatedStorage`.
 
 - [ ] **Step 3: Write the constants**
 
-Create `ReplicatedStorage.Renown.Constants`:
+Create `ReplicatedStorage.Spraypaint.Constants`:
 
 ```lua
--- Renown earn rates and the names Renown state is stored under.
+-- Spraypaint earn rates and the names Spraypaint state is stored under.
 --
 -- Data only. Rates live here rather than inline so they can be tuned from one place without touching
 -- the service that awards them -- these figures are a play-testing starting point, not a balance claim.
@@ -173,27 +173,27 @@ local Constants = {}
 -- The balance replicates as a player attribute, matching Level, XP and the kill counters. No
 -- leaderstats column: Cash is public because it is the combat economy, and a second column for a
 -- cosmetic currency clutters the player list for everyone in the server.
-Constants.ATTRIBUTE = "Renown"
+Constants.ATTRIBUTE = "Spraypaint"
 
 -- Keyed by the Faction attribute the enemy rigs already carry. Police are worth more because EnemyAI
 -- gives them per-type accuracy and damage overrides that make them the harder target.
-Constants.KILL_RENOWN = {
+Constants.KILL_SPRAYPAINT = {
 	Criminal = 2,
 	Police = 5,
 }
 
-Constants.LEVEL_RENOWN = 25
+Constants.LEVEL_SPRAYPAINT = 25
 
 -- Anything that is not a recognised NPC faction is worth nothing, and that includes nil.
 --
 -- This is the anti-farming rule, not a defensive nicety: a player's own character carries no Faction
 -- attribute, so PvP kills arrive here as nil and must stay worthless. KillStatsService and CashService
 -- both already exclude PvP for the same reason.
-function Constants.renownForFaction(faction: unknown): number
+function Constants.spraypaintForFaction(faction: unknown): number
 	if typeof(faction) ~= "string" then
 		return 0
 	end
-	return Constants.KILL_RENOWN[faction] or 0
+	return Constants.KILL_SPRAYPAINT[faction] or 0
 end
 
 -- Ownership of a bought palette, mirroring the WeaponOwned_* convention already in the place.
@@ -208,19 +208,19 @@ return Constants
 - [ ] **Step 4: Run the tests and confirm they pass**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownConstants")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintConstants")
 ```
 
 Expected: 8 passed, 0 failed.
 
 - [ ] **Step 5: Mirror and commit**
 
-Export the module's **actual Source from Studio** — never retype — to `FPSSystem/Renown/Constants.luau`, and the test to `FPSSystem/Renown/RenownConstants_Test.luau`.
+Export the module's **actual Source from Studio** — never retype — to `FPSSystem/Spraypaint/Constants.luau`, and the test to `FPSSystem/Spraypaint/SpraypaintConstants_Test.luau`.
 
 ```bash
-mkdir -p FPSSystem/Renown
-git add FPSSystem/Renown/
-git commit -m "Add the Renown constants"
+mkdir -p FPSSystem/Spraypaint
+git add FPSSystem/Spraypaint/
+git commit -m "Add the Spraypaint constants"
 ```
 
 ---
@@ -228,36 +228,36 @@ git commit -m "Add the Renown constants"
 ## Task 2: The balance and the earn path
 
 **Files:**
-- Create: `ServerScriptService.Renown.Scripts.RenownService` (ModuleScript)
-- Create: `ServerScriptService.Renown.Scripts.RenownRunner` (Script)
-- Test: `ServerStorage.UnitTest.Cases.RenownService_Test` (ModuleScript)
+- Create: `ServerScriptService.Spraypaint.Scripts.SpraypaintService` (ModuleScript)
+- Create: `ServerScriptService.Spraypaint.Scripts.SpraypaintRunner` (Script)
+- Test: `ServerStorage.UnitTest.Cases.SpraypaintService_Test` (ModuleScript)
 
 **Interfaces:**
-- Consumes: `Renown.Constants` from Task 1
+- Consumes: `Spraypaint.Constants` from Task 1
 - Produces:
-  - `RenownService.balanceOf(player): number`
-  - `RenownService.grant(player, amount: number, reason: string): number` — returns the new balance
-  - `RenownService.spend(player, amount: number): boolean` — false when short, balance untouched
-  - `RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)` — production kill handler; validates the attacker is a Player
-  - `RenownService.awardForVictim(player, victimHumanoid: unknown)` — the award rule, testable without a real Player
-  - `RenownService.onLevelChanged(player)` — the level handler, exposed for test
+  - `SpraypaintService.balanceOf(player): number`
+  - `SpraypaintService.grant(player, amount: number, reason: string): number` — returns the new balance
+  - `SpraypaintService.spend(player, amount: number): boolean` — false when short, balance untouched
+  - `SpraypaintService.onEliminated(attacker: unknown, victimHumanoid: unknown)` — production kill handler; validates the attacker is a Player
+  - `SpraypaintService.awardForVictim(player, victimHumanoid: unknown)` — the award rule, testable without a real Player
+  - `SpraypaintService.onLevelChanged(player)` — the level handler, exposed for test
 
 - [ ] **Step 1: Write the failing test**
 
-Create `ServerStorage.UnitTest.Cases.RenownService_Test`:
+Create `ServerStorage.UnitTest.Cases.SpraypaintService_Test`:
 
 ```lua
--- Tests for ServerScriptService.Renown.Scripts.RenownService.
+-- Tests for ServerScriptService.Spraypaint.Scripts.SpraypaintService.
 -- The handlers are exposed as named functions specifically so the earn rules can be tested rather than
 -- proven once by hand -- Phase 1 learned that lesson on its equip remote.
 return function(t)
-	local RenownService = require(game.ServerScriptService.Renown.Scripts.RenownService)
-	local Constants = require(game.ReplicatedStorage.Renown.Constants)
+	local SpraypaintService = require(game.ServerScriptService.Spraypaint.Scripts.SpraypaintService)
+	local Constants = require(game.ReplicatedStorage.Spraypaint.Constants)
 	local expect = t.expect
 
 	-- A stand-in player: the service only ever calls GetAttribute and SetAttribute on it.
-	local function fakePlayer(startingRenown: number?)
-		local attributes = { [Constants.ATTRIBUTE] = startingRenown or 0 }
+	local function fakePlayer(startingSpraypaint: number?)
+		local attributes = { [Constants.ATTRIBUTE] = startingSpraypaint or 0 }
 		return {
 			GetAttribute = function(_, name) return attributes[name] end,
 			SetAttribute = function(_, name, value) attributes[name] = value end,
@@ -278,71 +278,71 @@ return function(t)
 	end
 
 	t.test("a fresh player starts at zero", function()
-		expect.equal(RenownService.balanceOf(fakePlayer()), 0)
+		expect.equal(SpraypaintService.balanceOf(fakePlayer()), 0)
 	end)
 
 	t.test("granting adds and returns the new balance", function()
 		local player = fakePlayer(10)
-		expect.equal(RenownService.grant(player, 15, "test"), 25)
-		expect.equal(RenownService.balanceOf(player), 25)
+		expect.equal(SpraypaintService.grant(player, 15, "test"), 25)
+		expect.equal(SpraypaintService.balanceOf(player), 25)
 	end)
 
 	t.test("granting zero or a negative amount changes nothing", function()
 		local player = fakePlayer(10)
-		RenownService.grant(player, 0, "test")
-		RenownService.grant(player, -50, "test")
-		expect.equal(RenownService.balanceOf(player), 10)
+		SpraypaintService.grant(player, 0, "test")
+		SpraypaintService.grant(player, -50, "test")
+		expect.equal(SpraypaintService.balanceOf(player), 10)
 	end)
 
 	t.test("spending deducts and reports success", function()
 		local player = fakePlayer(300)
-		expect.truthy(RenownService.spend(player, 250))
-		expect.equal(RenownService.balanceOf(player), 50)
+		expect.truthy(SpraypaintService.spend(player, 250))
+		expect.equal(SpraypaintService.balanceOf(player), 50)
 	end)
 
 	t.test("spending more than the balance is refused and deducts nothing", function()
 		local player = fakePlayer(100)
-		expect.falsy(RenownService.spend(player, 250))
-		expect.equal(RenownService.balanceOf(player), 100)
+		expect.falsy(SpraypaintService.spend(player, 250))
+		expect.equal(SpraypaintService.balanceOf(player), 100)
 	end)
 
 	t.test("spending exactly the balance is allowed", function()
 		local player = fakePlayer(250)
-		expect.truthy(RenownService.spend(player, 250))
-		expect.equal(RenownService.balanceOf(player), 0)
+		expect.truthy(SpraypaintService.spend(player, 250))
+		expect.equal(SpraypaintService.balanceOf(player), 0)
 	end)
 
 	t.test("killing a Thug awards the Criminal rate", function()
 		local player = fakePlayer()
-		RenownService.awardForVictim(player, fakeVictim("Criminal"))
-		expect.equal(RenownService.balanceOf(player), Constants.KILL_RENOWN.Criminal)
+		SpraypaintService.awardForVictim(player, fakeVictim("Criminal"))
+		expect.equal(SpraypaintService.balanceOf(player), Constants.KILL_SPRAYPAINT.Criminal)
 	end)
 
 	t.test("killing Police awards the higher rate", function()
 		local player = fakePlayer()
-		RenownService.awardForVictim(player, fakeVictim("Police"))
-		expect.equal(RenownService.balanceOf(player), Constants.KILL_RENOWN.Police)
+		SpraypaintService.awardForVictim(player, fakeVictim("Police"))
+		expect.equal(SpraypaintService.balanceOf(player), Constants.KILL_SPRAYPAINT.Police)
 	end)
 
 	t.test("a PvP kill awards nothing", function()
 		-- The victim has no Faction attribute, exactly as a player character does not. If this ever
-		-- pays out, two players can farm Renown off each other indefinitely.
+		-- pays out, two players can farm Spraypaint off each other indefinitely.
 		local player = fakePlayer()
-		RenownService.awardForVictim(player, fakeVictim(nil))
-		expect.equal(RenownService.balanceOf(player), 0)
+		SpraypaintService.awardForVictim(player, fakeVictim(nil))
+		expect.equal(SpraypaintService.balanceOf(player), 0)
 	end)
 
 	t.test("onEliminated rejects an attacker that is not a Player", function()
 		-- The victim here WOULD pay 5 through awardForVictim, so this proves the guard is doing work
 		-- rather than the victim simply being worthless. An NPC killing an NPC must earn nobody
 		-- anything.
-		expect.truthy(pcall(RenownService.onEliminated, Instance.new("Model"), fakeVictim("Police")))
-		expect.truthy(pcall(RenownService.onEliminated, nil, fakeVictim("Police")))
+		expect.truthy(pcall(SpraypaintService.onEliminated, Instance.new("Model"), fakeVictim("Police")))
+		expect.truthy(pcall(SpraypaintService.onEliminated, nil, fakeVictim("Police")))
 	end)
 
 	t.test("a victim with no character awards nothing and does not throw", function()
 		local orphan = Instance.new("Humanoid")
-		expect.truthy(pcall(RenownService.awardForVictim, fakePlayer(), orphan))
+		expect.truthy(pcall(SpraypaintService.awardForVictim, fakePlayer(), orphan))
 	end)
 end
 ```
@@ -350,17 +350,17 @@ end
 - [ ] **Step 2: Run it and confirm it fails**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownService")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintService")
 ```
 
-Expected: fails — `Renown is not a valid member of ServerScriptService`.
+Expected: fails — `Spraypaint is not a valid member of ServerScriptService`.
 
 - [ ] **Step 3: Write the service**
 
-Create `ServerScriptService.Renown.Scripts.RenownService`:
+Create `ServerScriptService.Spraypaint.Scripts.SpraypaintService`:
 
 ```lua
--- Renown: a currency earned by killing NPCs and levelling up, spent on skins.
+-- Spraypaint: a currency earned by killing NPCs and levelling up, spent on skins.
 --
 -- The earn path is two LISTENERS on signals the game already broadcasts, so no existing file is
 -- modified. ShotResolver, KillStatsService and LevelingService are working code in the damage and
@@ -372,22 +372,22 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
-local Constants = require(ReplicatedStorage.Renown.Constants)
+local Constants = require(ReplicatedStorage.Spraypaint.Constants)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 
-local RenownService = {}
+local SpraypaintService = {}
 
 -- The level each player was last seen at. A baseline, not a cache: LevelingService sets Level inside
 -- onPlayerAdded, so without this every player would collect a level-up award simply for joining.
 local lastLevel: { [Player]: number } = {}
 
-function RenownService.balanceOf(player: any): number
+function SpraypaintService.balanceOf(player: any): number
 	local value = player:GetAttribute(Constants.ATTRIBUTE)
 	return if typeof(value) == "number" then value else 0
 end
 
-function RenownService.grant(player: any, amount: number, reason: string): number
-	local balance = RenownService.balanceOf(player)
+function SpraypaintService.grant(player: any, amount: number, reason: string): number
+	local balance = SpraypaintService.balanceOf(player)
 	-- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
 	-- rate tables that a later edit could get wrong.
 	if typeof(amount) ~= "number" or amount <= 0 then
@@ -398,11 +398,11 @@ function RenownService.grant(player: any, amount: number, reason: string): numbe
 	return updated
 end
 
-function RenownService.spend(player: any, amount: number): boolean
+function SpraypaintService.spend(player: any, amount: number): boolean
 	if typeof(amount) ~= "number" or amount <= 0 then
 		return false
 	end
-	local balance = RenownService.balanceOf(player)
+	local balance = SpraypaintService.balanceOf(player)
 	if balance < amount then
 		return false
 	end
@@ -412,11 +412,11 @@ end
 
 -- Production entry point for the Eliminated BindableEvent. Validates the signal's shape strictly,
 -- because this receives whatever ShotResolver passes, then delegates the award rule.
-function RenownService.onEliminated(attacker: unknown, victimHumanoid: unknown)
+function SpraypaintService.onEliminated(attacker: unknown, victimHumanoid: unknown)
 	if typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
 		return
 	end
-	RenownService.awardForVictim(attacker, victimHumanoid)
+	SpraypaintService.awardForVictim(attacker, victimHumanoid)
 end
 
 -- The award rule, split from the guard above so it can be tested. A Player cannot be constructed with
@@ -425,7 +425,7 @@ end
 --
 -- Reads the victim's faction exactly as KillStatsService does, which is what makes PvP worthless here:
 -- a player's own character carries no Faction attribute, so it resolves to nil and pays zero.
-function RenownService.awardForVictim(player: any, victimHumanoid: unknown)
+function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown)
 	if typeof(victimHumanoid) ~= "Instance" then
 		return
 	end
@@ -433,15 +433,15 @@ function RenownService.awardForVictim(player: any, victimHumanoid: unknown)
 	if not character then
 		return
 	end
-	local amount = Constants.renownForFaction(character:GetAttribute("Faction"))
+	local amount = Constants.spraypaintForFaction(character:GetAttribute("Faction"))
 	if amount > 0 then
-		RenownService.grant(player, amount, "kill")
+		SpraypaintService.grant(player, amount, "kill")
 	end
 end
 
 -- Level handler. Awards per level GAINED, so a multi-level jump pays for each one rather than once,
 -- and never awards on the join-time set.
-function RenownService.onLevelChanged(player: any)
+function SpraypaintService.onLevelChanged(player: any)
 	local level = player:GetAttribute("Level")
 	if typeof(level) ~= "number" then
 		return
@@ -451,11 +451,11 @@ function RenownService.onLevelChanged(player: any)
 	if previous == nil or level <= previous then
 		return
 	end
-	RenownService.grant(player, (level - previous) * Constants.LEVEL_RENOWN, "level")
+	SpraypaintService.grant(player, (level - previous) * Constants.LEVEL_SPRAYPAINT, "level")
 end
 
-function RenownService.start()
-	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(RenownService.onEliminated)
+function SpraypaintService.start()
+	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(SpraypaintService.onEliminated)
 
 	safePlayerAdded(function(player: Player)
 		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
@@ -464,7 +464,7 @@ function RenownService.start()
 		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up.
 		lastLevel[player] = player:GetAttribute("Level")
 		player:GetAttributeChangedSignal("Level"):Connect(function()
-			RenownService.onLevelChanged(player)
+			SpraypaintService.onLevelChanged(player)
 		end)
 	end)
 
@@ -473,20 +473,20 @@ function RenownService.start()
 	end)
 end
 
-return RenownService
+return SpraypaintService
 ```
 
-Create `ServerScriptService.Renown.Scripts.RenownRunner` (a **Script**, not a ModuleScript):
+Create `ServerScriptService.Spraypaint.Scripts.SpraypaintRunner` (a **Script**, not a ModuleScript):
 
 ```lua
 -- A ModuleScript's listeners connect only when something requires it, and nothing else does.
-require(game:GetService("ServerScriptService").Renown.Scripts.RenownService).start()
+require(game:GetService("ServerScriptService").Spraypaint.Scripts.SpraypaintService).start()
 ```
 
 - [ ] **Step 4: Run the tests and confirm they pass**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownService")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintService")
 ```
 
 Expected: 11 passed, 0 failed.
@@ -498,10 +498,10 @@ The unit tests cannot cover the join path, because it needs a real Player. In a 
 ```lua
 local Players = game:GetService("Players")
 local player = Players:GetPlayers()[1]
-return string.format("Level=%s Renown=%s", tostring(player:GetAttribute("Level")), tostring(player:GetAttribute("Renown")))
+return string.format("Level=%s Spraypaint=%s", tostring(player:GetAttribute("Level")), tostring(player:GetAttribute("Spraypaint")))
 ```
 
-Expected: `Renown=0`. A non-zero balance here means the join-time `Level` set was read as a level-up — the exact bug the baseline exists to prevent.
+Expected: `Spraypaint=0`. A non-zero balance here means the join-time `Level` set was read as a level-up — the exact bug the baseline exists to prevent.
 
 - [ ] **Step 6: Prove the earn path live**
 
@@ -510,7 +510,7 @@ Still in Play, Server datamodel. Award XP to force a level, and confirm a kill p
 ```lua
 local Players = game:GetService("Players")
 local player = Players:GetPlayers()[1]
-local before = player:GetAttribute("Renown")
+local before = player:GetAttribute("Spraypaint")
 local level = player:GetAttribute("Level")
 
 -- Fire the same BindableEvent ShotResolver fires, with a stand-in Police victim.
@@ -520,7 +520,7 @@ local humanoid = Instance.new("Humanoid")
 humanoid.Parent = character
 game:GetService("ServerScriptService").Blaster.Events.Eliminated:Fire(player, humanoid, 100)
 task.wait(0.2)
-local afterKill = player:GetAttribute("Renown")
+local afterKill = player:GetAttribute("Spraypaint")
 
 -- And a PvP-shaped victim, which must pay nothing.
 local pvp = Instance.new("Model")
@@ -530,63 +530,63 @@ game:GetService("ServerScriptService").Blaster.Events.Eliminated:Fire(player, pv
 task.wait(0.2)
 
 return string.format("before=%d afterPoliceKill=%d afterPvP=%d (police should be +5, pvp +0)",
-	before, afterKill, player:GetAttribute("Renown"))
+	before, afterKill, player:GetAttribute("Spraypaint"))
 ```
 
 Expected: `before=0 afterPoliceKill=5 afterPvP=5`.
 
 - [ ] **Step 7: Mirror and commit**
 
-Export the actual Source from Studio to `FPSSystem/Renown/RenownService.luau`, `FPSSystem/Renown/RenownRunner.luau` and `FPSSystem/Renown/RenownService_Test.luau`.
+Export the actual Source from Studio to `FPSSystem/Spraypaint/SpraypaintService.luau`, `FPSSystem/Spraypaint/SpraypaintRunner.luau` and `FPSSystem/Spraypaint/SpraypaintService_Test.luau`.
 
 ```bash
-git add FPSSystem/Renown/
-git commit -m "Add Renown, earned from NPC kills and level-ups"
+git add FPSSystem/Spraypaint/
+git commit -m "Add Spraypaint, earned from NPC kills and level-ups"
 ```
 
 ---
 
-## Task 3: The Renown palette tier
+## Task 3: The Spraypaint palette tier
 
 **Files:**
 - Modify: `ReplicatedStorage.Cosmetics.Palettes`
-- Test: `ServerStorage.UnitTest.Cases.RenownTier_Test` (ModuleScript)
+- Test: `ServerStorage.UnitTest.Cases.SpraypaintTier_Test` (ModuleScript)
 
 **Interfaces:**
 - Consumes: `Palettes.list`, `Palettes.byKey` from Phase 1
 - Produces:
   - `Palettes.priceOf(key: string): number?`
-  - Four entries with `source = "Renown"` and a `price`
-  - `Palette.source` widened to `"Free" | "Vip" | "Renown"`, `price: number?` added
+  - Four entries with `source = "Spraypaint"` and a `price`
+  - `Palette.source` widened to `"Free" | "Vip" | "Spraypaint"`, `price: number?` added
 
 - [ ] **Step 1: Write the failing test**
 
-Create `ServerStorage.UnitTest.Cases.RenownTier_Test`:
+Create `ServerStorage.UnitTest.Cases.SpraypaintTier_Test`:
 
 ```lua
--- Tests for the Renown tier added to ReplicatedStorage.Cosmetics.Palettes.
+-- Tests for the Spraypaint tier added to ReplicatedStorage.Cosmetics.Palettes.
 -- Phase 1's Palettes_Test still guards the shared invariants (ramps ascend, swatches exist, keys are
 -- unique); this case covers only what the new tier adds.
 return function(t)
 	local Palettes = require(game.ReplicatedStorage.Cosmetics.Palettes)
 	local expect = t.expect
 
-	local function renownPalettes()
+	local function spraypaintPalettes()
 		local found = {}
 		for _, palette in Palettes.list do
-			if palette.source == "Renown" then
+			if palette.source == "Spraypaint" then
 				table.insert(found, palette)
 			end
 		end
 		return found
 	end
 
-	t.test("there are four Renown palettes", function()
-		expect.equal(#renownPalettes(), 4)
+	t.test("there are four Spraypaint palettes", function()
+		expect.equal(#spraypaintPalettes(), 4)
 	end)
 
-	t.test("every Renown palette has a positive integer price", function()
-		for _, palette in renownPalettes() do
+	t.test("every Spraypaint palette has a positive integer price", function()
+		for _, palette in spraypaintPalettes() do
 			expect.equal(typeof(palette.price), "number")
 			expect.truthy(palette.price > 0)
 			expect.equal(palette.price % 1, 0)
@@ -594,25 +594,25 @@ return function(t)
 	end)
 
 	t.test("no Free or Vip palette carries a price", function()
-		-- A priced Vip palette would imply it is buyable with Renown, which must never be true.
+		-- A priced Vip palette would imply it is buyable with Spraypaint, which must never be true.
 		for _, palette in Palettes.list do
-			if palette.source ~= "Renown" then
+			if palette.source ~= "Spraypaint" then
 				expect.equal(palette.price, nil)
 			end
 		end
 	end)
 
-	t.test("priceOf returns the price for a Renown key and nil otherwise", function()
-		local first = renownPalettes()[1]
+	t.test("priceOf returns the price for a Spraypaint key and nil otherwise", function()
+		local first = spraypaintPalettes()[1]
 		expect.equal(Palettes.priceOf(first.key), first.price)
 		expect.equal(Palettes.priceOf("Stock"), nil)
 		expect.equal(Palettes.priceOf("Gold"), nil)
 		expect.equal(Palettes.priceOf("NoSuchPalette"), nil)
 	end)
 
-	t.test("isVipOnly stays false for Renown palettes", function()
-		-- Renown must not route through the Vip gate, or buying it would demand the pass as well.
-		for _, palette in renownPalettes() do
+	t.test("isVipOnly stays false for Spraypaint palettes", function()
+		-- Spraypaint must not route through the Vip gate, or buying it would demand the pass as well.
+		for _, palette in spraypaintPalettes() do
 			expect.falsy(Palettes.isVipOnly(palette.key))
 		end
 	end)
@@ -628,22 +628,22 @@ return function(t)
 		-- alphanumeric so nothing collides today, which is exactly why this needs locking before
 		-- someone adds a key with a space in it. Phase 1 proved the same invariant for the 29 weapon
 		-- names.
-		local RenownConstants = require(game.ReplicatedStorage.Renown.Constants)
+		local SpraypaintConstants = require(game.ReplicatedStorage.Spraypaint.Constants)
 		local probe = Instance.new("Part")
 		local seen = {}
 		for _, palette in Palettes.list do
-			local name = RenownConstants.ownedAttributeFor(palette.key)
+			local name = SpraypaintConstants.ownedAttributeFor(palette.key)
 			expect.falsy(seen[name])
 			seen[name] = palette.key
 			expect.truthy(pcall(function() probe:SetAttribute(name, true) end))
 		end
 	end)
 
-	t.test("every Renown ramp still runs dark to light", function()
+	t.test("every Spraypaint ramp still runs dark to light", function()
 		local function luminance(c)
 			return 0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B
 		end
-		for _, palette in renownPalettes() do
+		for _, palette in spraypaintPalettes() do
 			expect.truthy(#palette.ramp >= 2)
 			for index = 2, #palette.ramp do
 				expect.truthy(luminance(palette.ramp[index]) >= luminance(palette.ramp[index - 1]))
@@ -656,7 +656,7 @@ end
 - [ ] **Step 2: Run it and confirm it fails**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownTier")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintTier")
 ```
 
 Expected: the four-palette and twelve-palette cases fail; `priceOf` errors as nil.
@@ -669,11 +669,11 @@ In `ReplicatedStorage.Cosmetics.Palettes`, widen the type:
 export type Palette = {
 	key: string,
 	name: string,
-	source: "Free" | "Vip" | "Renown",
+	source: "Free" | "Vip" | "Spraypaint",
 	swatch: Color3,
 	ramp: { Color3 },
-	-- Present only on Renown entries. A Free or Vip palette carrying a price would imply it is
-	-- buyable with Renown, which must never be true of the pass tier.
+	-- Present only on Spraypaint entries. A Free or Vip palette carrying a price would imply it is
+	-- buyable with Spraypaint, which must never be true of the pass tier.
 	price: number?,
 }
 ```
@@ -682,17 +682,17 @@ Append these four entries to `Palettes.list`, after `Arctic`:
 
 ```lua
 	{
-		key = "Cobalt", name = "COBALT", source = "Renown", price = 250,
+		key = "Cobalt", name = "COBALT", source = "Spraypaint", price = 250,
 		swatch = rgb(30, 58, 138),
 		ramp = { rgb(12, 22, 54), rgb(30, 58, 138), rgb(96, 140, 224) },
 	},
 	{
-		key = "Verdigris", name = "VERDIGRIS", source = "Renown", price = 350,
+		key = "Verdigris", name = "VERDIGRIS", source = "Spraypaint", price = 350,
 		swatch = rgb(47, 122, 107),
 		ramp = { rgb(16, 46, 40), rgb(47, 122, 107), rgb(120, 200, 180) },
 	},
 	{
-		key = "Ember", name = "EMBER", source = "Renown", price = 500,
+		key = "Ember", name = "EMBER", source = "Spraypaint", price = 500,
 		swatch = rgb(194, 65, 12),
 		ramp = { rgb(60, 18, 6), rgb(194, 65, 12), rgb(250, 160, 80) },
 	},
@@ -701,7 +701,7 @@ Append these four entries to `Palettes.list`, after `Arctic`:
 		-- space, the closest pair in the whole catalogue against a prior floor of 52.8, and both were
 		-- pale and near-identical in brightness -- a difference that may not survive a 52px chip or
 		-- colour-vision deficiency. This one sits 68.0 from its nearest neighbour.
-		key = "RoseGold", name = "ROSE GOLD", source = "Renown", price = 750,
+		key = "RoseGold", name = "ROSE GOLD", source = "Spraypaint", price = 750,
 		swatch = rgb(183, 110, 121),
 		ramp = { rgb(74, 38, 44), rgb(183, 110, 121), rgb(232, 176, 182) },
 	},
@@ -720,10 +720,10 @@ end
 
 ```lua
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
-return tostring(run("RenownTier")) .. " | " .. tostring(run("Palettes"))
+return tostring(run("SpraypaintTier")) .. " | " .. tostring(run("Palettes"))
 ```
 
-Expected: `RenownTier` 8 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
+Expected: `SpraypaintTier` 8 passed, and Phase 1's `Palettes` still 10 passed — the shared invariants must not have regressed.
 
 - [ ] **Step 5: Confirm the row still fits**
 
@@ -738,11 +738,11 @@ Expected: `chips=12 expected canvas=698`. The row already scrolls, so nothing in
 
 - [ ] **Step 6: Mirror and commit**
 
-Export `ReplicatedStorage.Cosmetics.Palettes` to `FPSSystem/Cosmetics/Palettes.luau` (overwriting the Phase 1 mirror) and the new test to `FPSSystem/Renown/RenownTier_Test.luau`.
+Export `ReplicatedStorage.Cosmetics.Palettes` to `FPSSystem/Cosmetics/Palettes.luau` (overwriting the Phase 1 mirror) and the new test to `FPSSystem/Spraypaint/SpraypaintTier_Test.luau`.
 
 ```bash
 git add FPSSystem/
-git commit -m "Add the four Renown palettes"
+git commit -m "Add the four Spraypaint palettes"
 ```
 
 ---
@@ -750,18 +750,18 @@ git commit -m "Add the four Renown palettes"
 ## Task 4: Server-authoritative purchase
 
 **Files:**
-- Create: `ReplicatedStorage.Renown.Remotes.BuySkinRequest` (RemoteEvent)
-- Modify: `ServerScriptService.Renown.Scripts.RenownService` — add `handleBuyRequest`
-- Modify: `ServerScriptService.Cosmetics.Scripts.CosmeticsService` — `ownsPalette` gains a Renown branch
-- Test: `ServerStorage.UnitTest.Cases.RenownService_Test` — extend
+- Create: `ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest` (RemoteEvent)
+- Modify: `ServerScriptService.Spraypaint.Scripts.SpraypaintService` — add `handleBuyRequest`
+- Modify: `ServerScriptService.Cosmetics.Scripts.CosmeticsService` — `ownsPalette` gains a Spraypaint branch
+- Test: `ServerStorage.UnitTest.Cases.SpraypaintService_Test` — extend
 
 **Interfaces:**
-- Consumes: `Palettes.priceOf` (Task 3), `RenownService.spend` (Task 2), `Renown.Constants.ownedAttributeFor` (Task 1)
-- Produces: `RenownService.handleBuyRequest(player, paletteKey: unknown): boolean`
+- Consumes: `Palettes.priceOf` (Task 3), `SpraypaintService.spend` (Task 2), `Spraypaint.Constants.ownedAttributeFor` (Task 1)
+- Produces: `SpraypaintService.handleBuyRequest(player, paletteKey: unknown): boolean`
 
 - [ ] **Step 1: Write the failing tests**
 
-Append to `ServerStorage.UnitTest.Cases.RenownService_Test`, inside the existing `return function(t)`:
+Append to `ServerStorage.UnitTest.Cases.SpraypaintService_Test`, inside the existing `return function(t)`:
 
 ```lua
 	local Palettes = require(game.ReplicatedStorage.Cosmetics.Palettes)
@@ -770,60 +770,60 @@ Append to `ServerStorage.UnitTest.Cases.RenownService_Test`, inside the existing
 		return Constants.ownedAttributeFor(key)
 	end
 
-	t.test("buying a Renown palette deducts the price and records ownership", function()
+	t.test("buying a Spraypaint palette deducts the price and records ownership", function()
 		local player = fakePlayer(1000)
-		expect.truthy(RenownService.handleBuyRequest(player, "Cobalt"))
-		expect.equal(RenownService.balanceOf(player), 1000 - Palettes.priceOf("Cobalt"))
+		expect.truthy(SpraypaintService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(SpraypaintService.balanceOf(player), 1000 - Palettes.priceOf("Cobalt"))
 		expect.equal(player._attributes[ownedName("Cobalt")], true)
 	end)
 
-	t.test("buying without enough Renown is refused and changes nothing", function()
+	t.test("buying without enough Spraypaint is refused and changes nothing", function()
 		local player = fakePlayer(10)
-		expect.falsy(RenownService.handleBuyRequest(player, "Cobalt"))
-		expect.equal(RenownService.balanceOf(player), 10)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(SpraypaintService.balanceOf(player), 10)
 		expect.equal(player._attributes[ownedName("Cobalt")], nil)
 	end)
 
 	t.test("buying the same palette twice deducts once", function()
 		local player = fakePlayer(1000)
-		RenownService.handleBuyRequest(player, "Cobalt")
-		local afterFirst = RenownService.balanceOf(player)
-		expect.falsy(RenownService.handleBuyRequest(player, "Cobalt"))
-		expect.equal(RenownService.balanceOf(player), afterFirst)
+		SpraypaintService.handleBuyRequest(player, "Cobalt")
+		local afterFirst = SpraypaintService.balanceOf(player)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, "Cobalt"))
+		expect.equal(SpraypaintService.balanceOf(player), afterFirst)
 	end)
 
-	t.test("a Vip palette cannot be bought with Renown", function()
+	t.test("a Vip palette cannot be bought with Spraypaint", function()
 		-- The whole point of the source check: this path must never be a way around the pass.
 		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, "Gold"))
-		expect.equal(RenownService.balanceOf(player), 100000)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, "Gold"))
+		expect.equal(SpraypaintService.balanceOf(player), 100000)
 		expect.equal(player._attributes[ownedName("Gold")], nil)
 	end)
 
 	t.test("a free palette cannot be bought", function()
 		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, "Carbon"))
-		expect.equal(RenownService.balanceOf(player), 100000)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, "Carbon"))
+		expect.equal(SpraypaintService.balanceOf(player), 100000)
 	end)
 
 	t.test("an unknown palette key is refused and does not throw", function()
 		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, "NoSuchPalette"))
-		expect.equal(RenownService.balanceOf(player), 100000)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, "NoSuchPalette"))
+		expect.equal(SpraypaintService.balanceOf(player), 100000)
 	end)
 
 	t.test("a non-string palette key is refused and does not throw", function()
 		local player = fakePlayer(100000)
-		expect.falsy(RenownService.handleBuyRequest(player, 42))
-		expect.falsy(RenownService.handleBuyRequest(player, nil))
-		expect.equal(RenownService.balanceOf(player), 100000)
+		expect.falsy(SpraypaintService.handleBuyRequest(player, 42))
+		expect.falsy(SpraypaintService.handleBuyRequest(player, nil))
+		expect.equal(SpraypaintService.balanceOf(player), 100000)
 	end)
 ```
 
 - [ ] **Step 2: Run and confirm the new cases fail**
 
 ```lua
-return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("RenownService")
+return require(game:GetService("ServerStorage").UnitTest.RunUnitTest)("SpraypaintService")
 ```
 
 Expected: the 14 existing cases pass; the 7 new ones fail on `handleBuyRequest` being nil.
@@ -833,11 +833,11 @@ Expected: the 14 existing cases pass; the 7 new ones fail on `handleBuyRequest` 
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local folder = ReplicatedStorage.Renown:FindFirstChild("Remotes")
+local folder = ReplicatedStorage.Spraypaint:FindFirstChild("Remotes")
 if not folder then
 	folder = Instance.new("Folder")
 	folder.Name = "Remotes"
-	folder.Parent = ReplicatedStorage.Renown
+	folder.Parent = ReplicatedStorage.Spraypaint
 end
 local remote = Instance.new("RemoteEvent")
 remote.Name = "BuySkinRequest"
@@ -847,24 +847,24 @@ return remote:GetFullName()
 
 - [ ] **Step 4: Add the handler**
 
-In `RenownService`, add above `start()`:
+In `SpraypaintService`, add above `start()`:
 
 ```lua
 -- The client asks; the server decides. Every condition is re-checked here rather than trusted, so a
 -- forged request cannot buy a palette the player cannot afford, nor reach the Vip tier at all.
-function RenownService.handleBuyRequest(player: any, paletteKey: unknown): boolean
+function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown): boolean
 	if typeof(paletteKey) ~= "string" then
 		return false
 	end
 	local palette = Palettes.byKey(paletteKey)
-	if not palette or palette.source ~= "Renown" then
+	if not palette or palette.source ~= "Spraypaint" then
 		return false
 	end
 	if player:GetAttribute(Constants.ownedAttributeFor(paletteKey)) == true then
 		return false
 	end
 	local price = Palettes.priceOf(paletteKey)
-	if not price or not RenownService.spend(player, price) then
+	if not price or not SpraypaintService.spend(player, price) then
 		return false
 	end
 	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
@@ -877,9 +877,9 @@ Add `local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)` beside the 
 In `start()`, connect the remote and equip on success:
 
 ```lua
-	ReplicatedStorage.Renown.Remotes.BuySkinRequest.OnServerEvent:Connect(
+	ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest.OnServerEvent:Connect(
 		function(player: Player, paletteKey: unknown, weaponName: unknown)
-			if not RenownService.handleBuyRequest(player, paletteKey) then
+			if not SpraypaintService.handleBuyRequest(player, paletteKey) then
 				return
 			end
 			-- Equipped by the SERVER in the same call rather than by a second client remote, so a
@@ -912,21 +912,21 @@ keeping the purchase function pure is what lets the seven purchase tests run wit
 
 - [ ] **Step 5: Extend ownsPalette**
 
-In `ServerScriptService.Cosmetics.Scripts.CosmeticsService`, `ownsPalette` currently returns true for any non-Vip palette. Change the branch so a Renown palette requires ownership:
+In `ServerScriptService.Cosmetics.Scripts.CosmeticsService`, `ownsPalette` currently returns true for any non-Vip palette. Change the branch so a Spraypaint palette requires ownership:
 
 ```lua
 	if Palettes.isVipOnly(key) then
 		return player:GetAttribute(MonetizationConstants.ownedAttributeFor(VIP_KEY)) == true
 	end
-	-- A Renown palette is earned, not granted: it is owned only once bought. Free palettes still fall
+	-- A Spraypaint palette is earned, not granted: it is owned only once bought. Free palettes still fall
 	-- through to true.
 	if Palettes.priceOf(key) then
-		return player:GetAttribute(RenownConstants.ownedAttributeFor(key)) == true
+		return player:GetAttribute(SpraypaintConstants.ownedAttributeFor(key)) == true
 	end
 	return true
 ```
 
-Add `local RenownConstants = require(ReplicatedStorage.Renown.Constants)` beside the other requires.
+Add `local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)` beside the other requires.
 
 - [ ] **Step 6: Run every suite**
 
@@ -935,14 +935,14 @@ Add `local RenownConstants = require(ReplicatedStorage.Renown.Constants)` beside
 -- a table address rather than a count. Read the fields.
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
 local lines = {}
-for _, name in { "RenownService", "RenownTier", "RenownConstants", "Palettes", "SkinApplier", "CosmeticsOwnership" } do
+for _, name in { "SpraypaintService", "SpraypaintTier", "SpraypaintConstants", "Palettes", "SkinApplier", "CosmeticsOwnership" } do
 	local r = run(name)
 	table.insert(lines, string.format("%-20s run=%d passed=%d failed=%d", name, r.run, r.passed, r.failed))
 end
 return table.concat(lines, "\n")
 ```
 
-Expected: RenownService 21, RenownTier 8, RenownConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Renown branch did not alter Free or Vip behaviour.
+Expected: SpraypaintService 21, SpraypaintTier 8, SpraypaintConstants 8, Palettes 10, SkinApplier 14, CosmeticsOwnership 11 — all passing. **Phase 1's eleven ownership tests passing unchanged is the check that matters**: it proves the Spraypaint branch did not alter Free or Vip behaviour.
 
 - [ ] **Step 7: Prove a forged purchase is refused, live**
 
@@ -951,24 +951,24 @@ Client datamodel, with a zero balance:
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = game:GetService("Players").LocalPlayer
-ReplicatedStorage.Renown.Remotes.BuySkinRequest:FireServer("Cobalt")
-ReplicatedStorage.Renown.Remotes.BuySkinRequest:FireServer("Gold")
+ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest:FireServer("Cobalt")
+ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest:FireServer("Gold")
 task.wait(1)
-return string.format("Renown=%s SkinOwned_Cobalt=%s SkinOwned_Gold=%s",
-	tostring(player:GetAttribute("Renown")),
+return string.format("Spraypaint=%s SkinOwned_Cobalt=%s SkinOwned_Gold=%s",
+	tostring(player:GetAttribute("Spraypaint")),
 	tostring(player:GetAttribute("SkinOwned_Cobalt")),
 	tostring(player:GetAttribute("SkinOwned_Gold")))
 ```
 
-Expected: `Renown=0 SkinOwned_Cobalt=nil SkinOwned_Gold=nil` — both refused.
+Expected: `Spraypaint=0 SkinOwned_Cobalt=nil SkinOwned_Gold=nil` — both refused.
 
 - [ ] **Step 8: Mirror and commit**
 
-Export `RenownService` and `CosmeticsService` from Studio to `FPSSystem/Renown/RenownService.luau` and `FPSSystem/Cosmetics/CosmeticsService.luau`, plus the updated test.
+Export `SpraypaintService` and `CosmeticsService` from Studio to `FPSSystem/Spraypaint/SpraypaintService.luau` and `FPSSystem/Cosmetics/CosmeticsService.luau`, plus the updated test.
 
 ```bash
 git add FPSSystem/
-git commit -m "Add the server-authoritative Renown skin purchase"
+git commit -m "Add the server-authoritative Spraypaint skin purchase"
 ```
 
 ---
@@ -978,10 +978,10 @@ git commit -m "Add the server-authoritative Renown skin purchase"
 **Files:**
 - Modify: `ReplicatedStorage.GuiTemplates.WeaponaryShop.ShopArea.DetailPanel` — add `BuyStrip`, add `Coin` to the chip template
 - Modify: `StarterPlayer.StarterPlayerScripts.SkinRowController`
-- Create: `StarterPlayer.StarterPlayerScripts.RenownHud` (LocalScript)
+- Create: `StarterPlayer.StarterPlayerScripts.SpraypaintHud` (LocalScript)
 
 **Interfaces:**
-- Consumes: `Palettes.priceOf` (Task 3), `BuySkinRequest` (Task 4), `Renown.Constants.ATTRIBUTE` (Task 1)
+- Consumes: `Palettes.priceOf` (Task 3), `BuySkinRequest` (Task 4), `Spraypaint.Constants.ATTRIBUTE` (Task 1)
 - Produces: a working buy flow
 
 - [ ] **Step 1: Build the strip and the coin badge**
@@ -1057,7 +1057,7 @@ cancel.Text = "CANCEL"
 cancel.AutoButtonColor = false
 cancel.Parent = strip
 
--- The coin badge marks an unowned Renown chip, distinct from the grey lock on a Vip chip. Built from
+-- The coin badge marks an unowned Spraypaint chip, distinct from the grey lock on a Vip chip. Built from
 -- a Frame for the same reason the lock was: upload_image refused the Figma export as an untrusted URL.
 local chip = detail.SkinRow.SkinChip
 local oldCoin = chip:FindFirstChild("Coin")
@@ -1092,8 +1092,8 @@ Read the live script first — it is the Phase 1 controller and these edits buil
 **2a. Add the requires and the remote**, beside the existing ones:
 
 ```lua
-local RenownConstants = require(ReplicatedStorage.Renown.Constants)
-local buyRemote = ReplicatedStorage.Renown.Remotes.BuySkinRequest
+local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
+local buyRemote = ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest
 ```
 
 **2b. Replace `ownsVip`-only ownership with one helper that mirrors the server.** Add below `ownsVip`:
@@ -1107,7 +1107,7 @@ local function ownsPalette(palette): boolean
 		return ownsVip()
 	end
 	if palette.price then
-		return player:GetAttribute(RenownConstants.ownedAttributeFor(palette.key)) == true
+		return player:GetAttribute(SpraypaintConstants.ownedAttributeFor(palette.key)) == true
 	end
 	return true
 end
@@ -1125,7 +1125,7 @@ with:
 
 ```lua
 		local currentPalette = Palettes.byKey(current)
-		-- Unowned now covers a Renown skin as well as a Vip one, matching equippedKeyFor on the
+		-- Unowned now covers a Spraypaint skin as well as a Vip one, matching equippedKeyFor on the
 		-- server. Without this the row would ring a Cobalt chip the server had already degraded to
 		-- Stock -- the same disagreement the Vip branch was added to prevent.
 		if not currentPalette or not ownsPalette(currentPalette) then
@@ -1144,7 +1144,7 @@ with:
 			end
 			local owned = ownsPalette(palette)
 			chip.Swatch.BackgroundTransparency = owned and 0 or 0.65
-			-- A Vip chip shows a lock, a Renown chip a coin: one says "pay", the other says "play".
+			-- A Vip chip shows a lock, a Spraypaint chip a coin: one says "pay", the other says "play".
 			chip.Lock.Visible = not owned and palette.source == "Vip"
 			chip.Coin.Visible = not owned and palette.price ~= nil
 		end
@@ -1172,10 +1172,10 @@ with:
 		hideBuyStrip()
 
 		local price = palette.price or 0
-		local affordable = (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) >= price
+		local affordable = (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) >= price
 
 		buyStrip.PaletteName.Text = palette.name
-		buyStrip.PriceLabel.Text = price .. " RENOWN"
+		buyStrip.PriceLabel.Text = price .. " SPRAYPAINT"
 		buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
 		buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
 		buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
@@ -1183,9 +1183,9 @@ with:
 
 		table.insert(buyConnections, buyStrip.BuyButton.MouseButton1Click:Connect(function()
 			-- Re-read the balance at click time rather than trusting what it was when the strip
-			-- opened: Renown can arrive from a kill while the strip is on screen, and the server
+			-- opened: Spraypaint can arrive from a kill while the strip is on screen, and the server
 			-- re-checks anyway, so this only avoids firing a request that is certain to be refused.
-			if (player:GetAttribute(RenownConstants.ATTRIBUTE) or 0) < price then
+			if (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) < price then
 				return
 			end
 			buyRemote:FireServer(palette.key, weaponName)
@@ -1227,7 +1227,7 @@ with:
 
 ```lua
 	-- One connection covering every ownership signal, rather than one per palette: AttributeChanged
-	-- fires with the name, so a Renown skin added later needs no new wiring here.
+	-- fires with the name, so a Spraypaint skin added later needs no new wiring here.
 	local ownershipConnection = player.AttributeChanged:Connect(function(name: string)
 		if name == MonetizationConstants.ownedAttributeFor("Vip") or name:sub(1, 10) == "SkinOwned_" then
 			refreshLocks()
@@ -1240,17 +1240,17 @@ with:
 
 - [ ] **Step 3: Announce gains client-side**
 
-Create `StarterPlayer.StarterPlayerScripts.RenownHud` (LocalScript):
+Create `StarterPlayer.StarterPlayerScripts.SpraypaintHud` (LocalScript):
 
 ```lua
--- Announces Renown gains through the shared notification module.
+-- Announces Spraypaint gains through the shared notification module.
 --
 -- Client-side and driven by the replicated attribute, so no remote is needed: the balance already
 -- reaches every client as a player attribute, and NotificationController is a client module.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Constants = require(ReplicatedStorage.Renown.Constants)
+local Constants = require(ReplicatedStorage.Spraypaint.Constants)
 local NotificationController = require(ReplicatedStorage.Modules.NotificationController)
 
 local player = Players.LocalPlayer
@@ -1263,7 +1263,7 @@ player:GetAttributeChangedSignal(Constants.ATTRIBUTE):Connect(function()
 	-- Only gains are announced. A purchase is a deduction the player just chose, and telling them
 	-- they spent it is noise at the moment they are looking at what they bought.
 	if gained > 0 then
-		NotificationController.show("+" .. gained .. " Renown", "RENOWN")
+		NotificationController.show("+" .. gained .. " Spraypaint", "SPRAYPAINT")
 	end
 end)
 ```
@@ -1276,17 +1276,17 @@ Expected: byte-identical in all three states.
 
 - [ ] **Step 5: Verify the buy flow end to end**
 
-In a Play session: grant yourself 1000 Renown server-side, open a weapon, scroll a Renown chip into view (confirm its `AbsolutePosition` is inside the row's bounds before clicking — clipped chips swallow clicks silently), click it, confirm the strip shows the right name and price, click BUY, and confirm the balance falls by the price, the chip loses its coin badge, the skin equips, and the preview dresses itself.
+In a Play session: grant yourself 1000 Spraypaint server-side, open a weapon, scroll a Spraypaint chip into view (confirm its `AbsolutePosition` is inside the row's bounds before clicking — clipped chips swallow clicks silently), click it, confirm the strip shows the right name and price, click BUY, and confirm the balance falls by the price, the chip loses its coin badge, the skin equips, and the preview dresses itself.
 
 Then repeat with a balance below the price and confirm BUY is inert and nothing changes.
 
 - [ ] **Step 6: Mirror and commit**
 
-Export `SkinRowController` and `RenownHud` from Studio to `FPSSystem/Cosmetics/SkinRowController.luau` and `FPSSystem/Renown/RenownHud.luau`.
+Export `SkinRowController` and `SpraypaintHud` from Studio to `FPSSystem/Cosmetics/SkinRowController.luau` and `FPSSystem/Spraypaint/SpraypaintHud.luau`.
 
 ```bash
 git add FPSSystem/
-git commit -m "Add the Renown buy strip and gain notifications"
+git commit -m "Add the Spraypaint buy strip and gain notifications"
 ```
 
 ---
@@ -1299,26 +1299,26 @@ No new feature code. This task produces the numbers the change log cites.
 
 Measure each row and record actual numbers, in one Play session:
 
-1. Kills award Renown — Thug +2, Police +5
-2. Level-ups award Renown — +25 on crossing a level
-3. Joining awards nothing — `Renown` is 0 after `Level` is published
+1. Kills award Spraypaint — Thug +2, Police +5
+2. Level-ups award Spraypaint — +25 on crossing a level
+3. Joining awards nothing — `Spraypaint` is 0 after `Level` is published
 4. A multi-level jump pays per level — force a two-level gain, expect +50
 5. PvP kills award nothing — balance unchanged
 6. Purchase deducts and grants — Cobalt at 250; balance −250 and `SkinOwned_Cobalt` true
 7. Insufficient funds refused — balance and ownership unchanged
 8. Double purchase refused — balance falls once
-9. A Vip key cannot be bought with Renown — `BuySkinRequest("Gold")` refused
+9. A Vip key cannot be bought with Spraypaint — `BuySkinRequest("Gold")` refused
 10. Forged request refused — zero balance, both refused
 11. Phase 1 still passes — Palettes 10, SkinApplier 14, CosmeticsOwnership 11
 12. The panel is undisturbed — five witnesses unchanged, same-session A/B
-13. Nothing persists — rejoin starts at 0 Renown with no skins owned
+13. Nothing persists — rejoin starts at 0 Spraypaint with no skins owned
 
 - [ ] **Step 2: Run every suite and record counts**
 
 ```lua
 local run = require(game:GetService("ServerStorage").UnitTest.RunUnitTest)
 return table.concat({
-	tostring(run("RenownConstants")), tostring(run("RenownService")), tostring(run("RenownTier")),
+	tostring(run("SpraypaintConstants")), tostring(run("SpraypaintService")), tostring(run("SpraypaintTier")),
 	tostring(run("Palettes")), tostring(run("SkinApplier")), tostring(run("CosmeticsOwnership")),
 }, "\n")
 ```
@@ -1329,7 +1329,7 @@ return table.concat({
 local ServerScriptService = game:GetService("ServerScriptService")
 local leaks = {}
 for _, s in { ServerScriptService.Blaster.Scripts.ShotResolver, ServerScriptService.Weapons.Scripts.WeaponUpgradeService } do
-	if s.Source:find("Renown", 1, true) or s.Source:find("Cosmetics", 1, true) then
+	if s.Source:find("Spraypaint", 1, true) or s.Source:find("Cosmetics", 1, true) then
 		table.insert(leaks, s.Name)
 	end
 end
@@ -1348,9 +1348,9 @@ Expected: `no earn-path file modified`. `WeaponShopService.luau` will appear in 
 
 - [ ] **Step 5: Write the change log and commit**
 
-Write `FPSSystem/FPS-Renown-Phase-2.md` in the project's Summary / Cause / Changes / Verification / Notes shape, matching the existing logs. Cite every number above. Record the traps encountered. End with a `Status:` line stating plainly what was confirmed live and what still needs a person.
+Write `FPSSystem/FPS-Spraypaint-Phase-2.md` in the project's Summary / Cause / Changes / Verification / Notes shape, matching the existing logs. Cite every number above. Record the traps encountered. End with a `Status:` line stating plainly what was confirmed live and what still needs a person.
 
 ```bash
 git add FPSSystem/
-git commit -m "Add change log: Renown, Phase 2"
+git commit -m "Add change log: Spraypaint, Phase 2"
 ```
