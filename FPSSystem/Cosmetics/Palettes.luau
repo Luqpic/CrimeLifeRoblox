@@ -70,17 +70,17 @@ Palettes.list = {
 		ramp = { rgb(96, 120, 146), rgb(170, 190, 210), rgb(240, 248, 255) },
 	},
 	{
-		key = "Cobalt", name = "COBALT", source = "Spraypaint", price = 250,
+		key = "Cobalt", name = "COBALT", source = "Spraypaint", price = 500,
 		swatch = rgb(30, 58, 138),
 		ramp = { rgb(12, 22, 54), rgb(30, 58, 138), rgb(96, 140, 224) },
 	},
 	{
-		key = "Verdigris", name = "VERDIGRIS", source = "Spraypaint", price = 350,
+		key = "Verdigris", name = "VERDIGRIS", source = "Spraypaint", price = 700,
 		swatch = rgb(47, 122, 107),
 		ramp = { rgb(16, 46, 40), rgb(47, 122, 107), rgb(120, 200, 180) },
 	},
 	{
-		key = "Ember", name = "EMBER", source = "Spraypaint", price = 500,
+		key = "Ember", name = "EMBER", source = "Spraypaint", price = 900,
 		swatch = rgb(194, 65, 12),
 		ramp = { rgb(60, 18, 6), rgb(194, 65, 12), rgb(250, 160, 80) },
 	},
@@ -89,7 +89,7 @@ Palettes.list = {
 		-- space, the closest pair in the whole catalogue against a prior floor of 52.8, and both were
 		-- pale and near-identical in brightness -- a difference that may not survive a 52px chip or
 		-- colour-vision deficiency. This one sits 68.0 from its nearest neighbour.
-		key = "RoseGold", name = "ROSE GOLD", source = "Spraypaint", price = 750,
+		key = "RoseGold", name = "ROSE GOLD", source = "Spraypaint", price = 1200,
 		swatch = rgb(183, 110, 121),
 		ramp = { rgb(74, 38, 44), rgb(183, 110, 121), rgb(232, 176, 182) },
 	},
