@@ -6,6 +6,10 @@
 -- able to break them. Not touching them at all is stronger than guarding them.
 --
 -- Session-only. Nothing here persists, matching Cash, Leveling and the kill counters.
+--
+-- ONE balance per player again, not one per weapon. The per-weapon map (and its spraypaintShared
+-- fallback bucket) is reverted -- see Schema.VERSION and ProfileGateway.migrate's v2 -> v3 step for
+-- how an already-migrated player's spread balances come back together into this single figure.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
@@ -28,30 +32,12 @@ local SpraypaintService = {}
 -- restored level.
 local lastLevel: { [Player]: number } = {}
 
--- A weapon's OWN balance only -- never includes the shared bucket. typeof-guarded on weaponName
--- itself, not just the attribute read: Constants.balanceAttributeFor throws on a non-string (the same
--- gsub-on-nil crash the old ownedAttributeFor sanitiser was already exposed to), and a caller passing
--- through an unvalidated value must get 0 back rather than an error.
-function SpraypaintService.balanceOf(player: any, weaponName: unknown): number
-	if typeof(weaponName) ~= "string" then
-		return 0
-	end
-	local value = player:GetAttribute(Constants.balanceAttributeFor(weaponName))
+function SpraypaintService.balanceOf(player: any): number
+	local value = player:GetAttribute(Constants.ATTRIBUTE)
 	return if typeof(value) == "number" then value else 0
 end
 
-function SpraypaintService.sharedBalanceOf(player: any): number
-	local value = player:GetAttribute(Constants.SHARED_ATTRIBUTE)
-	return if typeof(value) == "number" then value else 0
-end
-
--- What a weapon can actually spend right now: its own balance plus the shared bucket it falls back
--- to. This is the figure the shop panel shows and the figure spend() checks against.
-function SpraypaintService.spendableBalanceOf(player: any, weaponName: unknown): number
-	return SpraypaintService.balanceOf(player, weaponName) + SpraypaintService.sharedBalanceOf(player)
-end
-
--- Restores the persisted balances and owned skins onto the attributes the rest of the game reads.
+-- Restores the persisted balance and owned skins onto the attributes the rest of the game reads.
 -- Attributes stay the live source during a session; the profile is the copy that outlives it.
 --
 -- `profile` is normally supplied by the gateway's own hydrator loop, which runs before the profile is
@@ -63,97 +49,59 @@ function SpraypaintService.hydrate(player: any, profile: any?)
 	if not profile then
 		return
 	end
-	for weaponName, amount in profile.Data.spraypaint do
-		if typeof(amount) == "number" then
-			player:SetAttribute(Constants.balanceAttributeFor(weaponName), amount)
-		end
-	end
-	player:SetAttribute(Constants.SHARED_ATTRIBUTE, profile.Data.spraypaintShared or 0)
+	player:SetAttribute(Constants.ATTRIBUTE, profile.Data.spraypaint or 0)
 	for paletteKey in profile.Data.skinsOwned do
 		player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
 	end
 end
 
--- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are rate
--- tables that a later edit could get wrong. NaN and infinity both pass a bare `amount <= 0` check
--- (NaN compares false to everything; infinity is merely large) -- reachable only through the
--- single-UserId `/setlevel` admin path today, but an infinite balance makes spend's balance check
--- false forever, making every skin free permanently, so it is guarded here regardless. Shared by both
--- grant functions below so the rule can only drift once, not twice.
-local function isValidAmount(amount: unknown): boolean
-	return typeof(amount) == "number" and amount == amount and amount ~= math.huge and (amount :: number) > 0
-end
-
--- Credits ONE weapon's balance. `reason` is unused by the logic (kept for call-site readability and
--- for a future audit log) exactly as it was on the pre-split grant.
-function SpraypaintService.grant(player: any, weaponName: unknown, amount: number, reason: string): number
-	local balance = SpraypaintService.balanceOf(player, weaponName)
-	if typeof(weaponName) ~= "string" or not isValidAmount(amount) then
+-- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
+-- rate tables that a later edit could get wrong. NaN and infinity both pass a bare `amount <= 0`
+-- check (NaN compares false to everything; infinity is merely large) -- reachable only through the
+-- single-UserId `/setlevel` admin path today, but an infinite balance makes spend's `balance <
+-- amount` false forever, making every skin free permanently, so it is guarded here regardless.
+function SpraypaintService.grant(player: any, amount: number, reason: string): number
+	local balance = SpraypaintService.balanceOf(player)
+	if typeof(amount) ~= "number" or amount ~= amount or amount == math.huge or amount <= 0 then
 		return balance
 	end
 	local updated = balance + math.floor(amount)
-	player:SetAttribute(Constants.balanceAttributeFor(weaponName), updated)
+	player:SetAttribute(Constants.ATTRIBUTE, updated)
 	ProfileGateway.mirror(player, function(profile)
-		profile.Data.spraypaint[weaponName] = updated
+		profile.Data.spraypaint = updated
 	end)
 	return updated
 end
 
--- Credits the shared bucket directly. Only SpraypaintService.onLevelChanged calls this today (a
--- level-up with no weapon equipped) -- everything else that earns Spraypaint earns it for a specific
--- weapon through grant() above. Never called to satisfy a kill: "never allocate it arbitrarily to one
--- weapon" cuts the other way too -- the bucket is never allocated a kill's reward either.
-function SpraypaintService.grantShared(player: any, amount: number, reason: string): number
-	local balance = SpraypaintService.sharedBalanceOf(player)
-	if not isValidAmount(amount) then
-		return balance
-	end
-	local updated = balance + math.floor(amount)
-	player:SetAttribute(Constants.SHARED_ATTRIBUTE, updated)
-	ProfileGateway.mirror(player, function(profile)
-		profile.Data.spraypaintShared = updated
-	end)
-	return updated
-end
-
--- Draws from the weapon's OWN balance first, and only reaches into the shared bucket for whatever
--- that balance cannot cover -- the fallback order the design calls for, never the reverse. All-or-
--- nothing: an insufficient combined total changes neither balance.
-function SpraypaintService.spend(player: any, weaponName: unknown, amount: number): boolean
-	if typeof(weaponName) ~= "string" or typeof(amount) ~= "number" or amount <= 0 or amount % 1 ~= 0 then
+function SpraypaintService.spend(player: any, amount: number): boolean
+	if typeof(amount) ~= "number" or amount <= 0 or amount % 1 ~= 0 then
 		return false
 	end
-	local ownBalance = SpraypaintService.balanceOf(player, weaponName)
-	local sharedBalance = SpraypaintService.sharedBalanceOf(player)
-	if ownBalance + sharedBalance < amount then
+	local balance = SpraypaintService.balanceOf(player)
+	if balance < amount then
 		return false
 	end
-	local fromOwn = math.min(ownBalance, amount)
-	local fromShared = amount - fromOwn
-	local updatedOwn = ownBalance - fromOwn
-	local updatedShared = sharedBalance - fromShared
-	player:SetAttribute(Constants.balanceAttributeFor(weaponName), updatedOwn)
-	if fromShared > 0 then
-		player:SetAttribute(Constants.SHARED_ATTRIBUTE, updatedShared)
-	end
+	local updated = balance - amount
+	player:SetAttribute(Constants.ATTRIBUTE, updated)
 	ProfileGateway.mirror(player, function(profile)
-		profile.Data.spraypaint[weaponName] = updatedOwn
-		if fromShared > 0 then
-			profile.Data.spraypaintShared = updatedShared
-		end
+		profile.Data.spraypaint = updated
 	end)
 	return true
 end
 
 -- Production entry point for the Eliminated BindableEvent. Validates the signal's shape strictly,
--- because this receives whatever ShotResolver passes, then delegates the award rule. `weaponName` is
--- the fourth argument ShotResolver now fires (both at the direct-hit site and the bleed-tick site) --
--- the weapon that made the kill, credited below.
-function SpraypaintService.onEliminated(attacker: unknown, victimHumanoid: unknown, _appliedDamage: unknown, weaponName: unknown)
+-- because this receives whatever ShotResolver passes, then delegates the award rule.
+--
+-- ShotResolver still fires a FOURTH argument here (the weapon that made the kill) -- that threading
+-- was added for the per-weapon balance this reverts and is now unread. Left alone deliberately: Lua
+-- ignores an extra argument a function does not declare, so this is inert rather than broken, and
+-- re-editing ShotResolver's two fire sites plus applyBleed to strip an unread argument is a riskier
+-- change to the most safety-critical script in the game than leaving one unused parameter in place.
+function SpraypaintService.onEliminated(attacker: unknown, victimHumanoid: unknown)
 	if typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
 		return
 	end
-	SpraypaintService.awardForVictim(attacker, victimHumanoid, weaponName)
+	SpraypaintService.awardForVictim(attacker, victimHumanoid)
 end
 
 -- The award rule, split from the guard above so it can be tested. A Player cannot be constructed with
@@ -162,11 +110,7 @@ end
 --
 -- Reads the victim's faction exactly as KillStatsService does, which is what makes PvP worthless here:
 -- a player's own character carries no Faction attribute, so it resolves to nil and pays zero.
---
--- A kill with no valid weapon name pays nothing rather than falling back to the shared bucket: the
--- shared bucket is grandfathering for the old scalar balance and the no-weapon-equipped level-up case
--- ONLY, never a home for a kill reward that could not be attributed to a weapon.
-function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown, weaponName: unknown)
+function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown)
 	if typeof(victimHumanoid) ~= "Instance" then
 		return
 	end
@@ -174,19 +118,14 @@ function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown, 
 	if not character then
 		return
 	end
-	if typeof(weaponName) ~= "string" then
-		return
-	end
 	local amount = Constants.spraypaintForFaction(character:GetAttribute("Faction"))
 	if amount > 0 then
-		SpraypaintService.grant(player, weaponName, amount, "kill")
+		SpraypaintService.grant(player, amount, "kill")
 	end
 end
 
 -- Level handler. Awards per level GAINED, so a multi-level jump pays for each one rather than once,
--- and never awards on the join-time set or on a restore. Not weapon-specific by nature, so it credits
--- whichever weapon is actually in the player's hand at the moment of the level-up, and the shared
--- bucket when nothing is equipped to credit.
+-- and never awards on the join-time set or on a restore.
 function SpraypaintService.onLevelChanged(player: any)
 	local level = player:GetAttribute("Level")
 	if typeof(level) ~= "number" then
@@ -215,25 +154,12 @@ function SpraypaintService.onLevelChanged(player: any)
 	if previous == nil or level <= previous then
 		return
 	end
-
-	local amount = (level - previous) * Constants.LEVEL_SPRAYPAINT
-	local character = player.Character
-	local equippedTool = character and character:FindFirstChildOfClass("Tool")
-	if equippedTool then
-		SpraypaintService.grant(player, equippedTool.Name, amount, "level")
-	else
-		SpraypaintService.grantShared(player, amount, "level")
-	end
+	SpraypaintService.grant(player, (level - previous) * Constants.LEVEL_SPRAYPAINT, "level")
 end
 
 -- The client asks; the server decides. Every condition is re-checked here rather than trusted, so a
 -- forged request cannot buy a palette the player cannot afford, nor reach the Vip tier at all.
---
--- Charges `weaponName`'s balance (own balance first, then the shared bucket -- see spend). Validated
--- the same way the auto-equip step below already validated it (Phase 1 measured why: an unvalidated
--- weapon name let a crafted client create unbounded player attributes) -- this is the earlier, and
--- now load-bearing, half of that same check, since it is what decides which balance gets spent.
-function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown, weaponName: unknown): boolean
+function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown): boolean
 	if typeof(paletteKey) ~= "string" then
 		return false
 	end
@@ -251,14 +177,7 @@ function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown, we
 		warn("[Spraypaint] palette " .. paletteKey .. " is Spraypaint-sourced but has no price")
 		return false
 	end
-	if typeof(weaponName) ~= "string" then
-		return false
-	end
-	local template = ServerStorage.Weapons:FindFirstChild(weaponName)
-	if not (template and template:IsA("Tool")) then
-		return false
-	end
-	if not SpraypaintService.spend(player, weaponName, price) then
+	if not SpraypaintService.spend(player, price) then
 		return false
 	end
 	player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
@@ -271,7 +190,7 @@ end
 -- Named (rather than inline in the remote connection) so this seam the test suite can call directly,
 -- matching the precedent CosmeticsService.handleEquipRequest already set.
 function SpraypaintService.handleBuySkinRequest(player: Player, paletteKey: unknown, weaponName: unknown)
-	if not SpraypaintService.handleBuyRequest(player, paletteKey, weaponName) then
+	if not SpraypaintService.handleBuyRequest(player, paletteKey) then
 		return
 	end
 	-- Equipped by the SERVER in the same call rather than by a second client remote. The
@@ -305,16 +224,12 @@ function SpraypaintService.start()
 		-- any code here could observe a bound profile the attribute is already restored. This
 		-- initialiser is only a fallback for a player whose load failed and who is about to be kicked --
 		-- no hydrator ever runs for them, and without this the attribute would stay nil for that window.
-		-- Only the shared bucket needs a default seeded here: a per-weapon balance already reads as 0
-		-- through balanceOf's typeof guard when its attribute was never set, so there is nothing to
-		-- pre-seed per weapon and no list of weapon names to seed it from.
-		--
 		-- The attribute set is NOT mirrored. This was the one adoption in the phase that mirrored its
 		-- own default, justified as a fallback for a failed load -- but mirror no-ops without a bound
 		-- profile, so on a failed load it did nothing at all, and the only state in which the write was
 		-- live was the one where it put 0 over a real saved balance.
-		if player:GetAttribute(Constants.SHARED_ATTRIBUTE) == nil then
-			player:SetAttribute(Constants.SHARED_ATTRIBUTE, 0)
+		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
+			player:SetAttribute(Constants.ATTRIBUTE, 0)
 		end
 		-- Recorded BEFORE connecting, so the join-time Level set cannot be read as a level-up. This seed
 		-- is provisional: the gateway's load yields, so a RESTORED level always lands after it, which is

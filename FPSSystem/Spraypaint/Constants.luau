@@ -4,19 +4,12 @@
 -- the service that awards them -- these figures are a play-testing starting point, not a balance claim.
 local Constants = {}
 
--- The balance is now PER WEAPON, so it can no longer live under one player attribute -- a Player
--- attribute holds one scalar, not a map. One attribute per weapon instead, matching the
--- ownedAttributeFor / equip-attribute convention already used across this place. No leaderstats
--- column: Cash is public because it is the combat economy, and a second column for a cosmetic
--- currency clutters the player list for everyone in the server.
-function Constants.balanceAttributeFor(weaponName: string): string
-	return "Spraypaint_" .. (string.gsub(weaponName, "[^%w_]", "_"))
-end
-
--- The shared bucket every weapon may draw on once its own balance (above) is exhausted. One
--- attribute, not per-weapon: there is exactly one bucket. Fed only by the v1->v2 migration and by a
--- level-up with no weapon equipped to credit -- see SpraypaintService.
-Constants.SHARED_ATTRIBUTE = "SpraypaintShared"
+-- The balance replicates as a player attribute, matching Level, XP and the kill counters. One scalar
+-- for the whole player -- reverted from a per-weapon map plus a shared-bucket fallback (see
+-- ProfileGateway.migrate's v2 -> v3 step). No leaderstats column: Cash is public because it is the
+-- combat economy, and a second column for a cosmetic currency clutters the player list for everyone
+-- in the server.
+Constants.ATTRIBUTE = "Spraypaint"
 
 -- Keyed by the Faction attribute the enemy rigs already carry. Police are worth more because EnemyAI
 -- gives them per-type accuracy and damage overrides that make them the harder target.

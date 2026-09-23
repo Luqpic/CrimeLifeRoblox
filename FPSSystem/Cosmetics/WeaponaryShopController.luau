@@ -429,14 +429,12 @@ local function formatFireRate(rpm: number): string
 	return `{rpm} RPM`
 end
 
--- The figure shown is what the weapon can actually SPEND: its own balance plus the shared bucket it
--- falls back to (SpraypaintService.spendableBalanceOf, mirrored here the same way SkinRowController
--- already duplicates server logic it cannot require from ServerScriptService). Safe to call for any
--- weaponName, including one the player does not own -- an unowned weapon simply reads 0.
-local function refreshSpraypaintBalance(weaponName: string)
-	local own = player:GetAttribute(SpraypaintConstants.balanceAttributeFor(weaponName)) or 0
-	local shared = player:GetAttribute(SpraypaintConstants.SHARED_ATTRIBUTE) or 0
-	spraypaintAmountLabel.Text = (own + shared) .. " SPRAYPAINT"
+-- The single player-wide Spraypaint balance -- reverted from a per-weapon figure (own balance plus a
+-- shared-bucket fallback). `weaponName` is accepted, and unused, only so every call site that reads
+-- "the balance for the weapon on screen" still has one signature to call.
+local function refreshSpraypaintBalance(_weaponName: string)
+	local balance = player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0
+	spraypaintAmountLabel.Text = balance .. " SPRAYPAINT"
 end
 
 -- Refuses an action the player cannot pay for: flashes the button red and plays the denied tone,
@@ -943,9 +941,7 @@ player.AttributeChanged:Connect(function(attributeName: string)
 				refreshDetailStats(currentDetailWeapon) -- Equip/Dequip button label flip
 			end
 		end
-	elseif attributeName:match("^Spraypaint_") or attributeName == SpraypaintConstants.SHARED_ATTRIBUTE then
-		-- A kill or level-up can credit ANY weapon's balance, or the shared bucket, while this panel
-		-- is open on a different weapon entirely -- refresh only matters when it is the one on screen.
+	elseif attributeName == SpraypaintConstants.ATTRIBUTE then
 		if isOpen and currentDetailWeapon then
 			refreshSpraypaintBalance(currentDetailWeapon)
 		end
