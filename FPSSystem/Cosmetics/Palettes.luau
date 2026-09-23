@@ -93,6 +93,51 @@ Palettes.list = {
 		swatch = rgb(183, 110, 121),
 		ramp = { rgb(74, 38, 44), rgb(183, 110, 121), rgb(232, 176, 182) },
 	},
+	-- Eight more, added for the Skins card expansion (12 -> 20). Each swatch was checked against all
+	-- 19 others before it shipped, the same discipline RoseGold above documents -- the catalogue's
+	-- closest pair stays Stock<->Sandstorm at 52.8, unchanged by this addition. Ramps follow the same
+	-- shape as every entry above: dark/mid/light stops at roughly 0.3x/1.0x/1.6x the swatch, clamped
+	-- to 255, with the mid stop equal to the swatch itself.
+	{
+		key = "Slate", name = "SLATE", source = "Spraypaint", price = 1500,
+		swatch = rgb(96, 112, 132),
+		ramp = { rgb(29, 34, 40), rgb(96, 112, 132), rgb(154, 179, 211) },
+	},
+	{
+		key = "Rust", name = "RUST", source = "Spraypaint", price = 1800,
+		swatch = rgb(140, 96, 40),
+		ramp = { rgb(42, 29, 12), rgb(140, 96, 40), rgb(224, 154, 64) },
+	},
+	{
+		key = "Forest", name = "FOREST", source = "Spraypaint", price = 2200,
+		swatch = rgb(44, 140, 40),
+		ramp = { rgb(13, 42, 12), rgb(44, 140, 40), rgb(70, 224, 64) },
+	},
+	{
+		key = "Coral", name = "CORAL", source = "Spraypaint", price = 2600,
+		swatch = rgb(240, 118, 96),
+		ramp = { rgb(72, 35, 29), rgb(240, 118, 96), rgb(255, 189, 154) },
+	},
+	{
+		key = "Aqua", name = "AQUA", source = "Spraypaint", price = 3100,
+		swatch = rgb(34, 190, 210),
+		ramp = { rgb(10, 57, 63), rgb(34, 190, 210), rgb(54, 255, 255) },
+	},
+	{
+		key = "Lilac", name = "LILAC", source = "Spraypaint", price = 3700,
+		swatch = rgb(158, 132, 240),
+		ramp = { rgb(47, 40, 72), rgb(158, 132, 240), rgb(253, 211, 255) },
+	},
+	{
+		key = "Fuchsia", name = "FUCHSIA", source = "Spraypaint", price = 4400,
+		swatch = rgb(198, 40, 140),
+		ramp = { rgb(59, 12, 42), rgb(198, 40, 140), rgb(255, 64, 224) },
+	},
+	{
+		key = "Nebula", name = "NEBULA", source = "Vip",
+		swatch = rgb(126, 52, 210),
+		ramp = { rgb(38, 16, 63), rgb(126, 52, 210), rgb(202, 83, 255) },
+	},
 } :: { Palette }
 
 local byKeyIndex: { [string]: Palette } = {}

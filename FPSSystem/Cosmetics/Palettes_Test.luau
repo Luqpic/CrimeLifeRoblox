@@ -74,4 +74,24 @@ return function(t)
 		expect.truthy(free > 0)
 		expect.truthy(vip > 0)
 	end)
+
+	-- Encodes a discipline the catalogue's own comments only ever stated in prose (see RoseGold and
+	-- the Skins-card-expansion block): every swatch was checked against every other before it shipped,
+	-- and the closest pair on file is Stock<->Sandstorm at 52.8. This must fail the moment someone
+	-- adds a colour that violates that floor, rather than relying on a human re-running the check by
+	-- eye next time the catalogue grows.
+	t.test("no two swatches sit closer than 52.8 apart in RGB space", function()
+		local minDistance = math.huge
+		for i = 1, #Palettes.list do
+			for j = i + 1, #Palettes.list do
+				local a, b = Palettes.list[i].swatch, Palettes.list[j].swatch
+				local dr = (a.R - b.R) * 255
+				local dg = (a.G - b.G) * 255
+				local db = (a.B - b.B) * 255
+				local distance = math.sqrt(dr * dr + dg * dg + db * db)
+				minDistance = math.min(minDistance, distance)
+			end
+		end
+		expect.truthy(minDistance >= 52.8)
+	end)
 end

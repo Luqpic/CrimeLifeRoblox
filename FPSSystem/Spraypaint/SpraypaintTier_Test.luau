@@ -15,8 +15,9 @@ return function(t)
 		return found
 	end
 
-	t.test("there are four Spraypaint palettes", function()
-		expect.equal(#spraypaintPalettes(), 4)
+	t.test("there are eleven Spraypaint palettes", function()
+		-- Was four; the Skins-card-revamp expansion (12 -> 20 palettes) added seven more.
+		expect.equal(#spraypaintPalettes(), 11)
 	end)
 
 	t.test("every Spraypaint palette has a positive integer price", function()
@@ -53,8 +54,9 @@ return function(t)
 		end
 	end)
 
-	t.test("the catalogue now holds twelve palettes", function()
-		expect.equal(#Palettes.list, 12)
+	t.test("the catalogue now holds twenty palettes", function()
+		-- Was twelve; see the note on the Spraypaint-palette-count test above.
+		expect.equal(#Palettes.list, 20)
 	end)
 
 	t.test("every palette key maps to a unique, legal attribute name", function()
