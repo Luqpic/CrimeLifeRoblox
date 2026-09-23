@@ -6,11 +6,19 @@
 **Status:** Eleven of the thirteen verification rows confirmed live in `FPS System.rbxl` with real
 before/after numbers, and **every one of them against ProfileStore's Studio mock store, not a real
 DataStore** — this place is unpublished, so `ProfileStore.DataStoreState` settles to `"NoAccess"` and
-the whole phase has been proven against an in-memory fake. Two rows are **DEFERRED** and cannot be
-measured here at all: durability across a real server restart, and cross-server session locking. One
-row (a failed load kicks) is confirmed only in half. Row-by-row detail, and a defect this pass found
-and closed in `loadForKey`, are below. The mock exercises the logic, not the network: latency, throttling and
-`UpdateAsync` conflicts remain entirely unobserved.
+the whole phase has been proven against an in-memory fake. Three rows are **DEFERRED** and cannot be
+measured here at all: durability across a real server restart, cross-server session locking, and the
+entire load-abandonment policy — the 30s `LOAD_DEADLINE` and the departing-player cancel — which the
+mock's own proxy makes unreachable (Note 12). One row (a failed load kicks) is confirmed only in half.
+Row-by-row detail, and a defect this pass found and closed in `loadForKey`, are below. The mock
+exercises the logic, not the network: latency, throttling and `UpdateAsync` conflicts remain entirely
+unobserved.
+
+**Amended after a whole-branch review.** Per-task review passed all seven tasks; reading the branch as
+one diff afterwards found one Critical and three Majors that no single task's diff could have shown.
+All four are fixed and mutation-tested (Notes 9-12) and the suite is now **135/135 across 12 suites**
+in a real server VM. The most instructive of the four: **row 2's own measurement was the Critical, and
+this document wrote it down as the feature.** Corrected in place below.
 
 ## Summary
 
@@ -32,6 +40,7 @@ entry points:
 ```
 cash        500 -> 300 -> 250 -> 150     BuyRequest(AK47 200), UpgradeRequest x2 (50 + 100)
 spraypaint  0 -> 2 -> 277 -> 27 -> 29    1 real kill, SetLevelRequest(12), BuySkinRequest(Cobalt 250), 1 kill
+                                         the 2 -> 277 step is the Critical, not a feature -- row 2, Note 9
 level/xp    1/0 -> 12/15                 SetLevelRequest(12) + a real kill (15 XP)
 loadout     {"1"="Crowbar","3"="AK47"}   BuyRequest + SetLoadoutSlotRequest(AK47, slot 3)
 upgrades    {Crowbar=2}                  UpgradeRequest x2, held damage 45 -> 55
@@ -57,7 +66,7 @@ for any player with no bound profile, and `onPlayerAdded` kicks on `nil` with a 
 nothing has been changed.
 
 The second constraint is ordering, and it had to become its own phase rather than a convention.
-Hydrators run **strictly before** the profile is bound, so `get()` and `isLoaded()` stay false for the
+Hydrators run **strictly before** the profile is bound, so `get()` stays `nil` for the
 whole restore loop and a reward earned in that window is dropped rather than written from half-restored
 state. Losing one kill's reward is recoverable; overwriting a real balance with a partial one is not.
 Post-hydrators then run after *every* hydrator, because re-dressing a restored Tool needs both the
@@ -68,7 +77,10 @@ across two services that hand-ordering would have kept correct only until the ne
 
 All fourteen files below were re-read live from Studio this pass and compared against this repo's
 mirrors under `FPSSystem/` — **all fourteen are byte-exact**, so the mirror is not stale relative to
-the shipped Studio state at the moment this log was written.
+the shipped Studio state at the moment this log was written. The final fix round changed four of them
+(`ProfileGateway`, `SpraypaintService`, `ProfileGateway_Test`, `ProfileAdoption_Test`) and each was
+re-verified byte-exact against Studio afterwards, by length and by a rolling hash of the full source,
+not by trusting the edit report. The byte sizes below are the post-fix sizes.
 
 New:
 
@@ -77,10 +89,15 @@ New:
   `weaponsOwned`, `weaponUpgrades`, `loadout`) and
   `DERIVED = { "NextLevelXP", "SkinId", "damage", "catalogue", "lastLevel" }`. `CashService.STARTING_CASH`
   reads `Schema.template.cash` directly rather than holding its own copy, so the two cannot drift.
-- `ServerScriptService.Persistence.Scripts.ProfileGateway` (ModuleScript, 12121 bytes) — `useMockStore`,
+- `ServerScriptService.Persistence.Scripts.ProfileGateway` (ModuleScript, 13422 bytes) — `useMockStore`,
   `mirror`, `registerHydrator` / `registerPostHydrator`, `keyFor`, `migrate`, `loadForKey`, `get`,
-  `isLoaded`, `waitFor`, `start`. Three load attempts, 2s between them, a 30s deadline on the join path,
-  and a kick on failure. `loadForKey`'s `StartSessionAsync` call is wrapped in a `pcall`: it makes the
+  `start`. Three load attempts, 2s between them, a kick on failure, and a 30s deadline on the join path
+  that **has never executed** (Note 12). `isLoaded` and `waitFor` were published in the design and are
+  **gone**: `waitFor` had zero callers repo-wide and `isLoaded` had exactly one, inside a test, so the
+  module was advertising a yielding API nothing consumed. `registerHydrator` and `registerPostHydrator`
+  now also run the newly-registered function for every already-bound player, which closes the
+  late-registration hole at the class rather than per service (Note 10). `loadForKey`'s
+  `StartSessionAsync` call is wrapped in a `pcall`: it makes the
   only network round trip in that function and it *throws* on a key already loaded in this server, which
   unguarded escaped both `loadForKey` and `onPlayerAdded` and skipped the kick (Notes 7). A throw is now
   a failed attempt, so the existing retry loop owns it and an exhausted retry returns `nil` into the kick
@@ -93,11 +110,13 @@ New:
   The file carries no version string of its own, so the commit is the version. Repo mirror sha256
   `ad43737203688b8e88cab34ebe8c483000c157e53bfb41e35f1b49ee89d0c95f`.
 - `ServerStorage.UnitTest.Cases.Schema_Test` (3280 bytes, 8 cases),
-  `ProfileGateway_Test` (8902 bytes, 15 cases), `ProfileAdoption_Test` (10652 bytes, 12 cases).
+  `ProfileGateway_Test` (9677 bytes, 15 cases), `ProfileAdoption_Test` (14478 bytes, 14 cases).
 
 Modified — the seven adopting services:
 
-- `SpraypaintService` (10914 bytes) — hydrator; mirrors on grant, spend, buy and buy-with-auto-equip.
+- `SpraypaintService` (12244 bytes) — hydrator **and**, since the fix round, a post-hydrator that
+  re-seeds the level baseline from the restored `Level` (Note 9); mirrors on grant, spend, buy and
+  buy-with-auto-equip. Its `safePlayerAdded` fallback no longer mirrors its own default (Note 10).
 - `CosmeticsService` (7185 bytes) — hydrator **and** the phase's only post-hydrator (re-dresses held Tools).
 - `CashService` (10845 bytes) — hydrator; one `GetPropertyChangedSignal("Value")` listener on
   `leaderstats.Cash` covers every writer of that shared IntValue (pickup, level-up bonus, shop, upgrades,
@@ -127,20 +146,21 @@ is never serialised (Notes 1), because it never exercises the mirror at all.
 | # | Row | Result | Measured |
 |---|---|---|---|
 | 1 | A new player gets the template | **PASS** (mock) | Bound profile at join: `cash=500 level=1 xp=0 spraypaint=0 kills={} skinsOwned={} equippedSkin={} weaponUpgrades={}`, plus the two deliberate deltas from the raw template — `weaponsOwned={Crowbar=true}`, `loadout={"1"="Crowbar"}` (the starting-weapon seed, recorded by `hydrate` straight into `profile.Data`) and `version=1` (stamped by `migrate`). Live: `cash 500, level 1, XP 0, NextLevelXP 30, Spraypaint 0, LoadoutSlot1=Crowbar, CriminalKills 0, PoliceKills 0`. |
-| 2 | Earned Spraypaint survives a rejoin | **PASS** (mock) | `0 → 2` from **one real kill** (client `Blaster.Remotes.Shoot` → `ShotResolver` → Crowbar 55 dmg → Criminal rig 20.8 → 0.0 HP → `Eliminated`, Criminal rate +2); `2 → 277` from `SetLevelRequest(12)`, 11 levels × 25; `277 → 27` buying Cobalt (250); `27 → 29` from one further kill. Round trip `29 → 29`. |
+| 2 | Earned Spraypaint survives a rejoin | **PASS** (mock) for the STORED value only — **corrected**, see below | `0 → 2` from **one real kill** (client `Blaster.Remotes.Shoot` → `ShotResolver` → Crowbar 55 dmg → Criminal rig 20.8 → 0.0 HP → `Eliminated`, Criminal rate +2); `2 → 277` from `SetLevelRequest(12)`, 11 levels × 25; `277 → 27` buying Cobalt (250); `27 → 29` from one further kill. Round trip `29 → 29` in `profile.Data`. **The `2 → 277` step was written down here as an intended pass. It is the Critical.** In that one session the jump was legitimate — the admin call really did cross eleven levels — but the identical `(12 − 1) × 25` fires again on every **rejoin**, because `lastLevel` is seeded before the gateway's yielding load resolves and hydration's `SetAttribute("Level", 12)` then reads as an eleven-level level-up. A real rejoin of this player would have restored 29 and immediately paid 275 on top of it, landing on 304 live while `profile.Data` still read 29 — and the next grant or spend would have mirrored 304 back. Fixed and mutation-tested in Note 9. |
 | 3 | A bought skin survives a rejoin | **PASS** (mock) | `BuySkinRequest("Cobalt","Crowbar")` fired from the client → `skinsOwned={Cobalt=true}`, `equippedSkin={Crowbar="Cobalt"}`. Identical after reload. Deployed hydrators re-run against the reloaded profile set `SkinOwned_Cobalt=true`, `EquippedSkin_Crowbar=Cobalt`, and the restored Crowbar Tool came back carrying `SkinId=Cobalt`. |
 | 4 | Cash survives a rejoin | **PASS** (mock) | `500 → 300` (`BuyRequest` AK47, price 200) `→ 250` (`UpgradeRequest` L1, 50) `→ 150` (L2, 100). Round trip `150 → 150`; hydration replay put `leaderstats.Cash = 150`. |
 | 5 | Level and XP survive | **PASS** (mock) | `level 1 → 12` via `SetLevelRequest` (server-gated on UserId 58662576); `xp 0 → 15` from the real kill. Round trip `12/15 → 12/15`; hydration replay restored `Level=12, XP=15` and recomputed `NextLevelXP=195` rather than reading it. |
 | 6 | Weapons and loadout survive | **PASS** (mock) | `weaponsOwned={AK47=true,Crowbar=true}`, `loadout={"1"="Crowbar","3"="AK47"}` — deliberately non-contiguous, with slot 2 empty, which is the exact shape that dies in JSON when the keys are integers (Notes 2). Reload identical; key types read back as `1:string, 3:string`. Hydration replay: `LoadoutSlot1=Crowbar, LoadoutSlot2=(empty), LoadoutSlot3=AK47, LoadoutSlot4=(empty)`, Backpack rebuilt with both Tools. |
 | 7 | Upgrades survive, damage recomputes to the same figure | **PASS** (mock) | `weaponUpgrades={Crowbar=2}`; live held Crowbar `damage=55` before the round trip. After reload plus the deployed hydrators, the restored Crowbar Tool carried `damage=55` — recomputed as stock 45 + 2 × `DAMAGE_PER_LEVEL` 5, not read from storage. The AK47, never upgraded, came back at stock `damage=10`. |
 | 8 | Kills survive | **PASS** (mock), one faction only | `kills={CriminalKills=2}` — one real kill plus one harness-fired `Eliminated`. Round trip identical; hydration replay `CriminalKills=2`. **`PoliceKills` stayed 0 the whole session**: no live Police rig was reachable when the harness fired, so the Police bucket is unexercised. |
-| 9 | A failed load never saves — the stored profile is byte-identical afterwards | **PASS** (mock) | Scratch key seeded with `spraypaint=999, cash=4242, loadout={"1"="Crowbar","3"="AK47"}`, ended, reloaded, canonicalised: 153 chars. `_forceNextLoadFailure(true)` → `loadForKey` returned `nil` after **4.02s** (3 attempts × 2s). Reload afterwards canonicalised to the same 153 chars, string-equal. |
+| 9 | A failed load never saves — the stored profile is byte-identical afterwards | **PASS** (mock) | Scratch key seeded with `spraypaint=999, cash=4242, loadout={"1"="Crowbar","3"="AK47"}`, ended, reloaded, canonicalised: 153 chars. `_forceNextLoadFailure(true)` → `loadForKey` returned `nil` after **4.02s** (3 attempts × 2s). Reload afterwards canonicalised to the same 153 chars, string-equal. **Narrower than it reads:** `_forceNextLoadFailure` short-circuits *before* `StartSessionAsync`, so this row proves the retry-and-give-up loop and the never-write rule and never reaches ProfileStore at all. The 4.02s is `LOAD_ATTEMPTS × RETRY_DELAY` and nothing else. See Note 12. |
 | 10 | A failed load kicks | **HALF** | The `nil` half is measured (row 9). The kick half is **not** provoked by a failed load: `PlayerAdded` fires once and Studio Play Solo admits no second join, so there is no way to force a join to fail. What *was* observed live on a real `Player`: `profile:EndSession()` fired `OnSessionEnd`, whose handler kicked the player, and the Play Solo session terminated on its own. So the `Kick` path on a real Player is exercised; the failed-**load** kick is read, not run. |
 | 11 | Derived fields are not stored | **PASS** (mock) | None of `NextLevelXP`, `SkinId`, `damage`, `catalogue`, `lastLevel` present in `profile.Data`, before or after the round trip, while all of them were live at that moment: `NextLevelXP=195`, Crowbar `damage=55`, Crowbar `SkinId=Cobalt`, catalogue 29 entries in `ReplicatedStorage.Weapons.Catalog`. |
 | 12 | Migration from a v0 fixture | **PASS** (mock) | Fixture written to a scratch key: `version=nil`, `spraypaint=77`, `cash=123`, `NextLevelXP=999` (a leaked derived value), `fieldFromANewerSchema="keep me"`. After a real store round trip: `version=1`, `NextLevelXP` gone, `spraypaint=77`, `cash=123`, `fieldFromANewerSchema="keep me"` untouched. Console: `[Persistence] migrated profile <key> to version 1`. |
-| 13 | Phases 1 and 2 still pass | **PASS** | **133/133 across 12 suites**, run in a real server VM. Table below. |
+| 13 | Phases 1 and 2 still pass | **PASS** | **135/135 across 12 suites**, run in a real server VM (133/133 before the fix round below added two cases). Table below. |
 | — | Durability across a real server restart | **DEFERRED** | Unmeasurable on an unpublished place. `DataStoreState = "NoAccess"`, so the "store" is an in-memory table inside the server VM and it is destroyed with the playtest. There is no restart that a profile can survive here, by construction. |
 | — | Cross-server session locking | **DEFERRED** | Unmeasurable on an unpublished place. Needs two live servers holding one key. The same-server case is observable (see Notes 7) and is a different mechanism. |
+| — | The load-abandonment policy — the 30s `LOAD_DEADLINE` and the departing-player cancel | **DEFERRED** | **Never executed, not once.** ProfileStore's `Mock` proxy is `StartSessionAsync = function(_, profile_key) MockFlag = true; return self:StartSessionAsync(profile_key) end` — it **drops the `params` argument**, so the `{ Cancel = cancel }` the gateway passes never arrives, `params.Cancel` is `nil` inside ProfileStore for every mock run, and ProfileStore's own `START_SESSION_TIMEOUT` is back in charge. Every measurement this place has ever taken is a mock run, so the gateway's whole abandonment policy is unexercised code. Row 9 does not reach it either: `_forceNextLoadFailure` never calls `StartSessionAsync`. **Deliberately not worked around** — the vendored file is pinned to an upstream commit with a recorded sha256, and that guarantee is worth more than reaching this branch. See Note 12. |
 
 ### The twelve suites
 
@@ -157,12 +177,14 @@ is never serialised (Notes 1), because it never exercises the mirror at all.
 | `SpraypaintTier_Test` | 8/8 | Phase 2 |
 | `Schema_Test` | 8/8 | Phase 3 |
 | `ProfileGateway_Test` | 15/15 | Phase 3 |
-| `ProfileAdoption_Test` | 12/12 | Phase 3 |
-| **Total** | **133/133** | |
+| `ProfileAdoption_Test` | 14/14 | Phase 3 |
+| **Total** | **135/135** | |
 
 The six Phase 1 and Phase 2 suites are unchanged at 8, 21, 8, 10, 14, 11 = **72**; Phase 3 adds
-8 + 15 + 12 = **35**; the three pre-existing movement/authority suites contribute 8 + 8 + 10 = **26**.
-Phase 3 took the total from 98 to 133 and `ProfileGateway_Test` from 7 cases to 15.
+8 + 15 + 14 = **37**; the three pre-existing movement/authority suites contribute 8 + 8 + 10 = **26**.
+Phase 3 took the total from 98 to 135 and `ProfileGateway_Test` from 7 cases to 15. The final fix round
+added the two `ProfileAdoption_Test` cases (12 → 14) and rewrote one `ProfileGateway_Test` case rather
+than adding one, so that suite's count is unchanged at 15 while one of its cases can now fail.
 
 ### The damage path is still clean
 
@@ -273,7 +295,17 @@ That fix was right and incomplete, and the incompleteness is the more useful les
 had been "this throw is reachable, so guard it" rather than "an uncaught throw anywhere between
 `StartSessionAsync` and the bind bypasses the kick, so guard the whole stretch". We hardened the
 instance and not the class, and the dangerous line stayed open for another task. Both calls are wrapped
-now; the remaining statements in that window are table reads.
+now.
+
+That last clause originally read "the remaining statements in that window are table reads", and that
+was wrong in exactly the way this note is about. `profile:Reconcile()` and `profile:AddUserId(player.UserId)`
+are **unwrapped calls into vendored code** in that same window — one in `loadForKey`, one in
+`onPlayerAdded` — and calling them table reads is the same "hardened the instance, not the class"
+shortcut, committed a second time inside the note warning against it. The conclusion survives, but only
+because the vendored source was read: `Reconcile` is one line into `ReconcileTable`, plain recursive
+table copying with no `error` anywhere in it, and `AddUserId` `warn`s and returns on a bad argument
+rather than throwing. Both verified in `ServerStorage.ProfileStore` at the pinned commit. If that file
+is ever re-vendored, this is the sentence to re-check.
 
 `migrate` never destroys a field it does not recognise. An unknown key is likelier to come from a
 **newer** schema than to be garbage, so only the five names in `DERIVED` are stripped. Row 12 proves
@@ -371,11 +403,125 @@ made this pass's round trip unambiguous: the gateway kept one store for the whol
 is ever re-enabled, a test run mid-session repoints the live `store` and any round trip measured
 afterwards is measuring a different backing table.
 
+**9. THE CRITICAL: hydration paid a level-up award that never happened.**
+`SpraypaintService.start`'s `safePlayerAdded` seeded `lastLevel[player] = player:GetAttribute("Level")`
+and then connected `GetAttributeChangedSignal("Level")`. The gateway yields on `StartSessionAsync`, so
+`LevelingService.hydrate`'s `SetAttribute("Level", 12)` **always** lands afterwards and fires that
+signal. With `LevelingService`'s own `PlayerAdded` handler having run first, the seed is its default
+`1`, and `onLevelChanged` computed `(12 − 1) × 25 = 275` spraypaint for a level-up that never happened.
+
+The code was **correct only by ordering luck.** Both handlers are yield-free `PlayerAdded` handlers, so
+which one wins is pure require order: if `SpraypaintRunner` required first the seed was `nil` and the
+`previous == nil` guard returned early, and the file's own comment cited that as proof of correctness.
+The other order pays. `lastLevel` is correctly listed in `Schema.DERIVED` and is therefore never
+persisted — and nothing re-seeded it after the restore.
+
+The award was **durable** even though nothing was written. `mirror` no-ops before the bind, so
+`profile.Data.spraypaint` stayed at the real value; what survived was the inflated live **attribute**,
+and that attribute is the base the next `grant` or `spend` mirrors back. One rejoin, one kill, and 275
+phantom spraypaint is in the saved profile.
+
+**Fixed** with a post-hydrator in `SpraypaintService` that re-seeds `lastLevel[player]` from the
+restored `Level`. It has to be a post-hydrator and not a hydrator: it reads *another* service's
+restored attribute, and hydrator order is registration order, which is require order — exactly the
+thing that made the bug order-dependent in the first place.
+
+Two measurements underwrite it. `GetAttributeChangedSignal` is **deferred** in this place (probed
+directly: the handler had not run immediately after `SetAttribute` and had run after one `task.wait()`),
+so the signal cannot fire *between* `LevelingService`'s restore and the post-hydrator unless something
+in the hydrator loop yields; and nothing does — none of the seven hydrators nor either post-hydrator
+contains `WaitForChild`, `task.wait` or `task.spawn`. **That is an assumption, not a guarantee**: a
+future hydrator that yields, registered between `LevelingService`'s and this one's, would flush the
+deferred queue mid-loop and reopen the window. Recorded here rather than guarded, because the guard
+that would close it structurally — refusing to pay while `get(player)` is `nil` — also silences the
+award for any player who is legitimately unbound, and that is a behaviour change this round did not ask
+for.
+
+Regression case: `ProfileAdoption_Test > "a restored level is not paid out as a level-up"`, which drives
+the **real** registered hydrator and post-hydrator lists through `_runHydrators` / `_runPostHydrators`.
+Note that `LevelingService` is a `Script`: its hydrator *is* registered at server start, but it throws
+on a stand-in player (`FindFirstChild` is not a method on a table), so the case registers a probe
+hydrator that writes the same attribute from the same field, and asserts `Level == 12` so it cannot
+pass blind. **Mutation: delete the post-hydrator from `SpraypaintService`.** Exactly one case goes red —
+this one — with `expected 40, got 315`, which is 40 + 275: the phantom award, measured.
+
+**10. THE MAJOR: the ordering hole was closed at the instance, not the class.**
+`_runHydrators` runs whatever is registered at that instant and then binds unconditionally, so a service
+that registers **after** a bind never hydrates that player at all. Its own guarded `PlayerAdded` default
+then fires via `safePlayerAdded` / `GetPlayers()`, and the next ordinary action mirrors that default
+straight over real saved data: `level = 1` over a saved level 12 on the first kill, `{Crowbar}` over
+real ownership on the first purchase, a fresh kills table over a real count. No per-task diff could show
+this, because no single service is wrong — the class is.
+
+**Fixed at the class.** `registerHydrator` and `registerPostHydrator` now immediately run the
+newly-registered function for every player whose profile is already bound, guarded the same way the
+loops are (`pcall` + `warn`) so a throwing late hydrator cannot take registration down with it. A
+late-registering service always hydrates, and the window closes structurally instead of seven services
+each having to remember.
+
+Regression case: `ProfileAdoption_Test > "a hydrator registered after a player is already bound still
+hydrates them"`, which binds first and registers second, for both phases, and includes a deliberately
+throwing late post-hydrator to prove registration survives it. **Mutation: delete both `runForBound`
+calls.** Exactly one case goes red — this one — with `expected 808, got nil`.
+
+**Also closed here: the one adoption that mirrored its own default.** `SpraypaintService`'s
+`safePlayerAdded` fallback wrote `player:SetAttribute(ATTRIBUTE, 0)` *and* mirrored `spraypaint = 0`
+into the profile. Its comment justified the mirror as a fallback for a failed load — but `mirror`
+no-ops without a bound profile, so on a failed load it did nothing at all. The only state in which that
+line was live was the state in which it wrote `0` over a real saved balance. **The mirror call is
+deleted; the attribute set stays**, which is the part that actually serves the about-to-be-kicked
+player.
+
+**11. THE MAJOR: the eighth test this project has caught that could not fail.**
+`ProfileGateway_Test > "a migrate failure ends the session and returns nil"` asserted `failed == nil`
+and then `reread == nil`. Delete `profile:EndSession()` from `ProfileGateway.loadForKey` and it **still
+passed**: the second `loadForKey` hits ProfileStore's already-loaded throw, that throw is swallowed by
+the `pcall` Note 7 added, the attempts are exhausted and `nil` comes back for entirely the wrong reason.
+Our own guard is what made the test blind — the fix in Note 7 broke the assertion in a neighbouring
+case and nobody noticed, because both the right and the wrong behaviour return the same value.
+
+Its comment conceded this outright: it asked a human to "contrast this case's reported duration against
+'a failed load yields no profile and writes nothing' above". A timing a person is asked to eyeball is
+not an assertion.
+
+**Fixed** by asserting the duration the comment described. A freed lock means `StartSessionAsync`
+succeeds on attempt 1 and `migrate` throws again, so `nil` comes back in milliseconds; a leaked lock
+means three throwing attempts with `RETRY_DELAY` between them. The threshold is 1s, four times below
+the failure and far above the success. **Mutation: delete `profile:EndSession()` from the migrate-failure
+branch.** Exactly one case goes red — this one — with `reload took 4.03s, so it went down the
+contended-retry path: the failed attempt did not end the session`. The console for that run shows the
+three `already loaded` warnings the old assertion was silently passing through.
+
+**12. THE MAJOR: the mock drops `params`, so the abandonment policy has never run.**
+`ProfileStore.Mock`'s proxy is:
+
+```lua
+StartSessionAsync = function(_, profile_key)
+    MockFlag = true
+    return self:StartSessionAsync(profile_key)   -- params is dropped
+end,
+```
+
+The gateway calls `store:StartSessionAsync(key, { Cancel = cancel })`. Under `useMockStore` that second
+argument never arrives, so inside ProfileStore `params.Cancel` is `nil`, which re-enables its own
+`START_SESSION_TIMEOUT` (`if params.Cancel == nil then default_timeout = ... end`). Every measurement in
+this document is a mock run. **The gateway's entire abandonment policy — the 30s `LOAD_DEADLINE` and the
+departing-player cancel — has therefore never executed, not once.** Row 9 does not reach it either:
+`_forceNextLoadFailure` short-circuits before `StartSessionAsync` is called at all, so that row measures
+`LOAD_ATTEMPTS × RETRY_DELAY` and the never-write rule, and nothing about cancellation.
+
+**Not patched, deliberately.** The vendored `ServerStorage.ProfileStore` is pinned to an upstream commit
+with a recorded sha256 (`ad4373…0c95f`), and this log's `Changes` section asserts that match. That
+guarantee is worth more than exercising the branch: a local edit to vendored code is the kind of thing
+that survives one re-vendor and not the second. Recorded as DEFERRED beside restart durability and
+cross-server locking, and marked `NEVER EXERCISED` in the gateway's own comment where the next reader
+will find it. Closing it needs either a published place or an upstream fix.
+
 ## Status
 
 - **Confirmed live this pass, against ProfileStore's Studio mock:** verification rows 1-9, 11, 12 and
   13, each with the numbers quoted above; the damage-path-clean check; the single-`require` check; and
-  all 12 unit suites at 133/133 in a real server VM. Every change was driven through the game's own
+  all 12 unit suites at 135/135 in a real server VM. Every change was driven through the game's own
   entry points — `BuyRequest`, `SetLoadoutSlotRequest`, `UpgradeRequest`, `SetLevelRequest`,
   `BuySkinRequest` fired from the Client datamodel, and one genuine kill through `Blaster.Remotes.Shoot`
   → `ShotResolver` → `Eliminated` — not by writing to `profile.Data` directly.
@@ -387,11 +533,19 @@ afterwards is measuring a different backing table.
   join-time load failure and a stored v0 profile cannot be produced through a player join in this
   harness. Row 7's recompute and rows 3-6's restores were read back by re-running the **deployed**
   hydrators against the reloaded profile, not by an actual rejoin — see the next point for why no
-  rejoin is possible.
+  rejoin is possible. **That carve-out is how the Critical survived verification:** the hydrator replay
+  restores state without ever touching the `GetAttributeChangedSignal` the phantom award lived on, so
+  the one check that would have shown it is the one this harness cannot run (Note 9).
 - **DEFERRED — cannot be verified until the place is published.** Durability across a real server
   restart, and cross-server session locking. Neither is simulated and neither should be read as passing.
   The mock store lives in the server VM's memory and dies with the playtest, so there is no restart for
   a profile to survive and no second server to contend with.
+- **DEFERRED — the load-abandonment policy has never executed.** The 30s `LOAD_DEADLINE` and the
+  departing-player cancel. ProfileStore's `Mock` proxy drops the `params` argument, so `params.Cancel`
+  is `nil` in every mock run and ProfileStore's own `START_SESSION_TIMEOUT` takes over; row 9 does not
+  reach `StartSessionAsync` at all. Not worked around, because the vendored file's sha256 match is worth
+  more than the branch (Note 12). Nothing in this document should be read as evidence that the deadline
+  or the cancel works.
 - **Needs a person — row 10's other half.** A failed *load* has never kicked anyone. The `nil` return is
   measured and the `OnSessionEnd` kick was observed on a real Player, but the failed-load branch of
   `onPlayerAdded` has only ever been read. Two clients on a published place, one holding the session
@@ -403,5 +557,20 @@ afterwards is measuring a different backing table.
   contention, and `ProfileStore.OnError` / `OnCriticalToggle`, none of which have ever fired here.
 - **Closed this pass:** the `loadForKey` same-server-rejoin throw (Note 7) — guarded, with a regression
   case that proves the outcome, and mutation-tested. Suite total 132 -> 133.
+- **Closed in the final fix round, after a whole-branch review:** the phantom level-up award on every
+  rejoin (Note 9, Critical), the late-registration hydration hole (Note 10), the mirror of a default
+  over a real balance (Note 10), and a test that could not fail (Note 11). Three mutations run, each
+  naming exactly one red case: `expected 40, got 315` (the 275 award), `expected 808, got nil` (the
+  un-hydrated late registration), and `reload took 4.03s` (the leaked session lock). Two API functions
+  with no callers, `waitFor` and `isLoaded`, deleted. Suite total 133 -> 135.
 - **Open, recorded, not done here:** the three live test suites missing from this repo (Note 5), and the
   client-facing remote audit (Note 6).
+- **Open, recorded, not guarded.** Note 9's fix depends on no hydrator yielding between
+  `LevelingService`'s restore and `SpraypaintService`'s re-seed; today none does, and that was measured,
+  not assumed. A hydrator that yields would flush the deferred attribute signal mid-loop and reopen the
+  window. The structural guard (refuse a level award while `get(player)` is `nil`) also silences the
+  award for a legitimately unbound player, so it is named here rather than shipped unasked. Similarly,
+  Note 10's late-registration re-run does not itself re-seed the level baseline: a service registering
+  `LevelingService`'s hydrator after a bind would restore `Level` without `SpraypaintService`'s
+  post-hydrator following it. No service registers late today; this is the shape the next one must not
+  take.
