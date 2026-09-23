@@ -44,6 +44,22 @@ local function ownsPalette(palette): boolean
 	return true
 end
 
+-- SprayIcon is drawn from Frames rather than an image: Studio's image upload only accepts http/https
+-- URLs and refused the Figma CDN export as untrusted, and no free equivalent turned up in the Creator
+-- Store. If an asset id is minted later, swap SprayIcon for an ImageLabel and only the branch below
+-- needs to change -- every call site still just calls paintSprayIcon(icon, color).
+local function paintSprayIcon(icon: Instance, color: Color3)
+	if icon:IsA("ImageLabel") then
+		icon.ImageColor3 = color
+		return
+	end
+	for _, part in icon:GetChildren() do
+		if part:IsA("GuiObject") then
+			part.BackgroundColor3 = color
+		end
+	end
+end
+
 -- One shared list, not a per-build local: there is only ever one BuyStrip instance (a sibling of
 -- every weapon's SkinRow, reused across builds), so its BuyButton/CancelButton connections must be
 -- torn down against the SAME table hideBuyStrip() clears next time, not a fresh empty one created by
@@ -171,7 +187,12 @@ function SkinRowController.build(
 		-- down with everything else.
 		local function refreshAffordability()
 			local affordable = (player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0) >= price
-			buyStrip.PriceLabel.TextColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
+			-- The badge is part of the same price element as the text, so it follows the text's colour
+			-- rather than getting its own affordability check -- an unaffordable row with a stale accent
+			-- badge would read as half-styled.
+			local priceColor = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("FF4B4B")
+			buyStrip.PriceLabel.TextColor3 = priceColor
+			paintSprayIcon(buyStrip.SprayIcon, priceColor)
 			buyStrip.BuyButton.BackgroundColor3 = if affordable then Color3.fromHex("CBF23C") else Color3.fromHex("2A2E38")
 			buyStrip.BuyButton.TextColor3 = if affordable then Color3.fromHex("171A22") else Color3.fromHex("8A8F9A")
 			buyStrip.BuyButton.Text = if affordable then "BUY" else "NOT ENOUGH"
