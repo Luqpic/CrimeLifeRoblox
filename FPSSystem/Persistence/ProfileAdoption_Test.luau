@@ -1,8 +1,9 @@
 -- Tests that each service's mirror points actually write into the profile, that hydration restores
--- attributes from a profile, and that hydration cannot be raced by a mirror (Finding 3).
+-- attributes from a profile, that hydration cannot be raced by a mirror (Finding 3), and that a
+-- post-hydrator sees every hydrator's result regardless of registration order (fix round 2).
 --
 -- These use a stand-in player table, because a real Player cannot be constructed. The services read
--- and write attributes, and CosmeticsService.refresh (now called from hydrate) additionally reads
+-- and write attributes, and CosmeticsService's post-hydrator calls refresh, which additionally reads
 -- FindFirstChildOfClass/Character, so the stand-in stubs that the same way CosmeticsOwnership_Test's
 -- fakePlayer does -- enough to let refresh no-op instead of throwing on a plain table.
 return function(t)
@@ -173,6 +174,58 @@ return function(t)
 		expect.equal(player:GetAttribute(SpraypaintConstants.ownedAttributeFor("Ember")), true)
 
 		Gateway._unbind(player)
+		profile:EndSession()
+	end)
+
+	t.test("post-hydrators run after every hydrator, regardless of registration order", function()
+		-- CosmeticsService is a require of SpraypaintService, so CosmeticsService's hydrator ALWAYS
+		-- registers before SpraypaintService's -- that is fixed by the require graph and this test does
+		-- not, and must not need to, control it. What it proves instead is the actual invariant: a
+		-- post-hydrator never runs until every hydrator, including one registered AFTER it, has
+		-- finished. The probe checks the one attribute that only SpraypaintService's LATER-registered
+		-- hydrator can have set -- exactly the dependency Finding 4's fix round 1 got wrong.
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-posthydrate-order-" .. os.clock())
+		profile.Data.skinsOwned.Cobalt = true
+
+		local ownedSeenByProbe = "not set"
+		Gateway.registerPostHydrator(function(p, _profile)
+			if p == player then
+				ownedSeenByProbe = p:GetAttribute(SpraypaintConstants.ownedAttributeFor("Cobalt"))
+			end
+		end)
+
+		Gateway._runHydrators(player, profile)
+		Gateway._runPostHydrators(player, profile)
+
+		expect.equal(ownedSeenByProbe, true)
+
+		profile:EndSession()
+	end)
+
+	t.test("hydrating restores a Spraypaint-sourced equipped skin onto a Tool already in hand", function()
+		-- The exact case fix round 2 closes: a Tool for "Crowbar" already exists (as if WeaponShopService
+		-- granted and skinned it before this ran), and the equipped skin, "Cobalt", is Spraypaint-sourced,
+		-- so re-dressing it correctly depends on SpraypaintService's SkinOwned_Cobalt attribute as well as
+		-- CosmeticsService's own EquippedSkin_Crowbar attribute. If refresh ran as part of hydrate (fix
+		-- round 1's version) rather than as a post-hydrator, this would come out Stock, not Cobalt.
+		local player = standIn()
+		local character = Instance.new("Model")
+		local tool = Instance.new("Tool")
+		tool.Name = "Crowbar"
+		tool.Parent = character
+		player.Character = character
+
+		local profile = Gateway.loadForKey("adopt-posthydrate-skin-" .. os.clock())
+		profile.Data.skinsOwned.Cobalt = true
+		profile.Data.equippedSkin.Crowbar = "Cobalt"
+
+		Gateway._runHydrators(player, profile)
+		Gateway._runPostHydrators(player, profile)
+
+		expect.equal(tool:GetAttribute("SkinId"), "Cobalt")
+
+		character:Destroy()
 		profile:EndSession()
 	end)
 end

@@ -94,6 +94,28 @@ function ProfileGateway._runHydrators(player: any, profile: any)
 	end
 end
 
+-- Runs after every hydrator, still before the bind.
+--
+-- Some restoration depends on the whole profile being restored, not just one service's slice:
+-- re-dressing a Tool needs both the equipped skin AND the ownership attributes that decide whether
+-- that skin is allowed. Ordering hydrators by hand would work until someone adds a require and
+-- silently changes the order, so the dependency gets its own phase instead of a convention.
+local postHydrators: { (player: any, profile: any) -> () } = {}
+
+function ProfileGateway.registerPostHydrator(postHydrator: (player: any, profile: any) -> ())
+	table.insert(postHydrators, postHydrator)
+end
+
+-- Test seam only: same rationale as _runHydrators -- production reuses this below.
+function ProfileGateway._runPostHydrators(player: any, profile: any)
+	for _, postHydrator in postHydrators do
+		local ok, err = pcall(postHydrator, player, profile)
+		if not ok then
+			warn("[Persistence] post-hydrator failed for " .. tostring(player) .. ": " .. tostring(err))
+		end
+	end
+end
+
 function ProfileGateway.keyFor(userId: number): string
 	return "player_" .. userId
 end
@@ -183,8 +205,11 @@ local function onPlayerAdded(player: Player)
 
 	-- Hydrators run here, strictly before the bind below, so nothing outside this function can ever
 	-- observe a bound profile whose attributes are not yet restored. get() and isLoaded() stay false
-	-- for the whole of this loop.
+	-- for the whole of this loop. Post-hydrators run after EVERY hydrator has finished, so anything
+	-- that depends on another service's restored state -- not just its own -- sees it regardless of
+	-- which service happened to register first.
 	ProfileGateway._runHydrators(player, profile)
+	ProfileGateway._runPostHydrators(player, profile)
 
 	profiles[player] = profile
 end

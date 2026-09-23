@@ -50,18 +50,18 @@ function CosmeticsService.equippedKeyFor(player: Player, weaponName: string): st
 	return key
 end
 
--- Restores each weapon's persisted equipped skin onto the attribute the rest of the game reads, then
--- re-dresses anything already in hand.
+-- Restores each weapon's persisted equipped skin onto the attribute the rest of the game reads.
 --
 -- `profile` is normally supplied by the gateway's own hydrator loop, which runs before the profile is
 -- bound (see ProfileGateway.registerHydrator below) -- ProfileGateway.get(player) would still be nil
 -- at that point. The fallback lookup exists only so a direct call, such as a test that has already
 -- bound a stand-in with Gateway._bind, still works without threading a profile through by hand.
 --
--- The refresh matters because WeaponShopService grants and skins the starting weapon from its own
--- join handler, with no ordering guarantee against this one -- if it wins that race, the Tool it just
--- skinned already exists before this hydrator runs, and restoring the attribute alone would not have
--- touched it.
+-- Deliberately does NOT re-dress a Tool already in hand here. Whether an equipped skin is even worn
+-- can depend on SpraypaintService's ownership attributes (a Spraypaint-sourced skin), which this
+-- service's own hydrator has no guarantee has run yet -- CosmeticsService is a require of
+-- SpraypaintService, so its hydrator always registers first. See the post-hydrator registered below,
+-- which runs only once every hydrator, not just this one, has finished.
 function CosmeticsService.hydrate(player: any, profile: any?)
 	profile = profile or ProfileGateway.get(player)
 	if not profile then
@@ -70,7 +70,6 @@ function CosmeticsService.hydrate(player: any, profile: any?)
 	for weaponName, paletteKey in profile.Data.equippedSkin do
 		player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
 	end
-	CosmeticsService.refresh(player)
 end
 
 -- Called by WeaponShopService wherever it hands a weapon to a player, including the respawn restore.
@@ -132,5 +131,13 @@ ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest.OnServerEvent:Connect(Cosme
 -- code can observe a bound profile. Self-registered rather than called from SpraypaintService's join
 -- handler, which is what coupled the two services before this moved into the gateway.
 ProfileGateway.registerHydrator(CosmeticsService.hydrate)
+
+-- Re-dressing a Tool already in hand is a CONSEQUENCE of hydration, not a part of it -- it needs the
+-- whole profile restored (this service's equipped-skin attribute AND SpraypaintService's ownership
+-- attribute), not just this one's slice. A post-hydrator runs only after every hydrator has finished,
+-- so this is correct regardless of which service happened to register its hydrator first.
+ProfileGateway.registerPostHydrator(function(player: any, _profile: any)
+	CosmeticsService.refresh(player)
+end)
 
 return CosmeticsService
