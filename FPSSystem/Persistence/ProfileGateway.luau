@@ -70,6 +70,30 @@ function ProfileGateway.mirror(player: any, apply: (any) -> ())
 	end
 end
 
+-- Services register at require time; the gateway runs them all after a successful load and BEFORE
+-- binding the profile.
+--
+-- Ordering is the whole point. While hydrators run, get() still returns nil, so mirror is a no-op and
+-- a change earned in that window is LOST rather than written from un-hydrated state. Losing a kill's
+-- reward is recoverable; overwriting a real balance with a partial one is not.
+local hydrators: { (player: any, profile: any) -> () } = {}
+
+function ProfileGateway.registerHydrator(hydrator: (player: any, profile: any) -> ())
+	table.insert(hydrators, hydrator)
+end
+
+-- Test seam only: runs every registered hydrator directly, without a real Player or onPlayerAdded --
+-- which needs one. Production reuses this same function below, so there is exactly one hydrate-then-
+-- bind sequence, not a copy a test exercises and a separate copy the live server actually runs.
+function ProfileGateway._runHydrators(player: any, profile: any)
+	for _, hydrator in hydrators do
+		local ok, err = pcall(hydrator, player, profile)
+		if not ok then
+			warn("[Persistence] hydrator failed for " .. tostring(player) .. ": " .. tostring(err))
+		end
+	end
+end
+
 function ProfileGateway.keyFor(userId: number): string
 	return "player_" .. userId
 end
@@ -156,6 +180,11 @@ local function onPlayerAdded(player: Player)
 		profile:EndSession()
 		return
 	end
+
+	-- Hydrators run here, strictly before the bind below, so nothing outside this function can ever
+	-- observe a bound profile whose attributes are not yet restored. get() and isLoaded() stay false
+	-- for the whole of this loop.
+	ProfileGateway._runHydrators(player, profile)
 
 	profiles[player] = profile
 end

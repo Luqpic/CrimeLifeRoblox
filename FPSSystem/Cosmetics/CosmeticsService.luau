@@ -50,16 +50,27 @@ function CosmeticsService.equippedKeyFor(player: Player, weaponName: string): st
 	return key
 end
 
--- Restores each weapon's persisted equipped skin onto the attribute the rest of the game reads.
--- Attributes stay the live source during a session; the profile is the copy that outlives it.
-function CosmeticsService.hydrate(player: any)
-	local profile = ProfileGateway.get(player)
+-- Restores each weapon's persisted equipped skin onto the attribute the rest of the game reads, then
+-- re-dresses anything already in hand.
+--
+-- `profile` is normally supplied by the gateway's own hydrator loop, which runs before the profile is
+-- bound (see ProfileGateway.registerHydrator below) -- ProfileGateway.get(player) would still be nil
+-- at that point. The fallback lookup exists only so a direct call, such as a test that has already
+-- bound a stand-in with Gateway._bind, still works without threading a profile through by hand.
+--
+-- The refresh matters because WeaponShopService grants and skins the starting weapon from its own
+-- join handler, with no ordering guarantee against this one -- if it wins that race, the Tool it just
+-- skinned already exists before this hydrator runs, and restoring the attribute alone would not have
+-- touched it.
+function CosmeticsService.hydrate(player: any, profile: any?)
+	profile = profile or ProfileGateway.get(player)
 	if not profile then
 		return
 	end
 	for weaponName, paletteKey in profile.Data.equippedSkin do
 		player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
 	end
+	CosmeticsService.refresh(player)
 end
 
 -- Called by WeaponShopService wherever it hands a weapon to a player, including the respawn restore.
@@ -116,5 +127,10 @@ function CosmeticsService.handleEquipRequest(player: Player, weaponName: unknown
 end
 
 ReplicatedStorage.Cosmetics.Remotes.EquipSkinRequest.OnServerEvent:Connect(CosmeticsService.handleEquipRequest)
+
+-- Registered at require time, so the gateway can restore this service's attributes before any other
+-- code can observe a bound profile. Self-registered rather than called from SpraypaintService's join
+-- handler, which is what coupled the two services before this moved into the gateway.
+ProfileGateway.registerHydrator(CosmeticsService.hydrate)
 
 return CosmeticsService

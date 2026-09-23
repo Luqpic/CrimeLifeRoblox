@@ -37,8 +37,13 @@ end
 
 -- Restores the persisted balance and owned skins onto the attributes the rest of the game reads.
 -- Attributes stay the live source during a session; the profile is the copy that outlives it.
-function SpraypaintService.hydrate(player: any)
-	local profile = ProfileGateway.get(player)
+--
+-- `profile` is normally supplied by the gateway's own hydrator loop, which runs before the profile is
+-- bound (see ProfileGateway.registerHydrator below) -- ProfileGateway.get(player) would still be nil
+-- at that point. The fallback lookup exists only so a direct call, such as a test that has already
+-- bound a stand-in with Gateway._bind, still works without threading a profile through by hand.
+function SpraypaintService.hydrate(player: any, profile: any?)
+	profile = profile or ProfileGateway.get(player)
 	if not profile then
 		return
 	end
@@ -156,45 +161,50 @@ function SpraypaintService.handleBuyRequest(player: any, paletteKey: unknown): b
 	return true
 end
 
+-- Named (rather than inline in the remote connection) so this seam the test suite can call directly,
+-- matching the precedent CosmeticsService.handleEquipRequest already set.
+function SpraypaintService.handleBuySkinRequest(player: Player, paletteKey: unknown, weaponName: unknown)
+	if not SpraypaintService.handleBuyRequest(player, paletteKey) then
+		return
+	end
+	-- Equipped by the SERVER in the same call rather than by a second client remote. The
+	-- PURCHASE is what is atomic -- handleBuyRequest above either fully succeeds or changes
+	-- nothing. Equipping here is a best-effort follow-up: a bad weaponName below skips it,
+	-- leaving the palette owned but not worn, which is not a stranding bug -- the player can
+	-- still equip it through the normal equip remote. When it does run, the attribute change
+	-- drives the row's repaint and CosmeticsService.refresh re-dresses the held weapon, whose
+	-- SkinId listener catches first person.
+	--
+	-- weaponName arrives from the client and is validated here like any other client string.
+	-- Phase 1 measured why: an unvalidated weapon name let a crafted client create unbounded
+	-- player attributes, and one long enough made SetAttribute throw outright.
+	if typeof(weaponName) ~= "string" then
+		return
+	end
+	local template = ServerStorage.Weapons:FindFirstChild(weaponName)
+	if not (template and template:IsA("Tool")) then
+		return
+	end
+	player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
+	-- The equip half of a purchase was going unmirrored: ownership persisted but the auto-equip did
+	-- not, so a rejoin after buying-and-wearing a skin in one action showed the weapon back on Stock.
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.equippedSkin[weaponName] = paletteKey
+	end)
+	CosmeticsService.refresh(player, weaponName)
+end
+
 function SpraypaintService.start()
 	ServerScriptService.Blaster.Events.Eliminated.Event:Connect(SpraypaintService.onEliminated)
 
-	ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest.OnServerEvent:Connect(
-		function(player: Player, paletteKey: unknown, weaponName: unknown)
-			if not SpraypaintService.handleBuyRequest(player, paletteKey) then
-				return
-			end
-			-- Equipped by the SERVER in the same call rather than by a second client remote. The
-			-- PURCHASE is what is atomic -- handleBuyRequest above either fully succeeds or changes
-			-- nothing. Equipping here is a best-effort follow-up: a bad weaponName below skips it,
-			-- leaving the palette owned but not worn, which is not a stranding bug -- the player can
-			-- still equip it through the normal equip remote. When it does run, the attribute change
-			-- drives the row's repaint and CosmeticsService.refresh re-dresses the held weapon, whose
-			-- SkinId listener catches first person.
-			--
-			-- weaponName arrives from the client and is validated here like any other client string.
-			-- Phase 1 measured why: an unvalidated weapon name let a crafted client create unbounded
-			-- player attributes, and one long enough made SetAttribute throw outright.
-			if typeof(weaponName) ~= "string" then
-				return
-			end
-			local template = ServerStorage.Weapons:FindFirstChild(weaponName)
-			if not (template and template:IsA("Tool")) then
-				return
-			end
-			player:SetAttribute(CosmeticsService.attributeFor(weaponName), paletteKey)
-			CosmeticsService.refresh(player, weaponName)
-		end
-	)
+	ReplicatedStorage.Spraypaint.Remotes.BuySkinRequest.OnServerEvent:Connect(SpraypaintService.handleBuySkinRequest)
 
 	safePlayerAdded(function(player: Player)
-		-- Waits for the profile before doing anything else, so hydrate is what sets the starting
-		-- balance whenever one exists; the join initialiser below only ever fires as a fallback, for
-		-- a player whose load failed and who is about to be kicked.
-		ProfileGateway.waitFor(player)
-		SpraypaintService.hydrate(player)
-		CosmeticsService.hydrate(player)
-
+		-- Hydration itself now happens inside ProfileGateway's own join handler (see
+		-- ProfileGateway.registerHydrator below), strictly before the profile is bound, so by the time
+		-- any code here could observe a bound profile the attribute is already restored. This
+		-- initialiser is only a fallback for a player whose load failed and who is about to be kicked --
+		-- no hydrator ever runs for them, and without this the attribute would stay nil for that window.
 		if player:GetAttribute(Constants.ATTRIBUTE) == nil then
 			player:SetAttribute(Constants.ATTRIBUTE, 0)
 			ProfileGateway.mirror(player, function(profile)
@@ -212,5 +222,9 @@ function SpraypaintService.start()
 		lastLevel[player] = nil
 	end)
 end
+
+-- Registered at require time, so the gateway can restore this service's attributes before any other
+-- code -- including this same service's own safePlayerAdded above -- can observe a bound profile.
+ProfileGateway.registerHydrator(SpraypaintService.hydrate)
 
 return SpraypaintService
