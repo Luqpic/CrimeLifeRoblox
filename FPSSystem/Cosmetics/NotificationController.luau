@@ -18,15 +18,18 @@ local ARRIVAL_TIME = 0.22
 local RESEAT_TIME = 0.18
 local EXPIRE_TIME = 0.18
 local MAX_VISIBLE = 3
-local CARD_WIDTH = 420
-local CARD_HEIGHT = 100
+-- 420x100 was sized for copy this card never carries: a gain toast is one title word and one short
+-- line ("+7 Spraypaint"). 280x64 is the smallest size the Notification template's labels still read
+-- well at -- checked live against TitleLabel/MessageLabel's own layout.
+local CARD_WIDTH = 280
+local CARD_HEIGHT = 64
 local DEPTH_Y_STEP = 10 -- each older card sits this much higher than the one in front of it
 local DEPTH_INSET_STEP = 14 -- ...and this much narrower on each side
 local ARRIVAL_OFFSET_X = 40 -- new/expiring cards travel this far past their resting X
 local RIGHT_MARGIN = 20
--- Bottom-right is already claimed by GuiController's ammo/weapon HUD, built at runtime
--- (AutomaticSize) rather than sized in the template -- measured live below.
-local BOTTOM_MARGIN = 160
+-- The ammo/weapon HUD moved to middle-right (see GuiController), so bottom-right belongs to this
+-- stack alone now -- the margin only has to clear the screen edge, not dodge another HUD element.
+local BOTTOM_MARGIN = 24
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -39,6 +42,13 @@ gui.Name = "NotificationGui"
 -- every later notification parented to nothing.
 gui.ResetOnSpawn = false
 gui.Parent = playerGui
+
+-- UIScaleController skips any ScreenGui that already ships its own UIScale ("a GUI that already
+-- ships its own UIScale owns its own scaling policy") -- this card is already sized to read well,
+-- so it opts out rather than being blown up to match its widest offset-sized sibling on wide screens.
+local uiScale = Instance.new("UIScale")
+uiScale.Scale = 1
+uiScale.Parent = gui
 
 local container = Instance.new("Frame")
 container.Name = "Container"
@@ -56,8 +66,9 @@ local EXPIRE_INFO = TweenInfo.new(EXPIRE_TIME, Enum.EasingStyle.Back, Enum.Easin
 local stack = {}
 
 -- Depth 0 is the front card at full width; each step back is narrower (inset on both sides) and
--- higher (peeking out above the card in front), with its own detail dimmed toward the rounded
--- background only -- matching the reference, where the cards behind read as plain shapes, not text.
+-- higher (peeking out above the card in front), with `dim` fading the whole card -- background and
+-- content together (see reseat) -- so a receded card reads as fainter, never as a blank plate with
+-- its text switched off underneath a background that is still most of the way opaque.
 local function depthGeometry(depth: number)
 	local inset = DEPTH_INSET_STEP * depth
 	local position = UDim2.new(1, -inset, 1, -DEPTH_Y_STEP * depth)
@@ -72,7 +83,10 @@ local function reseat(card, depth: number, tweenInfo: TweenInfo)
 	-- container) already draw in ZIndex order, so setting it once here is enough.
 	card.instance.ZIndex = MAX_VISIBLE + 1 - depth
 
-	local contentTransparency = if depth == 0 then 0 else 1
+	-- Content shares the background's own `dim` instead of snapping straight to hidden. Live-measured
+	-- (two cards fired back to back): the old snap left a depth-1 card at 70% opaque with title and
+	-- message both at full transparency -- a large, blank-looking plate. That is the reported bug.
+	local contentTransparency = dim
 
 	TweenService:Create(card.instance, tweenInfo, {
 		Position = position,
