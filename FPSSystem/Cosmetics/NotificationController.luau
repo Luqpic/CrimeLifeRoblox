@@ -41,6 +41,20 @@ gui.Name = "NotificationGui"
 -- required once and holds a reference to the container below, which a reset would destroy and leave
 -- every later notification parented to nothing.
 gui.ResetOnSpawn = false
+-- Instance.new("ScreenGui") defaults to ZIndexBehavior.Global, under which EVERY descendant is sorted
+-- by its absolute ZIndex rather than drawn with its parent. `reseat` gives each card a ZIndex of
+-- MAX_VISIBLE + 1 - depth (4/3/2) to stack the depths, and the Notification template's own children sit
+-- at ZIndex 1 (TitleLabel, MessageLabel) and 2 (AccentEdge) -- so under Global a card's opaque
+-- background painted straight over its own text. Measured: title bounds 88.5x15 at TextTransparency 0,
+-- fully rendered and completely hidden. That is the reported blank card, and it is why a RECEDED card
+-- still showed faint text (its background dims to 0.3/0.6, so the text bleeds through) while the front
+-- card at 0.00 showed none at all -- the detail that made this look like a transparency bug for two
+-- rounds when it was never one.
+--
+-- Sibling is the behaviour this layout assumes: a subtree draws with its parent, and ZIndex orders
+-- SIBLINGS -- so the cards still stack by depth under the container, and each card's content draws
+-- above its own background.
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = playerGui
 
 -- UIScaleController skips any ScreenGui that already ships its own UIScale ("a GUI that already
