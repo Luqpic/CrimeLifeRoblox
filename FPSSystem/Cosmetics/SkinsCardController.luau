@@ -40,22 +40,21 @@ local CARD_SIZE = UDim2.fromOffset(240, 580)
 local GAP = 20 -- between the shop panel's right edge and the card's left edge
 local SLIDE_OFFSET = 40 -- how far right the card starts before tweening in
 
--- How much wider WeaponaryShopController's own responsive-scale formula must pretend the shop is,
--- to leave room for this card. Doubled, not just CARD_SIZE.X + GAP + SLIDE_OFFSET: the shop is
--- centre-anchored (AnchorPoint 0.5, 0.5), so a symmetric "does WIDTH fit inside VIEWPORT" formula
--- only ever counts HALF the shop's width against each side of the viewport -- but this card hangs
--- entirely off the shop's RIGHT edge, so the true right-side budget is halfShopWidth + GAP + CARD
--- width, and only DOUBLING that one-sided overhang and adding it to the shop's full width
--- reproduces the real (asymmetric) constraint inside the same symmetric formula. See
--- WeaponaryShopController's ResponsiveScale for the other half of this.
+-- How much wider WeaponaryShopController's responsive-scale formula must treat the shop as while
+-- this card is open. ONE card footprint, not two: the shop slides left by half of it (SHOP_SHIFT
+-- below) so the shop and the card sit centred TOGETHER, and a centred pair of width
+-- shop + GAP + card is exactly what that symmetric fit formula measures.
 --
--- SLIDE_OFFSET is folded in too, not just the card's resting footprint: the entrance tween's START
--- position sits SLIDE_OFFSET further right than where the card settles, and the brief is explicit
--- that BOTH tween endpoints must land inside the viewport -- budgeting only for the resting position
--- left just ~5px of margin for the slide overshoot at one tested viewport (1120x719), which is not a
--- margin, it's a coincidence. Reserving room for the slide's widest moment up front guarantees both
--- endpoints fit at any viewport size, not just the one that happened to be measured.
-local RESERVED_WIDTH = 2 * (CARD_SIZE.X.Offset + GAP + SLIDE_OFFSET)
+-- The previous version kept the shop centred on its own and reserved the card's overhang on BOTH
+-- sides, which shrank the shop far further than the card needed -- the "click a weapon and it
+-- suddenly becomes small" the user reported. At the user's ~1283-point viewport the pair
+-- (920 + 20 + 240 = 1180) now fits at full scale, so the shop does not shrink there at all; it only
+-- scales down on a viewport genuinely too narrow for both.
+--
+-- SLIDE_OFFSET is deliberately not reserved: the card is fully transparent at the start of its
+-- slide-in and the end of its slide-out, so the distance it travels past its resting spot is never
+-- visible.
+local RESERVED_WIDTH = CARD_SIZE.X.Offset + GAP
 
 local OPEN_TWEEN = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local CLOSE_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -483,13 +482,55 @@ local function currentScaleRatio(shopFrame: GuiObject): number
 	return shopFrame.AbsoluteSize.Y / CARD_SIZE.Y.Offset
 end
 
--- Re-seats the card against `shopFrame`'s CURRENT, already-measured geometry -- position and the
--- scale that keeps its own chips/text visually matched to whatever size the shop is presently
--- rendering at. Called once at open() and on every AbsolutePosition/AbsoluteSize change afterwards.
+-- The card's slide is an OFFSET from where the shop says the card should sit, not a tween of the
+-- card's own Position. The card is glued to the shop (reseat on every shop move), and the shop now
+-- slides left to make room at the same moment the card slides in -- a tween on card.Position would
+-- be overwritten by that glue on the first frame of the shop's slide, and the card would just
+-- appear. Tweening this value instead makes the two motions add: the card rides with the shop AND
+-- slides in relative to it, every frame.
+local slideValue = Instance.new("NumberValue")
+slideValue.Name = "SkinsCardSlide"
+local trackedShop: GuiObject? = nil
+
+-- Re-seats the card against `shopFrame`'s CURRENT, already-measured geometry, plus whatever
+-- distance its slide still has to travel. Runs on every shop move and resize, and on every frame
+-- of the card's own slide.
 local function reseat(shopFrame: GuiObject)
 	local scaleRatio = currentScaleRatio(shopFrame)
 	cardScale.Scale = scaleRatio
-	card.Position = targetPosition(shopFrame, scaleRatio)
+	card.Position = targetPosition(shopFrame, scaleRatio) + UDim2.fromOffset(slideValue.Value, 0)
+end
+
+slideValue.Changed:Connect(function()
+	if trackedShop then
+		reseat(trackedShop)
+	end
+end)
+
+local function untrack()
+	trackedShop = nil
+	if shopPositionConnection then
+		shopPositionConnection:Disconnect()
+		shopPositionConnection = nil
+	end
+	if shopSizeConnection then
+		shopSizeConnection:Disconnect()
+		shopSizeConnection = nil
+	end
+end
+
+-- Kept live through the CLOSE animation as well as while open. On BACK the shop slides right to
+-- re-centre while the card slides out, and a card that stopped tracking the moment close began
+-- would be left standing still for the shop to slide across.
+local function track(shopFrame: GuiObject)
+	untrack()
+	trackedShop = shopFrame
+	shopPositionConnection = shopFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+		reseat(shopFrame)
+	end)
+	shopSizeConnection = shopFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		reseat(shopFrame)
+	end)
 end
 
 -- Opens the card beside `shopFrame` (the shop's own outer panel, not the detail sub-panel -- the
@@ -505,33 +546,21 @@ function SkinsCardController.open(shopFrame: GuiObject, weaponName: string, prev
 	refreshLocks()
 	repaint()
 
-	local scaleRatio = currentScaleRatio(shopFrame)
-	local target = targetPosition(shopFrame, scaleRatio)
 	if isCardOpen then
 		-- Already open and simply re-targeted at a different weapon -- reseat without replaying the
-		-- entrance tween.
+		-- entrance.
 		reseat(shopFrame)
 		return repaint
 	end
 	isCardOpen = true
 
-	cardScale.Scale = scaleRatio
-	card.Position = target + UDim2.fromOffset(SLIDE_OFFSET, 0)
+	track(shopFrame)
+	slideValue.Value = SLIDE_OFFSET
+	reseat(shopFrame)
 	Transitions.set(card, 1)
 	cardGui.Enabled = true
-	TweenService:Create(card, OPEN_TWEEN, { Position = target }):Play()
+	TweenService:Create(slideValue, OPEN_TWEEN, { Value = 0 }):Play()
 	Transitions.fade(card, 0, OPEN_TWEEN.Time)
-
-	-- Tracks the shop panel for as long as the card stays open. A viewport resize, or the shop's own
-	-- scale shrinking to make room for this card (see WeaponaryShopController's ResponsiveScale),
-	-- changes AbsolutePosition and/or AbsoluteSize -- nothing else re-runs targetPosition() unless
-	-- this does.
-	shopPositionConnection = shopFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-		reseat(shopFrame)
-	end)
-	shopSizeConnection = shopFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		reseat(shopFrame)
-	end)
 
 	return repaint
 end
@@ -545,22 +574,25 @@ function SkinsCardController.close()
 	currentPreviewModel = nil
 	disarm()
 
-	if shopPositionConnection then
-		shopPositionConnection:Disconnect()
-		shopPositionConnection = nil
-	end
-	if shopSizeConnection then
-		shopSizeConnection:Disconnect()
-		shopSizeConnection = nil
-	end
-
-	local target = card.Position + UDim2.fromOffset(SLIDE_OFFSET, 0)
-	TweenService:Create(card, CLOSE_TWEEN, { Position = target }):Play()
+	TweenService:Create(slideValue, CLOSE_TWEEN, { Value = SLIDE_OFFSET }):Play()
 	Transitions.fade(card, 1, CLOSE_TWEEN.Time, function()
+		-- A weapon clicked again before this fade finished has already reopened the card; leave it.
+		if isCardOpen then
+			return
+		end
+		untrack()
 		cardGui.Enabled = false
 	end)
 end
 
+-- How far WeaponaryShopController slides the shop left while the card is open, in the shop's own
+-- unscaled units (its ScreenGui's UIScale multiplies Position offsets exactly as it multiplies
+-- sizes). Half the card's footprint, so the shop and the card sit centred as one unit. The tweens
+-- are exported so the shop's slide shares the card's timing and easing and the two read as one
+-- motion.
+SkinsCardController.SHOP_SHIFT = (CARD_SIZE.X.Offset + GAP) / 2
+SkinsCardController.OPEN_TWEEN = OPEN_TWEEN
+SkinsCardController.CLOSE_TWEEN = CLOSE_TWEEN
 SkinsCardController.RESERVED_WIDTH = RESERVED_WIDTH
 
 return SkinsCardController

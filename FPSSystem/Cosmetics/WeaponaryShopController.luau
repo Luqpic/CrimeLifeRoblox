@@ -111,6 +111,9 @@ gui.Parent = playerGui
 local shop = guiTemplates:WaitForChild("WeaponaryShop"):Clone()
 shop.Visible = false
 shop.Parent = gui
+-- Where the shop rests with no Skins card beside it. Captured from the template, not hard-coded,
+-- so moving the shop in the template moves this with it.
+local SHOP_REST_POSITION = shop.Position
 
 -- The shop's own scaling policy. UIScaleController (see its header note) skips any ScreenGui that
 -- already ships a UIScale -- the same escape hatch BlasterGui/BlasterTouchGui already use, for the
@@ -135,7 +138,7 @@ if not shopScale then
 end
 local reservedWidth = 0 -- SkinsCardController.RESERVED_WIDTH while the Skins card is open, else 0
 
-local function refreshShopScale()
+local function refreshShopScale(tween: TweenInfo?)
 	local viewport = camera.ViewportSize
 	if viewport.X <= 0 or viewport.Y <= 0 then
 		return
@@ -143,7 +146,33 @@ local function refreshShopScale()
 	local width = SHOP_OPEN_SIZE.X.Offset + reservedWidth
 	local fitX = (viewport.X * SHOP_MARGIN) / width
 	local fitY = (viewport.Y * SHOP_MARGIN) / SHOP_OPEN_SIZE.Y.Offset
-	shopScale.Scale = math.clamp(math.min(fitX, fitY, SHOP_MAX_SCALE), SHOP_MIN_SCALE, SHOP_MAX_SCALE)
+	local target = math.clamp(math.min(fitX, fitY, SHOP_MAX_SCALE), SHOP_MIN_SCALE, SHOP_MAX_SCALE)
+	-- Eased when the Skins card opens or closes, so a viewport too narrow for the pair at full size
+	-- shrinks smoothly instead of snapping; a viewport resize still applies at once (no tween). The
+	-- caller passes the easing so it matches the shop's own slide: measured on a 978-wide viewport, a
+	-- Quad-Out scale paired with the Quad-In slide-back grew the shop about its still-shifted centre
+	-- before it moved, and its left edge briefly left the screen (x = -17.6).
+	if tween then
+		TweenService:Create(shopScale, tween, { Scale = target }):Play()
+	else
+		shopScale.Scale = target
+	end
+end
+
+-- The card's open easing is Back, which overshoots: fine for a position, but on the scale it would
+-- briefly push past SHOP_MAX_SCALE. So the scale eases with Quad over the same duration and direction.
+local SHOP_SCALE_OPEN_TWEEN = TweenInfo.new(SkinsCardController.OPEN_TWEEN.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- The shop makes room for the Skins card by sliding LEFT by half the card's footprint, so the two
+-- sit centred together at the shop's own size -- rather than staying centred and shrinking to fit
+-- the card beside it, which is what made it suddenly become small. Same timing and easing as the
+-- card's own slide, so the pair reads as one motion.
+local function slideShop(makeRoom: boolean)
+	local target = if makeRoom
+		then SHOP_REST_POSITION - UDim2.fromOffset(SkinsCardController.SHOP_SHIFT, 0)
+		else SHOP_REST_POSITION
+	local info = if makeRoom then SkinsCardController.OPEN_TWEEN else SkinsCardController.CLOSE_TWEEN
+	TweenService:Create(shop, info, { Position = target }):Play()
 end
 
 camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshShopScale)
@@ -754,7 +783,8 @@ function showDetail(weaponName: string)
 	-- AbsoluteSize first, since SkinsCardController.open() reads that size to compute where the card
 	-- lands and how big it renders.
 	reservedWidth = SkinsCardController.RESERVED_WIDTH
-	refreshShopScale()
+	refreshShopScale(SHOP_SCALE_OPEN_TWEEN)
+	slideShop(true)
 	local repaintSkins = SkinsCardController.open(shop, weaponName, displayModel)
 	currentSkinConnection = player:GetAttributeChangedSignal(
 		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
@@ -870,7 +900,8 @@ backButton.MouseButton1Click:Connect(function()
 	stopSpin()
 	SkinsCardController.close()
 	reservedWidth = 0
-	refreshShopScale()
+	refreshShopScale(SkinsCardController.CLOSE_TWEEN)
+	slideShop(false)
 	detailPanel.Visible = false
 	categoryTabs.Visible = true
 	weaponGrid.Visible = true
@@ -972,6 +1003,7 @@ local function openShop()
 	MenuFovBlur.open()
 	shop.Visible = true
 	shop.Size = SHOP_CLOSED_SIZE
+	shop.Position = SHOP_REST_POSITION
 	refreshInventoryColumn()
 	buildGrid()
 	detailPanel.Visible = false
@@ -999,7 +1031,8 @@ function closeShop()
 	stopSpin()
 	SkinsCardController.close()
 	reservedWidth = 0
-	refreshShopScale()
+	refreshShopScale(SkinsCardController.CLOSE_TWEEN)
+	slideShop(false)
 	setSlotPickMode(false)
 
 	local closeTween = TweenService:Create(
