@@ -40,9 +40,16 @@ local SPECS = {
 	-- Gamepass weapon: no Price (the donor's is cleared -- a leftover Price would make it cash-buyable),
 	-- `Gamepass` names the Monetization.Constants pass that unlocks it. Lies with its muzzle along -Z and
 	-- top along +X, unlike the pistols/shotguns. Explosion stats are read by ShotResolver.
-	{src=source("RPG"), name="RPG", icon="", donor="AK47", len=8.5, projectile="RPGRocket",
-	 nativeFwd=Vector3.new(0,0,-1), nativeUp=Vector3.new(1,0,0), shootSound="rbxasset://sounds/Launching rocket.wav",
-	 clear={"Price", "ShopViewRotation"}, -- the AK's upside-down preview fix is for the AK's own mesh
+	{src=source("RPG"), name="RPG", icon="rbxassetid://123274987878588", donor="AK47", len=8.5, projectile="RPGRocket",
+	 nativeFwd=Vector3.new(0,0,-1), nativeUp=Vector3.new(1,0,0), shootSound="rbxassetid://112670894256968",
+	 -- Per-slot sound overrides; "" silences a slot. The reload is ONE 2.17 s sound on the first reload cue
+	 -- (MagOut, ~0.5 s in), so MagIn/Charger are silenced rather than replaying it. Impact plays where a
+	 -- round explodes (ShotResolver.explode).
+	 soundIds={Equip="rbxassetid://127644583196232", MagOut="rbxassetid://5278373892", MagIn="", Charger="",
+	  Impact="rbxassetid://130495957969380"},
+	 -- ShopViewRotation is KEPT from the AK47: the RPG shares its body frame, so the shop preview needs the
+	 -- same 180-degree flip (clearing it showed the RPG upside down).
+	 clear={"Price"},
 	 stats={Category="Launcher",Gamepass="RPG",damage=200,rateOfFire=30,magazineSize=1,range=600,spread=0.5,
 	  recoilMin=V2(4,30),recoilMax=V2(8,40),reloadTime=3,fireMode="Semi",raysPerShot=1,rayRadius=0.5,
 	  explosionRadius=16,explosionEdgeDamage=0.3,explosionKnockback=65,explosionFlingSpeed=290}},
@@ -148,6 +155,19 @@ for _, s in SPECS do
 	if s.shootSound then
 		local shoot = tool.Sounds.Shoot
 		for _, sound in shoot:GetChildren() do if sound:IsA("Sound") then sound.SoundId = s.shootSound end end
+	end
+	for slot, id in s.soundIds or {} do
+		local sound = tool.Sounds:FindFirstChild(slot)
+		if not sound then
+			sound = Instance.new("Sound")
+			sound.Name = slot
+			sound.Volume = 1
+			sound.RollOffMode = Enum.RollOffMode.InverseTapered
+			sound.RollOffMinDistance = 20
+			sound.RollOffMaxDistance = 400
+			sound.Parent = tool.Sounds
+		end
+		sound.SoundId = id
 	end
 	tool:SetAttribute("_ammo", s.stats.magazineSize)
 	tool:SetAttribute("_reloading", false)
