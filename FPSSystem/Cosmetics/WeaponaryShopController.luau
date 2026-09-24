@@ -33,11 +33,11 @@ local SHOP_OPEN_SIZE = UDim2.fromOffset(920, 580)
 -- its id is empty, so this table is a no-op until the ids are filled in -- do not invent placeholder
 -- ids and do not reuse an unrelated existing one.
 local ICON_ASSET_IDS = {
-	Melee = "", -- /Users/luqpic/Downloads/Weaponary/Melee.png
-	Pistol = "", -- /Users/luqpic/Downloads/Weaponary/Pistol.png
-	AutoRifle = "", -- /Users/luqpic/Downloads/Weaponary/Autorifle.png
-	Shotgun = "", -- /Users/luqpic/Downloads/Weaponary/Shotgun.png
-	Spray = "", -- /Users/luqpic/Downloads/Weaponary/Spray.png
+	Melee = "rbxassetid://106906257244958", -- /Users/luqpic/Downloads/Weaponary/Melee.png
+	Pistol = "rbxassetid://94971487013526", -- /Users/luqpic/Downloads/Weaponary/Pistol.png
+	AutoRifle = "rbxassetid://125690668175292", -- /Users/luqpic/Downloads/Weaponary/Autorifle.png
+	Shotgun = "rbxassetid://113177593124606", -- /Users/luqpic/Downloads/Weaponary/Shotgun.png
+	Spray = "rbxassetid://76994955461263", -- /Users/luqpic/Downloads/Weaponary/Spray.png
 }
 
 -- Hover outline for the loadout slots, shown only while the equip picker is waiting for a choice.
@@ -286,8 +286,16 @@ local function applyCategoryIcon(tab: TextButton, category: string)
 		icon.Size = UDim2.fromOffset(20, 20)
 		icon.ZIndex = 2
 		icon.Parent = tab
+		-- The glyphs are white so ImageColor3 can tint them: it MULTIPLIES, so the black originals
+		-- stayed black under any tint and all but vanished on the dark tab plate. Following the tab's
+		-- own TextColor3 makes the icon read exactly as the word it replaced did, including any
+		-- selected-state recolour, without this function needing to know the tab styling rules.
+		tab:GetPropertyChangedSignal("TextColor3"):Connect(function()
+			icon.ImageColor3 = tab.TextColor3
+		end)
 	end
 	icon.Image = iconId
+	icon.ImageColor3 = tab.TextColor3
 end
 
 for _, tab in categoryTabs:GetChildren() do
@@ -311,6 +319,12 @@ if ICON_ASSET_IDS.Spray ~= "" then
 	sprayImage.BackgroundTransparency = 1
 	sprayImage.Size = UDim2.fromOffset(16, 16)
 	sprayImage.Image = ICON_ASSET_IDS.Spray
+	-- Tinted to match the balance figure it sits beside -- see the ImageColor3 note in
+	-- applyCategoryIcon for why the source glyph has to be white for this to work at all.
+	local amount = spraypaintChip:FindFirstChild("Amount")
+	if amount and amount:IsA("TextLabel") then
+		sprayImage.ImageColor3 = amount.TextColor3
+	end
 	sprayImage.Parent = nativeIcon
 end
 
