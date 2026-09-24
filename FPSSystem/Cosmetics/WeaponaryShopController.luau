@@ -207,6 +207,35 @@ local descriptionLabel = detailPanel:WaitForChild("Description")
 local spraypaintChip = detailPanel:WaitForChild("SpraypaintChip")
 local spraypaintAmountLabel = spraypaintChip:WaitForChild("Amount") :: TextLabel
 
+-- The selected weapon's upgrade level, as a second pill directly below the Spraypaint one. Cloned from
+-- SpraypaintChip rather than added to the template, so the pair can never drift apart in size, corner
+-- or type -- and cloned HERE, before the spray-can image is swapped in further down, so the clone
+-- carries only the native badge shapes, which it then discards for the bullet. Blue is the RANGE stat
+-- bar's own fill, so the two pills read as a pair but never as the same currency.
+local LEVEL_BLUE = Color3.fromRGB(61, 165, 255)
+local LEVEL_ICON_ID = "rbxassetid://118647925274215" -- ~/Downloads/Bullet.png, re-exported white so it tints
+local levelChip = spraypaintChip:Clone()
+levelChip.Name = "LevelChip"
+levelChip.Position = spraypaintChip.Position + UDim2.fromOffset(0, spraypaintChip.Size.Y.Offset + 10)
+local levelStroke = levelChip:FindFirstChildOfClass("UIStroke")
+if levelStroke then
+	levelStroke.Color = LEVEL_BLUE
+end
+local levelIcon = levelChip:WaitForChild("Icon")
+for _, child in levelIcon:GetChildren() do
+	child:Destroy()
+end
+local bulletImage = Instance.new("ImageLabel")
+bulletImage.Name = "BulletImage"
+bulletImage.BackgroundTransparency = 1
+bulletImage.Size = UDim2.fromOffset(16, 16)
+bulletImage.Image = LEVEL_ICON_ID
+bulletImage.ImageColor3 = LEVEL_BLUE
+bulletImage.Parent = levelIcon
+local levelAmountLabel = levelChip:WaitForChild("Amount") :: TextLabel
+levelAmountLabel.TextColor3 = LEVEL_BLUE
+levelChip.Parent = detailPanel
+
 -- Full-bar reference values for the stat tracks. A bar needs a ceiling to read against, and these
 -- are the top of each stat's range across the 32-weapon catalogue rather than per-weapon maxima,
 -- so the bars stay comparable BETWEEN weapons -- which is the whole point of showing them.
@@ -580,6 +609,12 @@ local function refreshSpraypaintBalance(_weaponName: string)
 	spraypaintAmountLabel.Text = balance .. " SPRAYPAINT"
 end
 
+-- The weapon's upgrade level: 0 until its first upgrade, and for a weapon not owned yet.
+local function refreshLevelChip(weaponName: string)
+	local level = player:GetAttribute(UpgradeConfig.attributeFor(weaponName)) or 0
+	levelAmountLabel.Text = "LEVEL " .. level
+end
+
 -- Refuses an action the player cannot pay for: flashes the button red and plays the denied tone,
 -- then puts the colour back. Checked on the client purely as feedback -- the server still validates
 -- every purchase and upgrade, so this cannot be used to buy anything.
@@ -792,6 +827,7 @@ function showDetail(weaponName: string)
 
 	refreshDetailStats(weaponName)
 	refreshSpraypaintBalance(weaponName)
+	refreshLevelChip(weaponName)
 end
 
 -- Everything in the detail panel EXCEPT the 3D model: name, stats, price and button state. Safe to
@@ -1068,6 +1104,7 @@ player.AttributeChanged:Connect(function(attributeName: string)
 			-- Repaint here, where the new level is guaranteed to have arrived, rather than on a timer.
 			if isOpen then
 				refreshDetailStats(currentDetailWeapon)
+				refreshLevelChip(currentDetailWeapon)
 			end
 		end
 	elseif attributeName:match("^WeaponOwned_") then

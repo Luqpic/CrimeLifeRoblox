@@ -68,7 +68,9 @@ local COLOR_ACCENT = Color3.fromHex("CBF23C")
 local COLOR_CHIP_STROKE = Color3.fromHex("2A2E38")
 local COLOR_LOCK = Color3.fromHex("8A8F9A")
 local COLOR_DENIED = Color3.fromHex("FF4B4B") -- the shop's own DENIED_COLOR
-local HOVER_EXTRA_THICKNESS = 2 -- the weapon cards' StrokeHover adds the same
+local COLOR_HOVER = Color3.fromHex("8A92A6") -- sw-muted, the tab text grey: light enough to read on the well
+local HOVER_THICKNESS = 2
+local RINGED_THICKNESS = 3 -- selected / equipped: heavier than hover, so the two never read alike
 -- The purchase burst throws spray cans instead of coins, so a skin bought with Spraypaint does not
 -- read as a Cash spend. Tinted accent because the icon is white (see FPS-Weaponry-Category-Icons.md).
 local SPRAY_BURST = { image = SpraypaintConstants.ICON_ASSET_ID, color = COLOR_ACCENT, size = 30 }
@@ -229,8 +231,9 @@ local awaitingBurst: { [string]: boolean } = {}
 -- The chip's one UIStroke carries three states -- equipped, previewed, hovered -- so ONE function owns
 -- it. Separate tweens for each (the equipped ring, the preview ring, a hover thickening) would each
 -- overwrite the others mid-flight. Equipped and previewed both draw the accent ring, which cannot be
--- ambiguous: only an OWNED chip can be equipped and only an UNOWNED one previewed. Hover adds +2 on
--- top of whichever base applies, as the weapon cards' StrokeHover does.
+-- ambiguous: only an OWNED chip can be equipped and only an UNOWNED one previewed. Hover draws a grey
+-- outline on any other chip; a ringed chip stays green while hovered, so hovering never hides which
+-- skin is selected.
 local function paintChip(key: string, equipped: string)
 	local chip = chips[key]
 	local stroke = chip and chip:FindFirstChildOfClass("UIStroke")
@@ -238,11 +241,13 @@ local function paintChip(key: string, equipped: string)
 		return
 	end
 	local ringed = key == equipped or (previewPalette ~= nil and previewPalette.key == key)
-	local thickness = (if ringed then 2 else 1) + (if key == hoveredKey then HOVER_EXTRA_THICKNESS else 0)
-	TweenService:Create(stroke, STROKE_TWEEN, {
-		Color = if ringed then COLOR_ACCENT else COLOR_CHIP_STROKE,
-		Thickness = thickness,
-	}):Play()
+	local color, thickness = COLOR_CHIP_STROKE, 1
+	if ringed then
+		color, thickness = COLOR_ACCENT, RINGED_THICKNESS
+	elseif key == hoveredKey then
+		color, thickness = COLOR_HOVER, HOVER_THICKNESS
+	end
+	TweenService:Create(stroke, STROKE_TWEEN, { Color = color, Thickness = thickness }):Play()
 end
 
 local function paintAllChips()
@@ -382,9 +387,14 @@ for index, palette in Palettes.list do
 	local chipStroke = Instance.new("UIStroke")
 	chipStroke.Color = COLOR_CHIP_STROKE
 	chipStroke.Thickness = 1
+	-- Border, explicitly. A TextButton's UIStroke defaults to Contextual, which strokes the button's TEXT,
+	-- and a chip's text is empty -- so under the default no outline ever rendered: not the equipped ring,
+	-- not the preview ring, not hover, not the red refusal. Every one of those read correctly as a
+	-- property while drawing nothing. The WeaponCard template sets Border for the same reason.
+	chipStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	chipStroke.Parent = chip
 
-	-- Hover: +2 on the outline and the shared hover tone, as the weapon cards do (see StrokeHover on the
+	-- Hover: a grey outline and the shared hover tone, like the weapon cards (see StrokeHover on the
 	-- WeaponCard template). Routed through paintChip, which owns this stroke.
 	chip.MouseEnter:Connect(function()
 		hoveredKey = palette.key
