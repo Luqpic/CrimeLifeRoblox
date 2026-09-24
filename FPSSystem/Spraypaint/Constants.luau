@@ -11,6 +11,11 @@ local Constants = {}
 -- in the server.
 Constants.ATTRIBUTE = "Spraypaint"
 
+-- The spray-can icon, white so ImageColor3 can tint it (see FPS-Weaponry-Category-Icons.md). One owner
+-- for the id: the shop's balance badge, the Skins card's price labels and the purchase burst all read
+-- it from here.
+Constants.ICON_ASSET_ID = "rbxassetid://76994955461263"
+
 -- Keyed by the Faction attribute the enemy rigs already carry. Police are worth more because EnemyAI
 -- gives them per-type accuracy and damage overrides that make them the harder target.
 Constants.KILL_SPRAYPAINT = {

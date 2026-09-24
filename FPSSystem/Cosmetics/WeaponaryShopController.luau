@@ -37,7 +37,7 @@ local ICON_ASSET_IDS = {
 	Pistol = "rbxassetid://94971487013526", -- /Users/luqpic/Downloads/Weaponary/Pistol.png
 	AutoRifle = "rbxassetid://125690668175292", -- /Users/luqpic/Downloads/Weaponary/Autorifle.png
 	Shotgun = "rbxassetid://113177593124606", -- /Users/luqpic/Downloads/Weaponary/Shotgun.png
-	Spray = "rbxassetid://76994955461263", -- /Users/luqpic/Downloads/Weaponary/Spray.png
+	Spray = SpraypaintConstants.ICON_ASSET_ID, -- /Users/luqpic/Downloads/Weaponary/Spray.png (id owned by Spraypaint.Constants)
 }
 
 -- Hover outline for the loadout slots, shown only while the equip picker is waiting for a choice.

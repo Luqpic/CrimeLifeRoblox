@@ -55,21 +55,6 @@ Palettes.list = {
 		ramp = { rgb(30, 34, 18), rgb(120, 146, 36), rgb(216, 248, 96) },
 	},
 	{
-		key = "Gold", name = "GOLD", source = "Vip",
-		swatch = rgb(212, 175, 55),
-		ramp = { rgb(74, 58, 18), rgb(168, 138, 42), rgb(238, 212, 120) },
-	},
-	{
-		key = "Obsidian", name = "OBSIDIAN", source = "Vip",
-		swatch = rgb(78, 30, 96),
-		ramp = { rgb(12, 12, 16), rgb(58, 24, 72), rgb(150, 90, 180) },
-	},
-	{
-		key = "Arctic", name = "ARCTIC", source = "Vip",
-		swatch = rgb(226, 232, 240),
-		ramp = { rgb(96, 120, 146), rgb(170, 190, 210), rgb(240, 248, 255) },
-	},
-	{
 		key = "Cobalt", name = "COBALT", source = "Spraypaint", price = 500,
 		swatch = rgb(30, 58, 138),
 		ramp = { rgb(12, 22, 54), rgb(30, 58, 138), rgb(96, 140, 224) },
@@ -133,8 +118,29 @@ Palettes.list = {
 		swatch = rgb(198, 40, 140),
 		ramp = { rgb(59, 12, 42), rgb(198, 40, 140), rgb(255, 64, 224) },
 	},
+	-- VIP ON HOLD. Arctic, Obsidian, Gold and Nebula were the Vip pass's skins. While Vip is paused
+	-- they are sold for Spraypaint, priced past the top of the Spraypaint curve (Fuchsia 4400) because
+	-- they were the premium tier, and moved here from after Acid so the grid still reads cheapest to
+	-- priciest. Swatches and ramps are untouched, so the colour-distance test is unaffected. To
+	-- restore Vip: set source = "Vip", drop the price, and move Gold, Obsidian and Arctic back after
+	-- Acid.
 	{
-		key = "Nebula", name = "NEBULA", source = "Vip",
+		key = "Arctic", name = "ARCTIC", source = "Spraypaint", price = 5200,
+		swatch = rgb(226, 232, 240),
+		ramp = { rgb(96, 120, 146), rgb(170, 190, 210), rgb(240, 248, 255) },
+	},
+	{
+		key = "Obsidian", name = "OBSIDIAN", source = "Spraypaint", price = 6100,
+		swatch = rgb(78, 30, 96),
+		ramp = { rgb(12, 12, 16), rgb(58, 24, 72), rgb(150, 90, 180) },
+	},
+	{
+		key = "Gold", name = "GOLD", source = "Spraypaint", price = 7100,
+		swatch = rgb(212, 175, 55),
+		ramp = { rgb(74, 58, 18), rgb(168, 138, 42), rgb(238, 212, 120) },
+	},
+	{
+		key = "Nebula", name = "NEBULA", source = "Spraypaint", price = 8200,
 		swatch = rgb(126, 52, 210),
 		ramp = { rgb(38, 16, 63), rgb(126, 52, 210), rgb(202, 83, 255) },
 	},

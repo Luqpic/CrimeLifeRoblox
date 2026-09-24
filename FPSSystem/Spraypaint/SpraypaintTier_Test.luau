@@ -15,9 +15,10 @@ return function(t)
 		return found
 	end
 
-	t.test("there are eleven Spraypaint palettes", function()
-		-- Was four; the Skins-card-revamp expansion (12 -> 20 palettes) added seven more.
-		expect.equal(#spraypaintPalettes(), 11)
+	t.test("there are fifteen Spraypaint palettes", function()
+		-- Was four; the Skins-card-revamp expansion (12 -> 20 palettes) added seven more, and putting Vip
+		-- on hold moved its four palettes (Arctic, Obsidian, Gold, Nebula) onto Spraypaint prices.
+		expect.equal(#spraypaintPalettes(), 15)
 	end)
 
 	t.test("every Spraypaint palette has a positive integer price", function()
@@ -43,7 +44,7 @@ return function(t)
 			expect.equal(Palettes.priceOf(palette.key), palette.price)
 		end
 		expect.equal(Palettes.priceOf("Stock"), nil)
-		expect.equal(Palettes.priceOf("Gold"), nil)
+		expect.equal(Palettes.priceOf("Carbon"), nil)
 		expect.equal(Palettes.priceOf("NoSuchPalette"), nil)
 	end)
 

@@ -2,14 +2,12 @@
 -- The Skins card: a detached panel beside the weapon shop's detail view, replacing the old in-panel
 -- SkinRow + BuyStrip (see the retired SkinRowController). One chip per palette; clicking an owned
 -- one asks the server to equip it and recolours the spinning preview immediately so the choice reads
--- before the round trip. Clicking a locked one either prompts the Vip pass or fires the Spraypaint
--- purchase directly -- see the change log for why the old two-step "click to reveal a buy strip,
--- click again to confirm" flow was dropped rather than moved: the price is now printed on the chip
--- itself, so the confirm step no longer has anything to disclose that a click doesn't already show.
+-- before the round trip. Clicking a locked one PREVIEWS it on the 3D model, and clicking that same
+-- chip again buys it -- see the note above paintChip for why a purchase takes two clicks.
 --
 -- Built natively -- Frames/UICorner/UIStroke -- to the Figma spec (iRetcvpbMMD190DJA9Mwrm, node
--- 147:6, "SLICE - SkinsCard" 240x580). No image import: Studio's asset upload is blocked in this
--- environment (see SkinRowController's old SprayIcon note for the same constraint hit earlier).
+-- 147:6, "SLICE - SkinsCard" 240x580). The only image is the spray-can icon beside each
+-- price (SpraypaintConstants.ICON_ASSET_ID).
 --
 -- Lives in its OWN ScreenGui, ZIndexBehavior.Sibling, DisplayOrder above WeaponaryShopGui's.
 -- WeaponaryShopGui is ZIndexBehavior.Global (Instance.new("ScreenGui") always is) -- under Global
@@ -23,11 +21,14 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local GuiService = game:GetService("GuiService")
+local SoundService = game:GetService("SoundService")
 
 local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
+local Sounds = require(ReplicatedStorage.UI.Sounds)
+local CashBurst = require(ReplicatedStorage.UI.CashBurst)
 local Transitions = require(ReplicatedStorage.UI.Transitions)
 
 local player = Players.LocalPlayer
@@ -66,6 +67,11 @@ local COLOR_WELL = Color3.fromHex("12141A")
 local COLOR_ACCENT = Color3.fromHex("CBF23C")
 local COLOR_CHIP_STROKE = Color3.fromHex("2A2E38")
 local COLOR_LOCK = Color3.fromHex("8A8F9A")
+local COLOR_DENIED = Color3.fromHex("FF4B4B") -- the shop's own DENIED_COLOR
+local HOVER_EXTRA_THICKNESS = 2 -- the weapon cards' StrokeHover adds the same
+-- The purchase burst throws spray cans instead of coins, so a skin bought with Spraypaint does not
+-- read as a Cash spend. Tinted accent because the icon is white (see FPS-Weaponry-Category-Icons.md).
+local SPRAY_BURST = { image = SpraypaintConstants.ICON_ASSET_ID, color = COLOR_ACCENT, size = 30 }
 
 -- Matches the shop's own headings (DetailName, TitleLabel) -- see FPS-Figma-1to1-Image-Export-And-
 -- Font-Fix.md for why this is the live face rather than what ReplicatedStorage.UI.Theme claims
@@ -190,43 +196,156 @@ local currentPreviewModel: Instance? = nil
 
 local chips: { [string]: TextButton } = {}
 
+-- Which palette is equipped on the weapon on screen, degraded to Stock for an unknown key or one the
+-- player no longer owns -- mirrors CosmeticsService.equippedKeyFor on the server (see
+-- SkinRowController's original note on why).
+local function equippedKey(): string
+	if not currentWeaponName then
+		return Palettes.DEFAULT_KEY
+	end
+	local current = player:GetAttribute(attributeFor(currentWeaponName))
+	local palette = if typeof(current) == "string" then Palettes.byKey(current) else nil
+	if not palette or not ownsPalette(palette) then
+		return Palettes.DEFAULT_KEY
+	end
+	return palette.key
+end
+
+-- A locked chip is PREVIEWED on the first click and only bought on the second. The preview dresses
+-- the spinning 3D model in that palette so the player can judge a skin before paying for it, and the
+-- second click on the same chip is the purchase. So one stray click only ever shows a colour -- it
+-- can never spend up to 8200 -- and the step before buying now does something useful.
+--
+-- No timeout. A preview stays up until the player picks another chip, goes BACK, closes the shop, or
+-- the card is re-targeted at another weapon. The old primed state timed out after 3s only because it
+-- had nothing to show; a preview that snapped away while the player was still looking at it would be
+-- worse than no preview at all.
+local previewPalette = nil
+local hoveredKey: string? = nil
+-- Palette keys this card has asked the server to sell, so the burst and purchase sound play only for
+-- a purchase made here, not for ownership arriving any other way (a restored profile, a grant).
+local awaitingBurst: { [string]: boolean } = {}
+
+-- The chip's one UIStroke carries three states -- equipped, previewed, hovered -- so ONE function owns
+-- it. Separate tweens for each (the equipped ring, the preview ring, a hover thickening) would each
+-- overwrite the others mid-flight. Equipped and previewed both draw the accent ring, which cannot be
+-- ambiguous: only an OWNED chip can be equipped and only an UNOWNED one previewed. Hover adds +2 on
+-- top of whichever base applies, as the weapon cards' StrokeHover does.
+local function paintChip(key: string, equipped: string)
+	local chip = chips[key]
+	local stroke = chip and chip:FindFirstChildOfClass("UIStroke")
+	if not stroke then
+		return
+	end
+	local ringed = key == equipped or (previewPalette ~= nil and previewPalette.key == key)
+	local thickness = (if ringed then 2 else 1) + (if key == hoveredKey then HOVER_EXTRA_THICKNESS else 0)
+	TweenService:Create(stroke, STROKE_TWEEN, {
+		Color = if ringed then COLOR_ACCENT else COLOR_CHIP_STROKE,
+		Thickness = thickness,
+	}):Play()
+end
+
+local function paintAllChips()
+	local equipped = equippedKey()
+	for key in chips do
+		paintChip(key, equipped)
+	end
+end
+
+-- The price row reads "<icon> 1500" at rest and "<icon> BUY 1500" in accent while that chip is being
+-- previewed, cueing the second click.
+local function paintPrice(palette)
+	local chip = chips[palette.key]
+	local price = chip and chip:FindFirstChild("PriceLabel")
+	if not price or not palette.price then
+		return
+	end
+	local previewing = previewPalette == palette
+	local color = if previewing then COLOR_ACCENT else Color3.new(1, 1, 1)
+	local amount = price:FindFirstChild("Amount")
+	if amount and amount:IsA("TextLabel") then
+		amount.Text = if previewing then "BUY " .. palette.price else tostring(palette.price)
+		amount.TextColor3 = color
+	end
+	local icon = price:FindFirstChild("Icon")
+	if icon and icon:IsA("ImageLabel") then
+		icon.ImageColor3 = color
+	end
+end
+
+-- Dresses the spinning model in the previewed palette if there is one, else in what is equipped.
+-- Guarded the same way every other cosmetics call site is: a failed skin must cost the player a
+-- colour, never break the card.
+local function dressPreview()
+	if not currentPreviewModel then
+		return
+	end
+	local key = if previewPalette then previewPalette.key else equippedKey()
+	local ok, err = pcall(SkinApplier.applyKey, currentPreviewModel, key)
+	if not ok then
+		warn("[Cosmetics] failed to dress the " .. tostring(currentWeaponName) .. " preview with " .. key .. ": " .. tostring(err))
+	end
+end
+
 local function repaint()
 	if not currentWeaponName then
 		return
 	end
-	local current = player:GetAttribute(attributeFor(currentWeaponName))
-	if typeof(current) ~= "string" then
-		current = Palettes.DEFAULT_KEY
+	-- A preview that has become the equipped skin -- the purchase went through and the server
+	-- auto-equipped it -- is no longer a preview. Cleared only once the equip has actually landed, so
+	-- the model does not flash back to the old skin in the gap between ownership replicating and the
+	-- equip replicating.
+	if previewPalette and equippedKey() == previewPalette.key then
+		previewPalette = nil
 	end
-	-- Mirrors CosmeticsService.equippedKeyFor on the server: degrades an unknown key, or a palette
-	-- the player no longer owns, to Stock -- see SkinRowController's original note on why.
-	local currentPalette = Palettes.byKey(current)
-	if not currentPalette or not ownsPalette(currentPalette) then
-		current = Palettes.DEFAULT_KEY
-	end
+	paintAllChips()
+	dressPreview()
+end
 
-	for key, chip in chips do
-		local stroke = chip:FindFirstChildOfClass("UIStroke")
-		if stroke then
-			local equipped = key == current
-			TweenService:Create(stroke, STROKE_TWEEN, {
-				Color = equipped and COLOR_ACCENT or COLOR_CHIP_STROKE,
-				Thickness = equipped and 2 or 1,
-			}):Play()
-		end
+local function clearPreview()
+	local palette = previewPalette
+	if not palette then
+		return
 	end
+	previewPalette = nil
+	paintPrice(palette)
+	paintAllChips()
+	dressPreview()
+end
 
-	if currentPreviewModel then
-		local ok, err = pcall(SkinApplier.applyKey, currentPreviewModel, current)
-		if not ok then
-			warn("[Cosmetics] failed to dress the " .. currentWeaponName .. " preview with " .. tostring(current) .. ": " .. tostring(err))
-		end
+local function preview(palette)
+	local previous = previewPalette
+	previewPalette = palette
+	if previous and previous ~= palette then
+		paintPrice(previous)
 	end
+	paintPrice(palette)
+	paintAllChips()
+	dressPreview()
+end
+
+-- Refused purchase, the same feedback the weapon BUY button's denyAction gives: the denied tone, and
+-- a red flash that settles back. On a chip it is the OUTLINE that turns red, not the fill -- the fill
+-- is the palette's own colour, and turning it red would show the player a skin that does not exist.
+local function denyChip(palette)
+	Sounds.denied():Play()
+	local chip = chips[palette.key]
+	local stroke = chip and chip:FindFirstChildOfClass("UIStroke")
+	if not stroke then
+		return
+	end
+	local toRed = TweenService:Create(stroke, TweenInfo.new(0.12), { Color = COLOR_DENIED, Thickness = 3 })
+	toRed.Completed:Connect(function()
+		task.delay(0.25, function()
+			paintChip(palette.key, equippedKey())
+		end)
+	end)
+	toRed:Play()
 end
 
 -- Re-evaluates every chip's locked visuals in place. Ownership is never cached in a click-handler
--- closure: a chip bought mid-view must equip on the very next click, not prompt for a pass or a
--- price the player has already paid.
+-- closure: a chip bought mid-view must equip on the very next click, not ask for a price the player
+-- has already paid.
 local function refreshLocks()
 	for _, palette in Palettes.list do
 		local chip = chips[palette.key]
@@ -234,7 +353,7 @@ local function refreshLocks()
 			continue
 		end
 		local owned = ownsPalette(palette)
-		chip.BackgroundTransparency = owned and 0 or 0.35
+		chip.BackgroundTransparency = if owned then 0 else 0.35
 		local lock = chip:FindFirstChild("Lock")
 		if lock then
 			lock.Visible = not owned
@@ -244,65 +363,6 @@ local function refreshLocks()
 			priceLabel.Visible = not owned
 		end
 	end
-end
-
--- A priced chip is PRIMED on the first click and only bought on the second, within ARM_WINDOW.
--- The old DetailPanel BuyStrip was a separate confirm control; this card replaced it, and without
--- something in its place a single stray click spent the price outright with no undo. That was
--- survivable at 250; the curve now reaches 4400, which is several hundred kills.
---
--- The primed state reuses the accent stroke the equipped ring uses, which is unambiguous here
--- because only an UNOWNED chip can be primed and only an OWNED one can be equipped -- the two
--- states can never appear on the same chip. The price label carrying the word CONFIRM is what
--- tells them apart at a glance.
-local ARM_WINDOW = 3
-local armedPalette = nil
-local armedThread: thread? = nil
-
-local function disarm()
-	if armedThread then
-		task.cancel(armedThread)
-		armedThread = nil
-	end
-	local palette = armedPalette
-	armedPalette = nil
-	if not palette then
-		return
-	end
-	local chip = chips[palette.key]
-	if not chip then
-		return
-	end
-	local priceLabel = chip:FindFirstChild("PriceLabel")
-	if priceLabel and palette.price then
-		priceLabel.Text = tostring(palette.price)
-		priceLabel.TextColor3 = Color3.new(1, 1, 1)
-	end
-	local stroke = chip:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		TweenService:Create(stroke, STROKE_TWEEN, { Color = COLOR_CHIP_STROKE, Thickness = 1 }):Play()
-	end
-end
-
-local function arm(palette)
-	disarm() -- only ever one primed chip; priming a second stands the first down
-	local chip = chips[palette.key]
-	if not chip then
-		return
-	end
-	armedPalette = palette
-	local priceLabel = chip:FindFirstChild("PriceLabel")
-	if priceLabel then
-		priceLabel.Text = "CONFIRM"
-		priceLabel.TextColor3 = COLOR_ACCENT
-	end
-	local stroke = chip:FindFirstChildOfClass("UIStroke")
-	if stroke then
-		TweenService:Create(stroke, STROKE_TWEEN, { Color = COLOR_ACCENT, Thickness = 2 }):Play()
-	end
-	-- Stands itself down rather than waiting indefinitely: a chip left primed across a whole
-	-- browsing session is the same accidental-purchase hazard one click later.
-	armedThread = task.delay(ARM_WINDOW, disarm)
 end
 
 for index, palette in Palettes.list do
@@ -323,6 +383,20 @@ for index, palette in Palettes.list do
 	chipStroke.Color = COLOR_CHIP_STROKE
 	chipStroke.Thickness = 1
 	chipStroke.Parent = chip
+
+	-- Hover: +2 on the outline and the shared hover tone, as the weapon cards do (see StrokeHover on the
+	-- WeaponCard template). Routed through paintChip, which owns this stroke.
+	chip.MouseEnter:Connect(function()
+		hoveredKey = palette.key
+		Sounds.hover():Play()
+		paintChip(palette.key, equippedKey())
+	end)
+	chip.MouseLeave:Connect(function()
+		if hoveredKey == palette.key then
+			hoveredKey = nil
+		end
+		paintChip(palette.key, equippedKey())
+	end)
 
 	-- Lock glyph, built on every chip and toggled Visible by refreshLocks -- a Vip chip shows it with
 	-- no price beneath (there is nothing to disclose but the pass), a Spraypaint chip shows it with
@@ -369,52 +443,87 @@ for index, palette in Palettes.list do
 	bodyCorner.CornerRadius = UDim.new(0, 3)
 	bodyCorner.Parent = body
 
-	-- Present only on Spraypaint entries (Palettes.Palette.price is optional for exactly this
-	-- reason) -- a Vip chip has nothing to print here.
+	-- Present only on priced entries (Palettes.Palette.price is optional). The spray-can icon sits
+	-- beside the figure so it reads as Spraypaint rather than Cash; a horizontal list keeps the pair
+	-- centred however wide the text is ("500" or "BUY 8200").
 	if palette.price then
-		local priceLabel = Instance.new("TextLabel")
-		priceLabel.Name = "PriceLabel"
-		priceLabel.BackgroundTransparency = 1
-		priceLabel.Size = UDim2.new(1, 0, 0, 14)
-		priceLabel.Position = UDim2.new(0, 0, 1, -16)
-		priceLabel.FontFace = FONT_HEAVY
-		priceLabel.TextSize = 11
-		priceLabel.TextColor3 = Color3.new(1, 1, 1)
-		priceLabel.TextXAlignment = Enum.TextXAlignment.Center
-		priceLabel.Text = tostring(palette.price)
-		priceLabel.Visible = false
-		priceLabel.ZIndex = 2
-		priceLabel.Parent = chip
+		local price = Instance.new("Frame")
+		price.Name = "PriceLabel"
+		price.BackgroundTransparency = 1
+		price.Size = UDim2.new(1, 0, 0, 14)
+		price.Position = UDim2.new(0, 0, 1, -16)
+		price.Visible = false
+		price.ZIndex = 2
+		price.Parent = chip
+
+		local row = Instance.new("UIListLayout")
+		row.FillDirection = Enum.FillDirection.Horizontal
+		row.HorizontalAlignment = Enum.HorizontalAlignment.Center
+		row.VerticalAlignment = Enum.VerticalAlignment.Center
+		row.Padding = UDim.new(0, 3)
+		row.SortOrder = Enum.SortOrder.LayoutOrder
+		row.Parent = price
+
+		local icon = Instance.new("ImageLabel")
+		icon.Name = "Icon"
+		icon.BackgroundTransparency = 1
+		icon.Size = UDim2.fromOffset(11, 11)
+		icon.Image = SpraypaintConstants.ICON_ASSET_ID
+		icon.ImageColor3 = Color3.new(1, 1, 1)
+		icon.LayoutOrder = 1
+		icon.ZIndex = 2
+		icon.Parent = price
+
+		local amount = Instance.new("TextLabel")
+		amount.Name = "Amount"
+		amount.BackgroundTransparency = 1
+		amount.AutomaticSize = Enum.AutomaticSize.X
+		amount.Size = UDim2.fromOffset(0, 14)
+		amount.FontFace = FONT_HEAVY
+		amount.TextSize = 11
+		amount.TextColor3 = Color3.new(1, 1, 1)
+		amount.Text = tostring(palette.price)
+		amount.LayoutOrder = 2
+		amount.ZIndex = 2
+		amount.Parent = price
 	end
 
 	chip.MouseButton1Click:Connect(function()
 		if not currentWeaponName then
 			return
 		end
-		-- Read ownership fresh rather than capturing it at build time: a chip bought or unlocked
-		-- while this same card is open must act on what is true now, not what was true when the
-		-- card was built (it is built exactly once, at module load).
+		-- Ownership is read fresh rather than captured at build time: a chip bought while this same
+		-- card is open must act on what is true now, not on what was true when the card was built.
 		if not ownsPalette(palette) then
 			if palette.source == "Vip" then
-				-- MonetizationService already disables the prompt for an unconfigured pass id, so
-				-- this is safe to fire before the place is published. No priming needed: the
-				-- Robux prompt is itself a confirmation step, and Roblox owns that dialog.
-				disarm()
+				-- Unused while Vip is on hold (no palette carries this source); kept so restoring Vip is
+				-- a data change. The Robux prompt is itself the confirmation step, and Roblox owns it.
+				clearPreview()
+				Sounds.click():Play()
 				promptGamepass:FireServer("Vip")
-			elseif armedPalette == palette then
-				-- Second click on the primed chip: this is the purchase.
-				disarm()
+			elseif previewPalette == palette then
+				-- Second click on the previewed chip: the purchase. Affordability is checked here purely
+				-- as feedback -- the server still validates every purchase, so this cannot be used to
+				-- buy anything.
+				local balance = player:GetAttribute(SpraypaintConstants.ATTRIBUTE)
+				if typeof(balance) ~= "number" or balance < palette.price then
+					denyChip(palette)
+					return
+				end
+				Sounds.click():Play()
+				awaitingBurst[palette.key] = true
 				buyRemote:FireServer(palette.key, currentWeaponName)
 			else
-				arm(palette)
+				Sounds.click():Play()
+				preview(palette)
 			end
 			return
 		end
-		disarm()
+		Sounds.click():Play()
+		clearPreview()
 		equipRemote:FireServer(currentWeaponName, palette.key)
 		if currentPreviewModel then
-			-- Guarded the same way every other cosmetics call site is: a failed skin must cost the
-			-- player a colour, never break the card.
+			-- Recolours the model before the round trip so the choice reads immediately.
 			local ok, err = pcall(SkinApplier.applyKey, currentPreviewModel, palette.key)
 			if not ok then
 				warn("[Cosmetics] failed to skin " .. currentWeaponName .. " preview with " .. palette.key .. ": " .. tostring(err))
@@ -433,6 +542,24 @@ refreshLocks()
 -- which weapon is on screen.
 player.AttributeChanged:Connect(function(name: string)
 	if name == MonetizationConstants.ownedAttributeFor("Vip") or name:sub(1, 10) == "SkinOwned_" then
+		-- A purchase this card fired has landed: spray cans burst out of the chip that bought it, the
+		-- Spraypaint counterpart of the weapon shop's coin burst. Keyed on the replicated ownership
+		-- flag, as the weapon shop keys its burst on WeaponOwned_, so it plays only once the server has
+		-- actually charged -- never on a click the server went on to refuse.
+		for key in awaitingBurst do
+			if name == SpraypaintConstants.ownedAttributeFor(key) and player:GetAttribute(name) == true then
+				awaitingBurst[key] = nil
+				local palette = Palettes.byKey(key)
+				local chip = chips[key]
+				local purchaseSound = SoundService:FindFirstChild("WeaponPurchaseSound")
+				if purchaseSound and purchaseSound:IsA("Sound") then
+					purchaseSound:Play()
+				end
+				if chip and palette then
+					CashBurst.burstFrom(chip, palette.price, SPRAY_BURST)
+				end
+			end
+		end
 		refreshLocks()
 		repaint()
 	end
@@ -540,9 +667,9 @@ end
 function SkinsCardController.open(shopFrame: GuiObject, weaponName: string, previewModel: Instance?): () -> ()
 	currentWeaponName = weaponName
 	currentPreviewModel = previewModel
-	-- Re-targeting at another weapon must not carry a primed chip across: the player's next click
-	-- would then buy against a weapon they were no longer looking at when they primed it.
-	disarm()
+	-- Re-targeting at another weapon drops any preview: the next click would otherwise buy against a
+	-- weapon the player was no longer looking at when they started previewing.
+	clearPreview()
 	refreshLocks()
 	repaint()
 
@@ -572,7 +699,8 @@ function SkinsCardController.close()
 	isCardOpen = false
 	currentWeaponName = nil
 	currentPreviewModel = nil
-	disarm()
+	hoveredKey = nil -- a pointer still on a chip as the card closes never gets MouseLeave
+	clearPreview()
 
 	TweenService:Create(slideValue, CLOSE_TWEEN, { Value = SLIDE_OFFSET }):Play()
 	Transitions.fade(card, 1, CLOSE_TWEEN.Time, function()

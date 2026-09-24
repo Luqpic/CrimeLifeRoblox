@@ -66,13 +66,16 @@ return function(t)
 		end
 	end)
 
-	t.test("at least one free palette and at least one Vip palette exist", function()
-		local free, vip = 0, 0
+	-- Vip is on hold: its four palettes are sold for Spraypaint for now, so this no longer demands that a
+	-- Vip palette exist. CosmeticsOwnership_Test pins the on-hold state itself and says what to restore.
+	-- Counts genuinely Free palettes: the old version counted every non-Vip palette as free, so a
+	-- catalogue with no Free palette at all would still have passed it.
+	t.test("at least one free palette exists", function()
+		local free = 0
 		for _, palette in Palettes.list do
-			if palette.source == "Vip" then vip += 1 else free += 1 end
+			if palette.source == "Free" then free += 1 end
 		end
 		expect.truthy(free > 0)
-		expect.truthy(vip > 0)
 	end)
 
 	-- Encodes a discipline the catalogue's own comments only ever stated in prose (see RoseGold and
