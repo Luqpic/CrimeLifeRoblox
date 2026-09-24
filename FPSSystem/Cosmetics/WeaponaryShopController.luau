@@ -4,6 +4,7 @@ local TweenService = game:GetService("TweenService")
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -20,6 +21,24 @@ local SkinsCardController = require(script.Parent.SkinsCardController)
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 
 local FADE_TIME = 0.25
+local SHOP_CLOSED_SIZE = UDim2.fromOffset(870, 545)
+local SHOP_OPEN_SIZE = UDim2.fromOffset(920, 580)
+
+-- The five icon asset ids the shop needs: one per category chip (Melee/Pistol/AutoRifle/Shotgun)
+-- plus the Spraypaint balance's own natively-drawn spray-can badge (DetailPanel.SpraypaintChip.Icon,
+-- see FPS-Spraypaint-Badge-Beside-Price-Label.md). Blocked on assets, not on wiring: upload_image
+-- only accepts http/https URLs and serving these five PNGs from localhost was denied by the sandbox,
+-- so real asset ids need a person to upload them and paste the ids here. Every id defaults to "" and
+-- every chip/badge below falls back to its CURRENT rendering (text label / native shapes) whenever
+-- its id is empty, so this table is a no-op until the ids are filled in -- do not invent placeholder
+-- ids and do not reuse an unrelated existing one.
+local ICON_ASSET_IDS = {
+	Melee = "", -- /Users/luqpic/Downloads/Weaponary/Melee.png
+	Pistol = "", -- /Users/luqpic/Downloads/Weaponary/Pistol.png
+	AutoRifle = "", -- /Users/luqpic/Downloads/Weaponary/Autorifle.png
+	Shotgun = "", -- /Users/luqpic/Downloads/Weaponary/Shotgun.png
+	Spray = "", -- /Users/luqpic/Downloads/Weaponary/Spray.png
+}
 
 -- Hover outline for the loadout slots, shown only while the equip picker is waiting for a choice.
 -- Its own stroke rather than the state stroke refreshInventoryColumn paints, because that one
@@ -92,6 +111,43 @@ gui.Parent = playerGui
 local shop = guiTemplates:WaitForChild("WeaponaryShop"):Clone()
 shop.Visible = false
 shop.Parent = gui
+
+-- The shop's own scaling policy. UIScaleController (see its header note) skips any ScreenGui that
+-- already ships a UIScale -- the same escape hatch BlasterGui/BlasterTouchGui already use, for the
+-- same reason: the Skins card sits in a SEPARATE ScreenGui beside this one (see
+-- SkinsCardController), and UIScaleController's per-ScreenGui measurement has no way to know this
+-- shop must also leave room for that sibling panel. Taking scaling over here, rather than letting
+-- two systems write the same UIScale.Scale property, lets `reservedWidth` below budget for the card
+-- whenever it's open -- see SkinsCardController.RESERVED_WIDTH for why that budget is doubled.
+--
+-- Created immediately after `shop.Parent = gui` (mirroring exactly when GuiController/
+-- TouchInputController create BlasterGui's own UIScale) so it exists before UIScaleController's own
+-- deferred ChildAdded/DescendantAdded signals get a chance to manage this ScreenGui first.
+local camera = Workspace.CurrentCamera
+local SHOP_MAX_SCALE = 1 -- never upscale above the authored size -- same ceiling UIScaleController uses
+local SHOP_MIN_SCALE = 0.4 -- same floor UIScaleController uses: unreadable below this regardless
+local SHOP_MARGIN = 0.94 -- same breathing room UIScaleController leaves around a fitted panel
+local shopScale = gui:FindFirstChildOfClass("UIScale")
+if not shopScale then
+	shopScale = Instance.new("UIScale")
+	shopScale.Name = "ResponsiveScale"
+	shopScale.Parent = gui
+end
+local reservedWidth = 0 -- SkinsCardController.RESERVED_WIDTH while the Skins card is open, else 0
+
+local function refreshShopScale()
+	local viewport = camera.ViewportSize
+	if viewport.X <= 0 or viewport.Y <= 0 then
+		return
+	end
+	local width = SHOP_OPEN_SIZE.X.Offset + reservedWidth
+	local fitX = (viewport.X * SHOP_MARGIN) / width
+	local fitY = (viewport.Y * SHOP_MARGIN) / SHOP_OPEN_SIZE.Y.Offset
+	shopScale.Scale = math.clamp(math.min(fitX, fitY, SHOP_MAX_SCALE), SHOP_MIN_SCALE, SHOP_MAX_SCALE)
+end
+
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshShopScale)
+refreshShopScale()
 
 local titleBar = shop:WaitForChild("TitleBar")
 local closeButton = titleBar:WaitForChild("CloseButton")
@@ -210,6 +266,53 @@ end
 
 categoryTabs:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutCategoryTabs)
 layoutCategoryTabs()
+
+-- Renders an ImageLabel over a category tab's text once its icon id arrives (see ICON_ASSET_IDS).
+-- A no-op while the id is "": the tab's own authored Text ("Melee", "Pistol", ...) is never touched,
+-- so the shop looks and works exactly as it does today until the ids are filled in.
+local function applyCategoryIcon(tab: TextButton, category: string)
+	local iconId = ICON_ASSET_IDS[category]
+	if not iconId or iconId == "" then
+		return
+	end
+	tab.Text = ""
+	local icon = tab:FindFirstChild("Icon") :: ImageLabel?
+	if not icon then
+		icon = Instance.new("ImageLabel")
+		icon.Name = "Icon"
+		icon.BackgroundTransparency = 1
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon.Size = UDim2.fromOffset(20, 20)
+		icon.ZIndex = 2
+		icon.Parent = tab
+	end
+	icon.Image = iconId
+end
+
+for _, tab in categoryTabs:GetChildren() do
+	if tab:IsA("TextButton") then
+		applyCategoryIcon(tab, tab.Name:gsub("^Tab", ""))
+	end
+end
+
+-- Same fallback for the Spraypaint balance's spray-can badge (native Body/Cap/Dot1/Dot2 shapes --
+-- see FPS-Spraypaint-Badge-Beside-Price-Label.md). A no-op while ICON_ASSET_IDS.Spray is "": the
+-- native shapes are left exactly as they render today.
+if ICON_ASSET_IDS.Spray ~= "" then
+	local nativeIcon = spraypaintChip:WaitForChild("Icon")
+	for _, shape in nativeIcon:GetChildren() do
+		if shape:IsA("GuiObject") then
+			shape.Visible = false
+		end
+	end
+	local sprayImage = Instance.new("ImageLabel")
+	sprayImage.Name = "SprayImage"
+	sprayImage.BackgroundTransparency = 1
+	sprayImage.Size = UDim2.fromOffset(16, 16)
+	sprayImage.Image = ICON_ASSET_IDS.Spray
+	sprayImage.Parent = nativeIcon
+end
 
 -- TextScaled with nothing capping it balloons "Empty" to fill the entire slot frame.
 for i = 1, 4 do
@@ -633,6 +736,11 @@ function showDetail(weaponName: string)
 	if currentSkinConnection then
 		currentSkinConnection:Disconnect()
 	end
+	-- Reserve the card's footprint BEFORE opening it: refreshShopScale must settle the shop's real
+	-- AbsoluteSize first, since SkinsCardController.open() reads that size to compute where the card
+	-- lands and how big it renders.
+	reservedWidth = SkinsCardController.RESERVED_WIDTH
+	refreshShopScale()
 	local repaintSkins = SkinsCardController.open(shop, weaponName, displayModel)
 	currentSkinConnection = player:GetAttributeChangedSignal(
 		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
@@ -747,6 +855,8 @@ end)
 backButton.MouseButton1Click:Connect(function()
 	stopSpin()
 	SkinsCardController.close()
+	reservedWidth = 0
+	refreshShopScale()
 	detailPanel.Visible = false
 	categoryTabs.Visible = true
 	weaponGrid.Visible = true
@@ -847,7 +957,7 @@ local function openShop()
 	Panels.opened("WeaponaryShop", closeShop)
 	MenuFovBlur.open()
 	shop.Visible = true
-	shop.Size = UDim2.fromOffset(870, 545)
+	shop.Size = SHOP_CLOSED_SIZE
 	refreshInventoryColumn()
 	buildGrid()
 	detailPanel.Visible = false
@@ -858,7 +968,7 @@ local function openShop()
 	TweenService:Create(
 		shop,
 		TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromOffset(920, 580) }
+		{ Size = SHOP_OPEN_SIZE }
 	):Play()
 end
 
@@ -874,12 +984,14 @@ function closeShop()
 	awaitingPurchaseSound = false
 	stopSpin()
 	SkinsCardController.close()
+	reservedWidth = 0
+	refreshShopScale()
 	setSlotPickMode(false)
 
 	local closeTween = TweenService:Create(
 		shop,
 		TweenInfo.new(FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-		{ Size = UDim2.fromOffset(870, 545) }
+		{ Size = SHOP_CLOSED_SIZE }
 	)
 	closeTween:Play()
 	closeTween.Completed:Connect(function()

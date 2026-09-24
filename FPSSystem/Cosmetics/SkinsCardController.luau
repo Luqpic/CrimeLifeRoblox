@@ -40,6 +40,23 @@ local CARD_SIZE = UDim2.fromOffset(240, 580)
 local GAP = 20 -- between the shop panel's right edge and the card's left edge
 local SLIDE_OFFSET = 40 -- how far right the card starts before tweening in
 
+-- How much wider WeaponaryShopController's own responsive-scale formula must pretend the shop is,
+-- to leave room for this card. Doubled, not just CARD_SIZE.X + GAP + SLIDE_OFFSET: the shop is
+-- centre-anchored (AnchorPoint 0.5, 0.5), so a symmetric "does WIDTH fit inside VIEWPORT" formula
+-- only ever counts HALF the shop's width against each side of the viewport -- but this card hangs
+-- entirely off the shop's RIGHT edge, so the true right-side budget is halfShopWidth + GAP + CARD
+-- width, and only DOUBLING that one-sided overhang and adding it to the shop's full width
+-- reproduces the real (asymmetric) constraint inside the same symmetric formula. See
+-- WeaponaryShopController's ResponsiveScale for the other half of this.
+--
+-- SLIDE_OFFSET is folded in too, not just the card's resting footprint: the entrance tween's START
+-- position sits SLIDE_OFFSET further right than where the card settles, and the brief is explicit
+-- that BOTH tween endpoints must land inside the viewport -- budgeting only for the resting position
+-- left just ~5px of margin for the slide overshoot at one tested viewport (1120x719), which is not a
+-- margin, it's a coincidence. Reserving room for the slide's widest moment up front guarantees both
+-- endpoints fit at any viewport size, not just the one that happened to be measured.
+local RESERVED_WIDTH = 2 * (CARD_SIZE.X.Offset + GAP + SLIDE_OFFSET)
+
 local OPEN_TWEEN = TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local CLOSE_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local STROKE_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -94,6 +111,16 @@ cardGui.DisplayOrder = 6 -- above WeaponaryShopGui's 5
 cardGui.IgnoreGuiInset = true
 cardGui.Enabled = false
 cardGui.Parent = playerGui
+
+-- This card's own responsive scale -- mirrors the exact ResponsiveScale-on-a-ScreenGui pattern
+-- WeaponaryShopController (and, previously, UIScaleController) already use elsewhere in this game.
+-- Verified empirically (temporary Edit-mode instances, then discarded) that a UIScale parented to a
+-- ScreenGui multiplies every descendant's Offset Size AND Position by its Scale, using the
+-- ScreenGui's own origin as the fixed reference point -- which is exactly why targetPosition below
+-- divides its computed absolute pixel target back down by scaleRatio before assigning it.
+local cardScale = Instance.new("UIScale")
+cardScale.Name = "ResponsiveScale"
+cardScale.Parent = cardGui
 
 local card = Instance.new("Frame")
 card.Name = "SkinsCard"
@@ -418,15 +445,51 @@ end)
 
 local isCardOpen = false
 
+-- Live only while the card is open: re-seats the card whenever the shop panel itself moves or
+-- resizes. This is the actual fix -- the shop's AbsolutePosition/AbsoluteSize change on a viewport
+-- resize (and now on the shop's own scale shrinking to make room, see WeaponaryShopController), and
+-- targetPosition used to be applied exactly once, at open(), with nothing re-running it. Both
+-- "not sticky" and "no visible tween" were that same one cause: the pair never fit the viewport, not
+-- a missing call site (open()/close() were already wired correctly). Disconnected on close.
+local shopPositionConnection: RBXScriptConnection? = nil
+local shopSizeConnection: RBXScriptConnection? = nil
+
 -- AbsolutePosition is always true screen-space, regardless of the source ScreenGui's own
 -- IgnoreGuiInset -- but this card's ScreenGui ignores the inset (see the header note on why), so the
 -- inset has to be added back onto the shop's AbsolutePosition or the card sits ~36px high. Same
 -- correction UI.CashBurst already makes for the same reason.
-local function targetPosition(shopFrame: GuiObject): UDim2
+--
+-- `scaleRatio` scales GAP along with everything else this card renders (see cardScale above), so the
+-- gap does not visually dominate once the pair has shrunk to fit a narrow viewport. The result is
+-- divided back down by scaleRatio because cardGui's own UIScale will multiply this Position's Offset
+-- by that same scaleRatio again when it renders -- see cardScale's comment for why.
+local function targetPosition(shopFrame: GuiObject, scaleRatio: number): UDim2
 	local inset = GuiService:GetGuiInset()
 	local pos = shopFrame.AbsolutePosition + inset
 	local size = shopFrame.AbsoluteSize
-	return UDim2.fromOffset(pos.X + size.X + GAP, pos.Y)
+	local absoluteX = pos.X + size.X + GAP * scaleRatio
+	local absoluteY = pos.Y
+	return UDim2.fromOffset(absoluteX / scaleRatio, absoluteY / scaleRatio)
+end
+
+-- The shop's current scale, recovered by measurement rather than by reaching into
+-- WeaponaryShopController's own UIScale instance: shopFrame.AbsoluteSize.Y is the shop's REAL
+-- rendered height, already carrying whatever scale WeaponaryShopController's ResponsiveScale is
+-- currently applying, and CARD_SIZE.Y.Offset (580) is the shop's own authored full-open height --
+-- the two are the same authored value by design (see the header note on "tops aligned"). Reading the
+-- resulting property back this way is what the project's own rule (verify the result, not the
+-- arithmetic) asks for here.
+local function currentScaleRatio(shopFrame: GuiObject): number
+	return shopFrame.AbsoluteSize.Y / CARD_SIZE.Y.Offset
+end
+
+-- Re-seats the card against `shopFrame`'s CURRENT, already-measured geometry -- position and the
+-- scale that keeps its own chips/text visually matched to whatever size the shop is presently
+-- rendering at. Called once at open() and on every AbsolutePosition/AbsoluteSize change afterwards.
+local function reseat(shopFrame: GuiObject)
+	local scaleRatio = currentScaleRatio(shopFrame)
+	cardScale.Scale = scaleRatio
+	card.Position = targetPosition(shopFrame, scaleRatio)
 end
 
 -- Opens the card beside `shopFrame` (the shop's own outer panel, not the detail sub-panel -- the
@@ -442,20 +505,33 @@ function SkinsCardController.open(shopFrame: GuiObject, weaponName: string, prev
 	refreshLocks()
 	repaint()
 
-	local target = targetPosition(shopFrame)
+	local scaleRatio = currentScaleRatio(shopFrame)
+	local target = targetPosition(shopFrame, scaleRatio)
 	if isCardOpen then
 		-- Already open and simply re-targeted at a different weapon -- reseat without replaying the
 		-- entrance tween.
-		card.Position = target
+		reseat(shopFrame)
 		return repaint
 	end
 	isCardOpen = true
 
+	cardScale.Scale = scaleRatio
 	card.Position = target + UDim2.fromOffset(SLIDE_OFFSET, 0)
 	Transitions.set(card, 1)
 	cardGui.Enabled = true
 	TweenService:Create(card, OPEN_TWEEN, { Position = target }):Play()
 	Transitions.fade(card, 0, OPEN_TWEEN.Time)
+
+	-- Tracks the shop panel for as long as the card stays open. A viewport resize, or the shop's own
+	-- scale shrinking to make room for this card (see WeaponaryShopController's ResponsiveScale),
+	-- changes AbsolutePosition and/or AbsoluteSize -- nothing else re-runs targetPosition() unless
+	-- this does.
+	shopPositionConnection = shopFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+		reseat(shopFrame)
+	end)
+	shopSizeConnection = shopFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		reseat(shopFrame)
+	end)
 
 	return repaint
 end
@@ -469,11 +545,22 @@ function SkinsCardController.close()
 	currentPreviewModel = nil
 	disarm()
 
+	if shopPositionConnection then
+		shopPositionConnection:Disconnect()
+		shopPositionConnection = nil
+	end
+	if shopSizeConnection then
+		shopSizeConnection:Disconnect()
+		shopSizeConnection = nil
+	end
+
 	local target = card.Position + UDim2.fromOffset(SLIDE_OFFSET, 0)
 	TweenService:Create(card, CLOSE_TWEEN, { Position = target }):Play()
 	Transitions.fade(card, 1, CLOSE_TWEEN.Time, function()
 		cardGui.Enabled = false
 	end)
 end
+
+SkinsCardController.RESERVED_WIDTH = RESERVED_WIDTH
 
 return SkinsCardController
