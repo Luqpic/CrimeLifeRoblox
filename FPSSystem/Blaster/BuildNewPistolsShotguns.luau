@@ -9,21 +9,21 @@ local W = game.ServerStorage.Weapons
 local VMS = game.ReplicatedStorage.Blaster.ViewModels
 local V2 = Vector2.new
 local SPECS = {
-	{src=workspace.Pistols["GLOCK 17"], name="Glock 18", donor="Glock 17", len=1.80,
+	{src=workspace.Pistols["GLOCK 17"], name="Glock 18", icon="rbxassetid://131817905527310", donor="Glock 17", len=1.80,
 	 stats={Category="Pistol",Price=850,damage=18,rateOfFire=1000,magazineSize=33,range=700,spread=2.6,recoilMin=V2(-1,6),recoilMax=V2(3,11),reloadTime=1.9,fireMode="Auto"}},
-	{src=workspace.Pistols["SIG SAUER M17 / P320"], name="SIG M17", donor="Glock 17", len=1.97,
+	{src=workspace.Pistols["SIG SAUER M17 / P320"], name="SIG M17", icon="rbxassetid://88683475230170", donor="Glock 17", len=1.97,
 	 stats={Category="Pistol",Price=500,damage=23,rateOfFire=600,magazineSize=17,range=900,spread=1.5,recoilMin=V2(0,10),recoilMax=V2(3,14),reloadTime=1.5,fireMode="Semi"}},
-	{src=workspace.Pistols["M45A1"], name="M45A1", donor="Glock 17", len=2.15, sounds="M1911",
+	{src=workspace.Pistols["M45A1"], name="M45A1", icon="rbxassetid://109363317738894", donor="Glock 17", len=2.15, sounds="M1911",
 	 stats={Category="Pistol",Price=700,damage=40,rateOfFire=420,magazineSize=7,range=950,spread=2.0,recoilMin=V2(0,17),recoilMax=V2(5,23),reloadTime=1.35,fireMode="Semi"}},
-	{src=workspace.Pistols["H&K USP COMPACT"], name="USP Compact", donor="Glock 17", len=1.67,
+	{src=workspace.Pistols["H&K USP COMPACT"], name="USP Compact", icon="rbxassetid://138547885966752", donor="Glock 17", len=1.67,
 	 stats={Category="Pistol",Price=525,damage=27,rateOfFire=520,magazineSize=12,range=800,spread=1.9,recoilMin=V2(0,13),recoilMax=V2(4,18),reloadTime=1.35,fireMode="Semi"}},
-	{src=workspace.Shotguns["REMINGTON 870, PICATINNY RAIL"], name="Remington 870", donor="Mossberg 590", len=6.9,
+	{src=workspace.Shotguns["REMINGTON 870, PICATINNY RAIL"], name="Remington 870", icon="rbxassetid://134927232970402", donor="Mossberg 590", len=6.9,
 	 stats={Category="Shotgun",Price=800,damage=16,rateOfFire=85,magazineSize=7,range=560,spread=8.5,recoilMin=V2(-6,25),recoilMax=V2(10,35),reloadTime=0.5,fireMode="Semi"}},
-	{src=workspace.Shotguns["REMINGTON 870, SAWED OFF"], name="Sawed-Off 870", donor="Mossberg 590", len=4.9, shiftX=-1.4,
+	{src=workspace.Shotguns["REMINGTON 870, SAWED OFF"], name="Sawed-Off 870", icon="rbxassetid://111525487459957", donor="Mossberg 590", len=4.9, shiftX=-1.4,
 	 stats={Category="Shotgun",Price=650,damage=14,rateOfFire=95,magazineSize=4,range=380,spread=13,recoilMin=V2(-6,30),recoilMax=V2(12,42),reloadTime=0.45,fireMode="Semi"}},
-	{src=workspace.Shotguns["BAIKAL MP-153"], name="MP-153", donor="Mossberg 590", len=7.6, sounds="Benelli M4",
+	{src=workspace.Shotguns["BAIKAL MP-153"], name="MP-153", icon="rbxassetid://89072275856972", donor="Mossberg 590", len=7.6, sounds="Benelli M4",
 	 stats={Category="Shotgun",Price=1050,damage=14,rateOfFire=170,magazineSize=5,range=560,spread=9,recoilMin=V2(8,26),recoilMax=V2(12,36),reloadTime=0.5,fireMode="Semi"}},
-	{src=workspace.Shotguns["FRANCHI SPAS-12, EXTENDED STOCK"], name="SPAS-13", donor="Mossberg 590", len=7.3, sounds="Spas 12",
+	{src=workspace.Shotguns["FRANCHI SPAS-12, EXTENDED STOCK"], name="SPAS-13", icon="rbxassetid://108464871855791", donor="Mossberg 590", len=7.3, sounds="Spas 12",
 	 stats={Category="Shotgun",Price=1150,damage=16,rateOfFire=120,magazineSize=8,range=600,spread=8,recoilMin=V2(8,26),recoilMax=V2(12,36),reloadTime=0.5,fireMode="Semi"}},
 }
 -- All eight sources lie on their side: muzzle along world -X, gun-up along world -Z.
@@ -101,7 +101,7 @@ for _, s in SPECS do
 	-- Tool (third person / shop): everything rigid on Body.
 	local tool = donorTool:Clone()
 	tool.Name = s.name
-	tool.TextureId = ""
+	tool.TextureId = s.icon -- icon art: ~/Downloads/New Guns, reduced to 1024px before upload
 	if s.sounds then tool.Sounds:Destroy() W[s.sounds].Sounds:Clone().Parent = tool end
 	for key, v in s.stats do tool:SetAttribute(key, v) end
 	tool:SetAttribute("_ammo", s.stats.magazineSize)
