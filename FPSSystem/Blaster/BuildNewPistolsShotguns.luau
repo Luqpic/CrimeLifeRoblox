@@ -1,30 +1,52 @@
--- Re-runnable build for the eight pistols/shotguns added 2026-09-24. Run in Studio (Edit, command bar
+-- Re-runnable build for the eight pistols/shotguns and the RPG added 2026-09-24. Run in Studio (Edit, command bar
 -- or MCP execute_luau). Reads the raw models in Workspace.Pistols / Workspace.Shotguns, whose moving
 -- pieces are tagged with a MovingPiece attribute ("Magazine" or "Pump"), and (re)creates for each:
 --   ServerStorage.Weapons.<name>                   Tool: donor clone, donor trims replaced by the new mesh
 --   ReplicatedStorage.Blaster.ViewModels.<name>    donor skeleton kept whole + hidden, new mesh hung off it
 -- Magazine pieces weld to the donor's animated Magazine part (reload drops them, the left hand follows).
 -- Pump pieces weld to a new Pump part on a Body->Pump Motor6D that WeaponViewmodelMotion racks per shot.
+-- Rocket pieces weld to Body and are tagged HideWhenEmpty: the loaded round, hidden while the weapon is
+-- empty (WeaponShopService does the Tool, ViewModelController the viewmodel).
 local W = game.ServerStorage.Weapons
 local VMS = game.ReplicatedStorage.Blaster.ViewModels
 local V2 = Vector2.new
+-- A source model looked up without erroring: the Pistols/Shotguns sources were deleted once their weapons
+-- shipped, and a spec whose source is gone is skipped (its built Tool and viewmodel are left as they are)
+-- rather than failing the whole build.
+local function source(...)
+	local node = workspace
+	for _, name in { ... } do
+		node = node and node:FindFirstChild(name)
+	end
+	return node
+end
 local SPECS = {
-	{src=workspace.Pistols["GLOCK 17"], name="Glock 18", icon="rbxassetid://131817905527310", donor="Glock 17", len=1.80,
+	{src=source("Pistols", "GLOCK 17"), name="Glock 18", icon="rbxassetid://131817905527310", donor="Glock 17", len=1.80,
 	 stats={Category="Pistol",Price=850,damage=18,rateOfFire=1000,magazineSize=33,range=700,spread=2.6,recoilMin=V2(-1,6),recoilMax=V2(3,11),reloadTime=1.9,fireMode="Auto"}},
-	{src=workspace.Pistols["SIG SAUER M17 / P320"], name="SIG M17", icon="rbxassetid://88683475230170", donor="Glock 17", len=1.97,
+	{src=source("Pistols", "SIG SAUER M17 / P320"), name="SIG M17", icon="rbxassetid://88683475230170", donor="Glock 17", len=1.97,
 	 stats={Category="Pistol",Price=500,damage=23,rateOfFire=600,magazineSize=17,range=900,spread=1.5,recoilMin=V2(0,10),recoilMax=V2(3,14),reloadTime=1.5,fireMode="Semi"}},
-	{src=workspace.Pistols["M45A1"], name="M45A1", icon="rbxassetid://109363317738894", donor="Glock 17", len=2.15, sounds="M1911",
+	{src=source("Pistols", "M45A1"), name="M45A1", icon="rbxassetid://109363317738894", donor="Glock 17", len=2.15, sounds="M1911",
 	 stats={Category="Pistol",Price=700,damage=40,rateOfFire=420,magazineSize=7,range=950,spread=2.0,recoilMin=V2(0,17),recoilMax=V2(5,23),reloadTime=1.35,fireMode="Semi"}},
-	{src=workspace.Pistols["H&K USP COMPACT"], name="USP Compact", icon="rbxassetid://138547885966752", donor="Glock 17", len=1.67,
+	{src=source("Pistols", "H&K USP COMPACT"), name="USP Compact", icon="rbxassetid://138547885966752", donor="Glock 17", len=1.67,
 	 stats={Category="Pistol",Price=525,damage=27,rateOfFire=520,magazineSize=12,range=800,spread=1.9,recoilMin=V2(0,13),recoilMax=V2(4,18),reloadTime=1.35,fireMode="Semi"}},
-	{src=workspace.Shotguns["REMINGTON 870, PICATINNY RAIL"], name="Remington 870", icon="rbxassetid://134927232970402", donor="Mossberg 590", len=6.9,
+	{src=source("Shotguns", "REMINGTON 870, PICATINNY RAIL"), name="Remington 870", icon="rbxassetid://134927232970402", donor="Mossberg 590", len=6.9,
 	 stats={Category="Shotgun",Price=800,damage=16,rateOfFire=85,magazineSize=7,range=560,spread=8.5,recoilMin=V2(-6,25),recoilMax=V2(10,35),reloadTime=0.5,fireMode="Semi"}},
-	{src=workspace.Shotguns["REMINGTON 870, SAWED OFF"], name="Sawed-Off 870", icon="rbxassetid://111525487459957", donor="Mossberg 590", len=4.9, shiftX=-1.4,
+	{src=source("Shotguns", "REMINGTON 870, SAWED OFF"), name="Sawed-Off 870", icon="rbxassetid://111525487459957", donor="Mossberg 590", len=4.9, shiftX=-1.4,
 	 stats={Category="Shotgun",Price=650,damage=14,rateOfFire=95,magazineSize=4,range=380,spread=13,recoilMin=V2(-6,30),recoilMax=V2(12,42),reloadTime=0.45,fireMode="Semi"}},
-	{src=workspace.Shotguns["BAIKAL MP-153"], name="MP-153", icon="rbxassetid://89072275856972", donor="Mossberg 590", len=7.6, sounds="Benelli M4",
+	{src=source("Shotguns", "BAIKAL MP-153"), name="MP-153", icon="rbxassetid://89072275856972", donor="Mossberg 590", len=7.6, sounds="Benelli M4",
 	 stats={Category="Shotgun",Price=1050,damage=14,rateOfFire=170,magazineSize=5,range=560,spread=9,recoilMin=V2(8,26),recoilMax=V2(12,36),reloadTime=0.5,fireMode="Semi"}},
-	{src=workspace.Shotguns["FRANCHI SPAS-12, EXTENDED STOCK"], name="SPAS-13", icon="rbxassetid://108464871855791", donor="Mossberg 590", len=7.3, sounds="Spas 12",
+	{src=source("Shotguns", "FRANCHI SPAS-12, EXTENDED STOCK"), name="SPAS-13", icon="rbxassetid://108464871855791", donor="Mossberg 590", len=7.3, sounds="Spas 12",
 	 stats={Category="Shotgun",Price=1150,damage=16,rateOfFire=120,magazineSize=8,range=600,spread=8,recoilMin=V2(8,26),recoilMax=V2(12,36),reloadTime=0.5,fireMode="Semi"}},
+	-- Gamepass weapon: no Price (the donor's is cleared -- a leftover Price would make it cash-buyable),
+	-- `Gamepass` names the Monetization.Constants pass that unlocks it. Lies with its muzzle along -Z and
+	-- top along +X, unlike the pistols/shotguns. Explosion stats are read by ShotResolver.
+	{src=source("RPG"), name="RPG", icon="", donor="AK47", len=8.5, projectile="RPGRocket",
+	 nativeFwd=Vector3.new(0,0,-1), nativeUp=Vector3.new(1,0,0), shootSound="rbxasset://sounds/Launching rocket.wav",
+	 clear={"Price", "ShopViewRotation"}, -- the AK's upside-down preview fix is for the AK's own mesh
+	 stats={Category="Launcher",Gamepass="RPG",damage=200,rateOfFire=30,magazineSize=1,range=600,spread=0.5,
+	  recoilMin=V2(4,30),recoilMax=V2(8,40),reloadTime=3,fireMode="Semi",raysPerShot=1,rayRadius=0.5,
+	  explosionRadius=16,explosionEdgeDamage=0.3,explosionKnockback=65,explosionFlingSpeed=290}},
+	 -- 290/65 measured on open baseplate: the killed flew 800-827 studs, a survivor at 12 studs 51 studs.
 }
 -- All eight sources lie on their side: muzzle along world -X, gun-up along world -Z.
 local NATIVE_FWD, NATIVE_UP = Vector3.new(-1,0,0), Vector3.new(0,0,-1)
@@ -50,6 +72,10 @@ end
 
 local report = {}
 for _, s in SPECS do
+	if not s.src then
+		table.insert(report, s.name .. ": source model missing -- skipped, existing build left untouched")
+		continue
+	end
 	local donorTool, donorVM = W[s.donor], VMS[s.donor]
 	local old = W:FindFirstChild(s.name) if old then old:Destroy() end
 	old = VMS:FindFirstChild(s.name) if old then old:Destroy() end
@@ -61,7 +87,7 @@ for _, s in SPECS do
 	local dVMMuzzle = T:PointToObjectSpace(donorVM.Blaster.Body.MuzzleAttachment.Position)
 	local inset = dVMMuzzle.X - dLo.X
 
-	local G = CFrame.fromMatrix(s.src:GetPivot().Position, NATIVE_FWD, NATIVE_UP)
+	local G = CFrame.fromMatrix(s.src:GetPivot().Position, s.nativeFwd or NATIVE_FWD, s.nativeUp or NATIVE_UP)
 	local nLo, nHi = Vector3.one*1e9, -Vector3.one*1e9
 	for _, p in s.src:GetChildren() do if p:IsA("BasePart") then nLo, nHi = corners(p.CFrame, p.Size, G, nLo, nHi) end end
 	local k = s.len / (nHi.X - nLo.X)
@@ -76,6 +102,17 @@ for _, s in SPECS do
 		end
 	end
 	local muzzle = Vector3.new(offset.X - k*nHi.X + inset, dVMMuzzle.Y, dVMMuzzle.Z)
+	-- A launcher's bore is its rocket, not the donor rifle's barrel: the muzzle goes on the rocket's own
+	-- centreline at its tip, so the round that flies starts exactly where the loaded one sat.
+	local rocket
+	for _, e in placed do
+		if e.src:GetAttribute("MovingPiece") == "Rocket" then rocket = e end
+	end
+	local rocketLo, rocketHi
+	if rocket then
+		rocketLo, rocketHi = corners(rocket.cf, rocket.src.Size * k, CFrame.identity, Vector3.one*1e9, -Vector3.one*1e9)
+		muzzle = Vector3.new(rocketLo.X + 0.05, rocket.cf.Position.Y, rocket.cf.Position.Z)
+	end
 
 	-- anchorFor(piece) returns the part a mesh piece welds to; Body unless it is a moving piece.
 	local function build(parentModel, body, bodyToFrame, props, anchorFor)
@@ -92,6 +129,9 @@ for _, s in SPECS do
 			p.CFrame = body.CFrame * bodyToFrame * e.cf
 			p.Parent = parentModel
 			local piece = e.src:GetAttribute("MovingPiece")
+			if piece == "Rocket" then
+				p:SetAttribute("HideWhenEmpty", true)
+			end
 			made[i] = p
 			weld(anchorFor and anchorFor(piece, p) or body, p)
 		end
@@ -103,7 +143,12 @@ for _, s in SPECS do
 	tool.Name = s.name
 	tool.TextureId = s.icon -- icon art: ~/Downloads/New Guns, reduced to 1024px before upload
 	if s.sounds then tool.Sounds:Destroy() W[s.sounds].Sounds:Clone().Parent = tool end
+	for _, key in s.clear or {} do tool:SetAttribute(key, nil) end
 	for key, v in s.stats do tool:SetAttribute(key, v) end
+	if s.shootSound then
+		local shoot = tool.Sounds.Shoot
+		for _, sound in shoot:GetChildren() do if sound:IsA("Sound") then sound.SoundId = s.shootSound end end
+	end
 	tool:SetAttribute("_ammo", s.stats.magazineSize)
 	tool:SetAttribute("_reloading", false)
 	tool:SetAttribute("viewModel", s.name)
@@ -153,6 +198,36 @@ for _, s in SPECS do
 			return nil
 		end)
 	vBody.MuzzleAttachment.Position = T:PointToWorldSpace(muzzle)
+
+	-- The round in flight: a copy of the loaded rocket on an invisible Root that sits at the muzzle and
+	-- faces down the bore (-Z = direction of travel), with an exhaust point at the rocket's tail.
+	if s.projectile and rocket then
+		local objects = game.ReplicatedStorage.Blaster.Objects
+		local oldRound = objects:FindFirstChild(s.projectile) if oldRound then oldRound:Destroy() end
+		local round = Instance.new("Model")
+		round.Name = s.projectile
+		local root = Instance.new("Part")
+		root.Name = "Root"
+		root.Size = Vector3.new(0.2, 0.2, 0.2)
+		root.Transparency = 1
+		root.Anchored = true root.CanCollide = false root.CanQuery = false root.CanTouch = false
+		root.CFrame = body.CFrame * CFrame.new(muzzle) * CFrame.Angles(0, math.pi / 2, 0)
+		root.Parent = round
+		local mesh = rocket.src:Clone()
+		for a in mesh:GetAttributes() do mesh:SetAttribute(a, nil) end
+		mesh.Name = "Rocket"
+		mesh.Size = mesh.Size * k
+		mesh.Anchored = true mesh.CanCollide = false mesh.CanQuery = false mesh.CanTouch = false
+		mesh.CFrame = body.CFrame * rocket.cf
+		mesh.Parent = round
+		local exhaust = Instance.new("Attachment")
+		exhaust.Name = "Exhaust"
+		exhaust.Position = Vector3.new(0, 0, rocketHi.X - rocketLo.X) -- tail, behind the tip
+		exhaust.Parent = root
+		round.PrimaryPart = root
+		round.Parent = objects
+		tool:SetAttribute("projectile", s.projectile)
+	end
 
 	tool.Parent = W
 	vm.Parent = VMS
