@@ -5,8 +5,10 @@
 --   ReplicatedStorage.Blaster.ViewModels.<name>    donor skeleton kept whole + hidden, new mesh hung off it
 -- Magazine pieces weld to the donor's animated Magazine part (reload drops them, the left hand follows).
 -- Pump pieces weld to a new Pump part on a Body->Pump Motor6D that WeaponViewmodelMotion racks per shot.
--- Rocket pieces weld to Body and are tagged HideWhenEmpty: the loaded round, hidden while the weapon is
--- empty (WeaponShopService does the Tool, ViewModelController the viewmodel).
+-- Rocket pieces are tagged HideWhenEmpty: the loaded round, hidden while the weapon is empty
+-- (WeaponShopService does the Tool, ViewModelController the viewmodel). On the Tool they weld to Body; in
+-- the viewmodel they weld to a Round part on a Body->Round Motor6D (RoundJoint), placed where the left
+-- hand grips the rocket, so WeaponViewmodelMotion's launcher reload can carry it in the hand.
 local W = game.ServerStorage.Weapons
 local VMS = game.ReplicatedStorage.Blaster.ViewModels
 local V2 = Vector2.new
@@ -120,6 +122,19 @@ for _, s in SPECS do
 		rocketLo, rocketHi = corners(rocket.cf, rocket.src.Size * k, CFrame.identity, Vector3.one*1e9, -Vector3.one*1e9)
 		muzzle = Vector3.new(rocketLo.X + 0.05, rocket.cf.Position.Y, rocket.cf.Position.Z)
 	end
+	-- Where the left hand holds the rocket: under its centreline, just ahead of the tube's mouth (the
+	-- front of everything that is not the rocket; forward is -X), so the hand never enters the tube.
+	local roundGrip
+	if rocket then
+		local mouthX = math.huge
+		for _, e in placed do
+			if e ~= rocket then
+				local lo = corners(e.cf, e.src.Size * k, CFrame.identity, Vector3.one*1e9, -Vector3.one*1e9)
+				mouthX = math.min(mouthX, lo.X)
+			end
+		end
+		roundGrip = Vector3.new(mouthX - 0.6, rocket.cf.Position.Y - 0.25, rocket.cf.Position.Z)
+	end
 
 	-- anchorFor(piece) returns the part a mesh piece welds to; Body unless it is a moving piece.
 	local function build(parentModel, body, bodyToFrame, props, anchorFor)
@@ -214,6 +229,21 @@ for _, s in SPECS do
 				end
 				table.insert(moving, "Pump<-" .. part.Name)
 				return pump
+			elseif piece == "Rocket" then
+				local round = Instance.new("Part")
+				round.Name = "Round"
+				round.Size = Vector3.new(0.2, 0.2, 0.2)
+				round.Transparency = 1
+				round.CanCollide = false round.CanTouch = false round.CanQuery = false round.Massless = true
+				round.CFrame = vBody.CFrame * T * CFrame.new(roundGrip)
+				round.Parent = vm.Blaster
+				local m6 = Instance.new("Motor6D")
+				m6.Name = "RoundJoint"
+				m6.Part0 = vBody m6.Part1 = round
+				m6.C0 = vBody.CFrame:ToObjectSpace(round.CFrame)
+				m6.Parent = vBody
+				table.insert(moving, "Round<-" .. part.Name)
+				return round
 			end
 			return nil
 		end)
