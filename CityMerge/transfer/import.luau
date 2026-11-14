@@ -18,6 +18,11 @@ local function import(key: string, parent: Instance?, newName: string?): Instanc
 	local res = HttpService:RequestAsync({Url = "http://127.0.0.1:8765/" .. key, Method = "GET"})
 	if not res.Success then error("GET failed for " .. key .. ": " .. tostring(res.StatusCode)) end
 	local arr = SerializationService:DeserializeInstancesAsync(EncodingService:Base64Decode(buffer.fromstring(res.Body)))
+	if #arr ~= 1 then
+		local n = #arr
+		for _, inst in ipairs(arr) do inst:Destroy() end
+		error("expected 1 root for " .. key .. ", got " .. n)
+	end
 	local root = arr[1]
 	if newName then root.Name = newName end
 	if parent and parent:FindFirstChild(root.Name) then
