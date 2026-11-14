@@ -202,7 +202,21 @@ Plays 2 and 3 also logged about 81 `ContentId ... failed` warnings (asset permis
 
 Timing (Play 1, client, forced respawn, from `CharacterAdded`): `Lean` added at 0.032 s, `LowerTorso` at 0.064 s, `HumanoidRootPart` at 0.071 s; at `CharacterAdded` the model had 0 children. The script therefore starts about 39 ms before its root part exists. The first spawn was not measured (the call cannot attach before the first character).
 
-**New, not fixed (not authorised in this leg):** `StarterPlayerScripts.WeaponaryShopController` line 20 (`require(script.Parent.SkinsCardController)`) indexes a sibling that had not yet been copied into PlayerScripts, in 2 of 3 Plays after the fix; absent from the one pre-fix city Play whose full client console was read (the second pre-fix Play was read only around the Lean line). When it happens the weapon shop and the skins card are not built (PlayerGui 19 children). The `Infinite yield` lines show the StarterGui copy arriving more than 5 s late in the same Plays. Unrelated to `Lean` (no code path between them); a client-load race in the heavy city. Proposed smallest fix for review: `script.Parent:WaitForChild("SkinsCardController")` on that line. Test: three city Plays, PlayerGui 21 children each time, no line-20 error.
+**Must fix 2, found in leg 2, fixed in leg 3 (gate-approved):** `StarterPlayerScripts.WeaponaryShopController` line 20 (`require(script.Parent.SkinsCardController)`) indexes a sibling that had not yet been copied into PlayerScripts, in 2 of 3 Plays after the fix; absent from the one pre-fix city Play whose full client console was read (the second pre-fix Play was read only around the Lean line). When it happens the weapon shop and the skins card are not built (PlayerGui 19 children). The `Infinite yield` lines show the StarterGui copy arriving more than 5 s late in the same Plays. Unrelated to `Lean` (no code path between them); a client-load race in the heavy city. Proposed smallest fix for review: `script.Parent:WaitForChild("SkinsCardController")` on that line. Test: three city Plays, PlayerGui 21 children each time, no line-20 error.
+
+**Done (leg 3, 2026-11-15):** the whole defect class (a client script indexing with `.` an instance that reaches the client separately) was audited: `client-load-order-audit.md`, 138 rows, 4 FIX (Lean's 3, done in leg 2, and `WeaponaryShopController` line 20), 134 SAFE with reasons. Line 20 now `require(script.Parent:WaitForChild("SkinsCardController"))`: 54,021 / Adler-32 1830119947 -> 54,037 / 193228620; every other city source unchanged (the 296 sources other than Lean, with this line swapped back, hash to leg 2's 2140064133); Enabled checksum 336067737 unchanged; FPS copy still 1830119947. Mirror `FPSSystem/Cosmetics/WeaponaryShopController.luau` is a stale FPS mirror and was not changed.
+
+Verification, five city Plays from `Dev.DevSpawn`, read at 25 s:
+
+| Play | PlayerGui | missing vs FPS 20 + TImeScripts | WeaponaryShopGui / SkinsCardGui | client script errors | server script errors | Infinite yield warnings | respawn +10 s |
+|---|---|---|---|---|---|---|---|
+| 1 | 21 | none | yes / yes | 0 | 0 | 0 | not done |
+| 2 | 21 | none | yes / yes | 0 | 0 | 0 | 21, none missing, 0 errors, Lean present, WalkSpeed 20 |
+| 3 | 21 | none | yes / yes | 0 | 0 | 0 | not done |
+| 4 | 21 | none | yes / yes | 0 | 0 | 0 | 21, none missing, 0 errors, Lean present, WalkSpeed 20 |
+| 5 | 21 | none | yes / yes | 0 | 0 | 0 | not done |
+
+Every Play: PlayerScripts 28, `Lean` present, WalkSpeed 20. Play 5: purchase through `BuyRequest` cash 500 -> 300, `WeaponOwned_AK47` nil -> true, profile weaponsOwned Crowbar, AK47 and cash 300; unit tests 12 suites 147 / 147 / 0, 0 `[FAIL]` lines. "Script error" here means any Error-type log line other than `Failed to load ...` asset lines. None of the five Plays showed the late StarterGui copy (0 `Infinite yield` warnings), so the race was not exercised: the fix is verified to change nothing when the sibling is present; that it rescues the late case is by the `WaitForChild` contract, not by a reproduced failure.
 
 ### Should fix (robustness / performance under streaming; the game works without them)
 
