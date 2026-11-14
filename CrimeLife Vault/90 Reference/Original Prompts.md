@@ -150,4 +150,10 @@ The working ledger of the getaway change: briefs, reports, fix rounds, pre-chang
 | `RobberySystem/.sdd-getaway/task-8-brief.md` | 5,431 | Task 8 brief — play-mode verification | ledger |
 | `RobberySystem/.sdd-getaway/task-8-report.md` | 20,133 | Task 8 report — play-mode verification | ledger |
 
+## Tycoon (added 2026-11-14)
+
+| File | Bytes | What it asks for | Kind |
+|---|---|---|---|
+| `Tycoon/2026-11-14 CrimeLife Tycoon Kickoff.md` | not recorded | The kickoff for CrimeLife Tycoon: research tycoon retention, plan the merge into Crimelife City, build new systems | prompt only |
+
 Related: [[Docs Index]], [[Batch Log]], [[Reference MOC]].

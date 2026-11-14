@@ -9,6 +9,10 @@ sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md", "CrimeLifeR
 
 Product decisions for CrimeLife, newest first in each note, each with its date and the change log or spec it came from. A new decision goes into its area note with its date. Where the source does not say who decided, the note does not guess.
 
+## CrimeLife Tycoon
+
+- [[CrimeLife Tycoon Decisions]]: the 2026-11-14 calls for the merged game: open-city crime tycoon, one base per player, raids, NPC police, six players, merge into Crimelife City.
+
 ## Game systems
 
 - [[Weapon and Combat Decisions]]: extend by attribute, sniper removed, shotgun knockback on the kill only, Knife backstab, RPG as a gamepass weapon.

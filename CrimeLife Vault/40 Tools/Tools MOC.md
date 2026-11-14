@@ -27,6 +27,8 @@ Everything Claude uses to read, change and test CrimeLife. All of it runs throug
 - [[Screen Captures]]: when `screen_capture` returns magenta or blank, and what to read instead.
 - [[Studio Host and Instance Id]]: the last recorded Studio ids and the Mac side.
 
+- [[Model Assignment]]: which Claude model (Fable, Opus, Sonnet) does which CrimeLife Tycoon work.
+
 ## Related
 
 - [[Engine Traps MOC]]: Roblox engine behaviour (not harness behaviour) that cost a debugging session.

@@ -11,6 +11,8 @@ Places, pipelines, an index of every CrimeLife document outside the vault, and t
 
 ## Where things are
 - [[Places and Studio Windows]]: FPS System and Robbery System, which file, what they share, the rule never to edit Robbery unless named, and the save rule (the developer saves; Claude never publishes).
+- [[Four Places Survey 2026-11-14]]: measured contents of the four places to be merged into CrimeLife Tycoon, and the HQ blueprint's stages and money lines.
+- [[Tycoon Market Research 2026-11]]: what holds players in Roblox tycoon games in 2025 to 2026, the crime competitors, and the policy limits.
 - [[Docs Index]]: the repo's code mirrors, specs, plans, ledgers, the code graph, and the CrimeLife-relevant files at the top of `Documents/Roblox`.
 - [[Original Prompts]]: every original prompt, one line each. What was asked for, against `70 Batches`, what happened.
 
