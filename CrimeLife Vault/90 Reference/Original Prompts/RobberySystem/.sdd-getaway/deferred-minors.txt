@@ -1,0 +1,15 @@
+Task 2: minor (deferred): "fires exactly once per bag" would also pass with no latch at all, because
+Task 2: minor (deferred): "rejects a construction missing its required dependencies" passes only
+Task 4: minor (deferred): `_bankBag`'s `amount <= 0` bail lost its only test. Unreachable via the
+Task 4: minor (deferred): the real construction path (`markerFolder` → `WaitForChild` →
+Task 4: minor (deferred): the inside-gate test is all-negative and only meaningful paired with the
+Task 4: minor (deferred): `HeistServer` still shows "Duffel Full — head back to claim it." at the
+Task 5: minor (deferred): report cited the stale toast at line 1018; it is 1019.
+Task 7: minor (deferred): NewsStationServer's boot assert has no test coverage — WorldSpec has no
+Task 7: minor (deferred): nothing in the world marks the four parts as deliberately retired; only
+Task 6: minor (deferred): `screen_capture` returns a uniform magenta frame in Play mode (three
+Task 6: minor (deferred): the GUI inset measured 58px in this viewport, not the ~36px the project
+Task 6: minor (deferred), and MINE: my Step 7 timer change (`zoneOccupancy[location] or amount > 0`)
+Task 6: minor (deferred): Item 4's reset fires at the START of the 0.4s slide-out, so the bar flies
+Task 6: minor (deferred): `190` is a bare literal in the quantiser and must stay in lockstep with
+Task 6: minor (deferred): timer and getaway widget can legitimately name DIFFERENT locations

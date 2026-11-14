@@ -1,2 +1,4 @@
 # Generated knowledge-graph output. Rebuilt on demand, not source.
 graphify-out/
+.obsidian/workspace*.json
+.DS_Store

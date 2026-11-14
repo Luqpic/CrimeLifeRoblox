@@ -1,0 +1,65 @@
+---
+type: system
+tags: [system, leveling, progression, ranks]
+updated: 2026-11-14
+sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-renown-phase-2/spraypaint-rename-report.md", "CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Kill-Leveling-System.md"]
+---
+
+# Leveling and Renown
+
+**Skills:** `roblox-game-systems`, `roblox-ui`, `roblox-data-stores` (load these for work here)
+
+## What it does
+Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a small max-health bonus and a cash bonus, fire a level-up popup and a world burst, and set a criminal **rank** shown on the [[Player Card]] and on the overhead plate other players see.
+
+"Renown" was the working name of the earned cosmetic currency in the 2026-09-23 Phase 2 spec and plan (`docs/superpowers/*/2026-09-23-renown-phase-2*`). It was renamed **Spraypaint** the same day, in Studio and in the repo; that currency lives in [[Spraypaint]]. The rank ladder below is the progression "renown" a player shows off.
+
+## Where it lives
+- `ReplicatedStorage.Leveling.Constants`: XP per kill tier, the curve (`xpToNextLevel`), `LEVEL_CAP`, rewards, `RANKS` + `rankForLevel(level)`, `XP_ICON_ID` / `HEALTH_ICON_ID` (single owner of both ids), `totalXp(level, xp)`.
+- `ReplicatedStorage.Leveling.Remotes.SetLevelRequest` (admin).
+- `ServerScriptService.Weapons.Scripts.LevelingService` (mirror `CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau`).
+- `StarterPlayer.StarterPlayerScripts.LevelingHud` (XP bar + popup), `.LevelUpVFX`, `.AdminLevelController` (`/setlevel` + F2 panel).
+- `ReplicatedStorage.VFX.LevelUpBurst` (current burst rig); `ReplicatedStorage.VFX.LevelUpShine` (unreferenced since 2026-09-19).
+- Rank shown by `GuiTemplates.PlayerCard.RankLabel` and `StarterPlayerScripts.PlayerNameplates` (`Rank` line).
+
+## How it works
+- XP comes from the shared `ServerScriptService.Blaster.Events.Eliminated` signal (the same one [[Quests and Dialogue]] and kill stats listen to) and from quest payouts. XP tier is read off the killing weapon (fire mode / infinite ammo), so Smuggler and Bandits pay at pistol rate (accepted, 2026-09-17).
+- PvP kills grant XP by design; cash stays enemy-only ([[Economy and Cash]]).
+- Replicated as `leaderstats.Level` and player attributes `Level`, `XP`, `NextLevelXP`. `XP` resets on each level-up, so the client uses `Leveling.Constants.totalXp` to derive a kill's XP (no extra remote).
+- `grantXp` loops so one grant can cross several levels; at the cap extra XP is dropped and `XP`/`NextLevelXP` read 0.
+- `MaxHealth = 100 + MAX_HEALTH_PER_LEVEL * (level - 1)`, re-applied on every spawn.
+- Ranks, seven equal tiers of ten (the cap falls inside the last): Rookie Thug (1-10, street grey), Street Hustler (11-20, green), Gang Enforcer (21-30, cyan), Made Man (31-40, blue), Mafia Hitman (41-50, purple), Capo (51-60, orange), Godfather (61-70, gold).
+- HUD: the XP bar is always visible above the hotbar, tweens its fill, carries a white Experience icon inside its left end; the popup reads `LEVEL {n}` under a `LEVEL UP` caption. The kill toast carries a `+N EXP` line under the Spraypaint line ([[Notifications]]).
+- Level-up burst: `LevelUpBurst` cloned on level-up, welded at foot height, emits for `EmitSeconds` 1.5, destroyed after the last particle (4.5 s total). Client-side only.
+- Admin: `SetLevelRequest` is gated server-side to one UserId (the developer's); clamps to 1..cap.
+- Persisted since 2026-09-23: `level` and `xp` mirror into the profile; `NextLevelXP` is derived and recomputed on load ([[Persistence and Saves]]).
+
+## Extend it
+- Rename a rank or recolour it: one line in `RANKS`.
+- New XP source: call into `LevelingService` from the server; never trust the client. Read `Eliminated` rather than adding a second kill signal.
+- New readout of XP gained: difference `totalXp`, not the raw `XP` attribute.
+
+## Watch out
+- Templates rest in their authored state: the popup template must rest fully transparent, and `LevelingHud` forces all four transparencies to 1 at startup (2026-09-18 regression, twice).
+- `LevelingService`'s header comment still says "Session-only ... does not add a DataStore": stale since [[FPS-Persistence-Phase-3]].
+- Spraypaint pays 25 per level gained off the `Level` attribute; hydration on join once paid a phantom award on every rejoin (Critical, fixed 2026-09-23). Any change to how `Level` is set on join must be re-checked against that.
+- You never see your own overhead plate; your rank shows on your card.
+- The level-up rig's `PointLight` (brightness 300, range 6) may read as a flashbang up close: needs an eye.
+- The XP and spray icon ids were uploaded as white glyphs so `ImageColor3` can tint them.
+
+## History
+- 2026-09-24: criminal ranks on the card and overhead; XP icon inside the bar, white. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
+- 2026-09-24: `+N EXP` line on the kill toast; Experience icon on every leveling readout; `totalXp`. [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]
+- 2026-09-23: level and XP persist through `ProfileGateway`; phantom rejoin level-up award found and fixed. [[FPS-Persistence-Phase-3]]
+- 2026-09-23: Renown currency renamed Spraypaint; earns 25 per level gained. [[FPS-Spraypaint-Phase-2]]
+- 2026-09-19: authored `LevelUpBurst` replaces the dormant shine emitter. [[FPS-Melee-Hit-And-LevelUp-VFX]]
+- 2026-09-18: popup stuck on screen (new caption not faded; template resting opaque) fixed. [[FPS-Player-Nameplates-And-LevelUp-Fix]]
+- 2026-09-18: popup restyled (acid outline, `LEVEL UP` caption). [[FPS-Figma-UI-Bugfix-Pass-5]]
+- 2026-09-17: Smuggler and Bandits pay pistol-rate XP (accepted). [[FPS-Enemy-Roster-Rework-3-New-Recruits]]
+- 2026-09-16: cap raised to 70; `/setlevel` and F2 admin panel (not driven live at the time). [[FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel]]
+- 2026-09-16: quest payouts grant XP. [[FPS-Quest-System-Level1-KillThugs]]
+- 2026-09-11: leveling bar converted to a template, always visible above the hotbar. [[FPS-Gui-Template-Conversion-Cash-Sound-Static-Leveling-Bar]]
+- 2026-09-11: XP bar tweens; level-up shine. [[FPS-Death-Screen-Leveling-Tween-LevelUp-VFX]]
+- 2026-09-11: kill-based leveling created, session-only at the time. [[FPS-Kill-Leveling-System]]
+
+See [[Batch Log]].
