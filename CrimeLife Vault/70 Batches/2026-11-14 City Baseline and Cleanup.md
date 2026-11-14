@@ -84,7 +84,7 @@ No source used `HttpService`, `InsertService`, `MarketplaceService`, `TeleportSe
 | `LooseTycoon` | the loose tycoon kit pieces from the slab (x >= 400) | 1,367 children, 21,997 instances |
 | `StagingSlab` | everything else stray on the slab | 103 children, 21,634 instances |
 
-**To move something back:** every moved item carries `OriginalCFrame` (or pivot), `OriginalParent` and `OriginalPath` attributes. Set the item's parent from `OriginalParent`/`OriginalPath` and `PivotTo(OriginalCFrame)`. `ServerStorage` does not replicate, so quarantined items cost clients nothing. Scripts that were disabled in place carry `QuarantinedScript = true`: 43 were disabled this way (proximity doors, outfit givers and similar, kept for a decision), and most travelled into quarantine with their models; 1 remains in Workspace. Find them all by that attribute.
+**To move something back:** models, parts and folders moved to `Duplicates`, `LooseTycoon` and `StagingSlab` carry `OriginalParent` ("Workspace") and, except Folders, `OriginalCFrame`; the 8 scripts in `CityQuarantine.Scripts` carry `OriginalPath` (a string) and no CFrame. For a model or part, set `Parent = workspace` (it will then sit outside the `Map` folders) and `PivotTo(OriginalCFrame)` (a Part: set `CFrame`). For a script, re-parent it by hand to the place named in `OriginalPath` and set `Enabled = true`. This recipe has not been tested. `ServerStorage` does not replicate, so quarantined items cost clients nothing. Scripts that were disabled in place carry `QuarantinedScript = true`: 43 were disabled this way (proximity doors, outfit givers and similar, kept for a decision), and most travelled into quarantine with their models; 1 remains in Workspace. Find them all by that attribute.
 
 `StagingSlab` holds `UnderGroundCasino` and `WareHouseP2`, which look like the underground halves of the casino and warehouse robberies. Phase 3 brings the Robbery place's scripted buildings; the developer should know these exist.
 
@@ -108,7 +108,7 @@ All rulings are in the ledger; the ones that shape the map:
 - Every moved item has its restore attributes; one top-level model of each robbery building remains and their pivots did not move.
 - Spawn check in Play: 21 samples over 5 s, Y = 5.09 every sample.
 - Under streaming, the client held 20,593 descendants; `Map.Robbery` has 6 children and only 1 had parts loaded (`CasinoMain`).
-- Tasks 1 to 5 were each reviewed against the live place and ended with no open Critical or Important finding (Task 1's two Important findings were labelling fixes). Task 6's review was still running when this note was written.
+- Tasks 1 to 6 were each reviewed against the live place and ended with no open Critical or Important finding (Task 1's two Important findings were labelling fixes). Task 6 was reviewed the same way and approved with no Critical or Important finding: the five scriptable streaming values, the six top-level children, `Ground` and `Plots` as Persistent, 0 `CanTouch` and 0 unanchored parts under `Map`, and 118,679 instances were all confirmed on the live place. That review did not run Play, so the spawn check and the client-side streaming table rest on the implementer's single run.
 
 ### Disproved
 

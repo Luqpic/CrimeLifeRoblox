@@ -29,7 +29,7 @@ The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of Crim
 - **Plots.** `Plot1` to `Plot6` are the six plates inside the city; `Plot7` and `Plot8` were on the old staging slab and carry `Spare = true`. Each plate has the attribute `PlotIndex` (1 to 8). `Plots` is a Model and `Persistent`, so plates never stream out.
 - **Streaming** (set 2026-11-14): `StreamingEnabled = true`, `StreamingIntegrityMode = PauseOutsideLoadedArea`, `StreamOutBehavior = Opportunistic`, `StreamingMinRadius = 128`, `StreamingTargetRadius = 512`. `Ground` is `Persistent`. At spawn a client held 20,593 descendants and only 1 of the 6 robbery buildings was loaded.
 - **Parts.** Every part under `Map` is anchored; `CanTouch` is off on all 97,888 of them and `CastShadow` is off on 40,325 small ones. `SpawnLocation` keeps `CanTouch`.
-- **Restore.** Anything in quarantine can be moved back from its `OriginalCFrame`, `OriginalParent` and `OriginalPath` attributes. Scripts disabled in place have `QuarantinedScript = true`.
+- **Restore.** Models, parts and folders in `Duplicates`, `LooseTycoon` and `StagingSlab` carry `OriginalParent` ("Workspace") and, except Folders, `OriginalCFrame`: set `Parent = workspace` (outside the `Map` folders) and `PivotTo(OriginalCFrame)`. The 8 scripts in `CityQuarantine.Scripts` carry `OriginalPath` (a string) and no CFrame: re-parent by hand and set `Enabled = true`. Not tested. Scripts disabled in place have `QuarantinedScript = true`.
 
 ## Extend it
 

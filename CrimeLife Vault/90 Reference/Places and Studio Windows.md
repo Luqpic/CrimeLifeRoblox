@@ -22,7 +22,7 @@ Cleaned on 2026-11-14 ([[2026-11-14 City Baseline and Cleanup]]); not saved by t
 - `Map` holds the art: `City`, `Robbery` (the six robbery buildings), `Roads`, `Props`, `Loose`.
 - `Plots` holds `Plot1` to `Plot6` (the city's blue plates) and `Plot7`, `Plot8` (`Spare = true`).
 - `Ground` holds the origin Baseplate. `SpawnLocation`, `Terrain` and `Camera` stay top level.
-- `ServerStorage.CityQuarantine` holds everything moved out (`Scripts`, `Duplicates`, `LooseTycoon`, `StagingSlab`), restorable from each item's `OriginalCFrame`, `OriginalParent` and `OriginalPath`.
+- `ServerStorage.CityQuarantine` holds everything moved out (`Scripts`, `Duplicates`, `LooseTycoon`, `StagingSlab`), restorable from the `OriginalParent` and `OriginalCFrame` attributes (models, parts) or `OriginalPath` (the 8 scripts); see [[City Map and Plots]].
 - Streaming is on; `ModelStreamingBehavior` still needs `Legacy` set by hand. Details: [[City Map and Plots]], [[Four Places Survey 2026-11-14]].
 
 ### The Robbery rule
