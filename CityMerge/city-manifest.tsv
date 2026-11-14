@@ -196,3 +196,5 @@ StarterCharacterScripts/CustomShiftLock	SmoothShiftLock.Spring	ModuleScript	n/a	
 StarterCharacterScripts/LandAnim	(root)	LocalScript	true	10044350
 StarterCharacterScripts/Lean	(root)	LocalScript	true	2478388517
 StarterCharacterScripts/Turning	(root)	LocalScript	true	2747668829
+Workspace/Quests	Level 1 Quest.Animate	LocalScript	true	461847317
+Workspace/Dev/UI	OverheadGui.InformationLabel.Script	Script	true	2983742675
