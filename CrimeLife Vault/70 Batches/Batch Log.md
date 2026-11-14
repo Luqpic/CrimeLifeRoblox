@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-14 | City | [[2026-11-14 City Baseline and Cleanup]] | City cleanup: backdoor scripts and duplicate buildings removed, slab quarantined, plots named, streaming on (264,072 to 118,679 Workspace instances) |
 | 2026-09-25 | FPS | [[FPS-RPG-Reload-Hand-Carries-Rocket]] | RPG Reload — The Hand Carries the Rocket Into the Tube |
 | 2026-09-25 | FPS | [[FPS-Gamepass-Shop-Scrolling-Grid]] | Gamepass Shop Grid Scrolls Instead of Overflowing |
 | 2026-09-24 | FPS | [[Revert-Global-Spraypaint-Balance]] | Revert Spraypaint to a global balance, raise skin prices |

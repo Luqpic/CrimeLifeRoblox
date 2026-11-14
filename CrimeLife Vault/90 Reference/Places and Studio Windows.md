@@ -15,6 +15,15 @@ Which place file holds what, and which Studio window the `Roblox_Studio` MCP mus
 |---|---|---|---|
 | **FPS System** | `Roblox Games/FPS System.rbxl` (local file, last modified 2026-09-25) | The primary place: weapons, shop, enemies, quests, leveling, cosmetics, persistence. All `70 Batches/FPS System/` work. | **Yes**, by default |
 | **Robbery System** | `Roblox Games/Robbery System.rbxl` (last modified 2026-09-20) | A heist game: Bank, SlowFoods, Gas2Go, NewsStation robberies, puzzle prompts, getaway. All `70 Batches/Robbery System/` work. | **Only when named explicitly** |
+| **Crimelife City** | `Roblox Games/Crimelife city.rbxl` (local file; saved copy `Crimelife city copy.rbxl` is the pre-cleanup state) | The main map and the **merge target** for the combined game. Art only after the 2026-11-14 cleanup: no CrimeLife scripts yet. | **Only when named**; the FPS and Robbery work is ported into it later |
+
+### Crimelife City (the merge target)
+Cleaned on 2026-11-14 ([[2026-11-14 City Baseline and Cleanup]]); not saved by that batch. Layout, `Workspace`:
+- `Map` holds the art: `City`, `Robbery` (the six robbery buildings), `Roads`, `Props`, `Loose`.
+- `Plots` holds `Plot1` to `Plot6` (the city's blue plates) and `Plot7`, `Plot8` (`Spare = true`).
+- `Ground` holds the origin Baseplate. `SpawnLocation`, `Terrain` and `Camera` stay top level.
+- `ServerStorage.CityQuarantine` holds everything moved out (`Scripts`, `Duplicates`, `LooseTycoon`, `StagingSlab`), restorable from each item's `OriginalCFrame`, `OriginalParent` and `OriginalPath`.
+- Streaming is on; `ModelStreamingBehavior` still needs `Legacy` set by hand. Details: [[City Map and Plots]], [[Four Places Survey 2026-11-14]].
 
 ### The Robbery rule
 Robbery System shares UI modules with FPS System but is a **separate project. Never edit it unless the request names it.** Reading it to compare a shared module is fine; writing is not.
@@ -41,7 +50,7 @@ Robbery keeps its own registry `ReplicatedStorage.SharedSystems.UITheme`; FPS ha
 - Synthetic mouse input and `screen_capture` have both failed in this environment at times; say what could not be seen.
 
 ## Other files with related names (not inspected)
-`Roblox Games/Crimelife city.rbxl`, `Crimelife city copy.rbxl`, `Crimelife city with tycoon .rbxl`, `CrimeLife Tycoon Building .rbxl`, `Crimelife Building (last saved 2023).rbxl`, plus `docs/crimelife-hq-blueprint.html`, `docs/crimelife-2023-exterior-reference.jpg`, `docs/figma-svg/`, `docs/flow-refs/`. Whether these belong to this game (a future map?) is **not recorded**. Ask before using or editing any of them.
+`Roblox Games/Crimelife city with tycoon .rbxl`, `CrimeLife Tycoon Building .rbxl`, `Crimelife Building (last saved 2023).rbxl`, plus `docs/crimelife-hq-blueprint.html`, `docs/crimelife-2023-exterior-reference.jpg`, `docs/figma-svg/`, `docs/flow-refs/`. Whether these belong to this game (a future map?) is **not recorded**. Ask before using or editing any of them.
 
 `Roblox Games/EnemyAI.md` (2026-09-09) is FPS System's own enemy AI design note; see [[Docs Index]].
 

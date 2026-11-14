@@ -43,6 +43,10 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 - [[Quests and Dialogue]]: quest givers, dialogue replies, quest log.
 - [[Movement and Stamina]]: sprint, stamina, landings, lean.
 
+## City map
+
+- [[City Map and Plots]]: the cleaned Crimelife City map, the eight plots, streaming, the quarantine folders.
+
 ## Robbery place
 
 - [[Robbery Prompts]]: the liquid-fill proximity prompt (shared with the FPS place).

@@ -79,4 +79,10 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 - A respawn empties PlayerGui of loose objects (BindableEvents, Folders).
 - A `CollectionService` added-signal fires again for every stream-in: remember what you wired.
 
+## Free-model backdoors
+- **Symptom:** a map built from free models carries hundreds of loose scripts that nobody on the team wrote; the Studio output shows `Terrain.Fix` and `HD Admin.Settings.Loader` trying to download assets. In `Crimelife city.rbxl` there were 636 scripts in Workspace, none CrimeLife code.
+- **Cause:** free models and "admin" kits ship a hidden loader that `require`s a numeric asset id at run time, so whoever owns that asset runs code on your server. Three kinds were found: five copies of `ServerScriptService.ClientReplicator` (one obfuscated line, `getfenv` plus a reversed-string `require` with a numeric id, active only when not in Studio); `Workspace.Terrain.Fix`, a 69,317-character infector (mostly blank lines before the payload, header "Removing this may cause severe damage to your game"); and the HD Admin loader `require(3239236979)`.
+- **How it was found:** a source scan over every `LuaSourceContainer` in every service, with three needles: a numeric `require(<id>)`, `getfenv`, and `loadstring`; then a check for `HttpService`, `InsertService`, `MarketplaceService`, `TeleportService` and `MessagingService` (none hit). Scripts were grouped by Adler-32 hash so each distinct source was read once.
+- **Fix:** save every source first (`CityCleanup/removed-scripts/`, 82 files), then destroy; do not disable, because a disabled backdoor still travels with the place. Anything you want to keep for a decision goes to `ServerStorage` with `Enabled = false`. Do not publish a place file from before the cleanup: the on-disk copies still contain the backdoors. Bit us: [[2026-11-14 City Baseline and Cleanup]].
+
 Related: [[Engine Traps MOC]] · [[Studio MCP Gotchas]] · [[Unit Test Runner]]

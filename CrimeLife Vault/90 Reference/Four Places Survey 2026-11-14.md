@@ -28,6 +28,23 @@ A read-only count of the four Studio places that will be merged into CrimeLife T
 - A copy of the tycoon building's parts is pasted loose into Workspace (droppers, conveyors, outfits, `TycoonSpawn`, 21 `DropperConfig` modules), not inside one model.
 - The developer says six blue baseplates mark the base plots. Not located or measured in this survey.
 
+## After cleanup (2026-11-14)
+
+Measured after the city cleanup ([[2026-11-14 City Baseline and Cleanup]]); the section above is the baseline and is unchanged. Source: `CityCleanup/after-task6.md`. Edit mode, not saved.
+
+- Workspace: 118,679 instances (baseline 264,072), 97,899 parts, 10,332 MeshParts, 5,000 unions, 0 unanchored parts.
+- `StreamingEnabled` is **true** (`StreamingMinRadius` 128, `StreamingTargetRadius` 512, `StreamingIntegrityMode = PauseOutsideLoadedArea`, `StreamOutBehavior = Opportunistic`). `ModelStreamingBehavior` is not scriptable and is not confirmed `Legacy`. A client holds 20,593 descendants at spawn.
+- Scripts in Workspace: 1, disabled (baseline 636, 619 enabled). Five backdoor copies of `ClientReplicator`, `Terrain.Fix` and the HD Admin loader were destroyed; see [[Luau and Scripting Traps]].
+- Six top-level Workspace children: `Terrain`, `Camera`, `Map`, `Plots`, `SpawnLocation`, `Ground`.
+  - `Map`: `City` (25,554), `Robbery` (6 buildings, 83,419), `Roads` (3, 1,798), `Props` (147, 4,307), `Loose` (213, 3,580).
+  - `Plots`: `Plot1` to `Plot6` (the six blue plates in the city) and `Plot7`, `Plot8` (on the old staging slab, `Spare = true`). This confirms the developer's six placeholder baseplates.
+  - `Ground`: the origin Baseplate.
+- `ServerStorage.CityQuarantine` holds what was moved out: `Scripts`, `Duplicates`, `LooseTycoon`, `StagingSlab`. `ServerStorage` is 143,383 instances and does not replicate.
+- Duplicates are gone: one copy each of `WareHouseRobbery(NotUnderGroundPart)`, `Bank`, `CasinoMain`, `NewsStation`, `Gas2Go` and `SlowFoods` remains, in `Map.Robbery`. `AI Dummy` and the four `Dummy` rigs are quarantined.
+- Studio-hosted Play readings (like for like only): memory 6,266.02 to 6,276.95 MB (baseline 7,830.04 to 7,834.16), PerformAverage 7.9681 / 1.9855 / 2.1798 (baseline 5.5949 to 5.8995). Real phone numbers: not recorded.
+
+Layout and watch-outs: [[City Map and Plots]].
+
 ## Test30.4 (measured)
 
 - Workspace: 87,456 instances, 37,690 parts, 292 scripts. `StreamingEnabled` is true.

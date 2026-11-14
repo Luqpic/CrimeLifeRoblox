@@ -36,6 +36,7 @@ All made by the developer on 2026-11-14, by picking from offered options. Quoted
 ### How it is built (picked after the questions)
 - **Heists feed the base by hauling loot home**: carry it to your HQ past police and rival players; it pays more there and supplies the money lines.
 - **The tycoon is one data-driven service** with server-computed income that saves and earns while away, not the marketplace kit.
+- **Buying can remove parts**: "the tycoon has parts that needs removal and what not (buy this and it will remove certai parts)". The catalog must carry each purchase's remove-list, read from the kit's buttons in `HQ.Building` before they are stripped (phase 4).
 - **Reuse OBT's systems**: "you can just reuse some of the existing systems from OBT such as the build menu, ect." OBT is read, never edited; which systems and what changes in the port are in `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`.
 
 - **Six players, two spare plots**: the city has eight blue plates; two stay empty.

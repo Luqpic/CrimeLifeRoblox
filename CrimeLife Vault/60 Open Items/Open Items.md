@@ -7,7 +7,7 @@ sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/*.md (Status li
 
 # Open Items
 
-Harvested on 2026-11-14 from every change log whose `Status:` or Notes say not verified, needs a person, follow-up or later. Each item names its source; the date is the source's date. When an item closes, remove it here and say so in the batch note. Systems: [[Systems MOC]]. How to re-check: [[Regression Suite]].
+Harvested on 2026-11-14 (city items added the same day) from every change log whose `Status:` or Notes say not verified, needs a person, follow-up or later. Each item names its source; the date is the source's date. When an item closes, remove it here and say so in the batch note. Systems: [[Systems MOC]]. How to re-check: [[Regression Suite]].
 
 ## Needs the developer
 
@@ -19,6 +19,28 @@ Harvested on 2026-11-14 from every change log whose `Status:` or Notes say not v
 - **Publish the 49 viewmodel KeyframeSequences**: the Studio tooling cannot upload animations (2026-09-20). [[FPS-Viewmodel-KeyframeSequence-Export]]
 - **Upload icons for the eight new guns** (2026-09-24). [[FPS-Eight-New-Pistols-And-Shotguns]]
 - **Share the sound assets that fail "not authorized"** in the Creator Dashboard: about 9 weapon sounds (2026-09-18) and about 10 sounds (2026-09-24); the logs do not say whether these overlap. [[FPS-Figma-1to1-Image-Export-And-Font-Fix]] [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
+
+### City map (2026-11-14)
+- **Save `Crimelife city.rbxl`.** Nothing was saved by the city cleanup (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Set `Workspace.ModelStreamingBehavior` to `Legacy`** in the Properties panel: it is not scriptable, so it is not confirmed (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Agree or change the provisional performance targets** in `CityCleanup/baseline-2026-11-14.md` (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Look at the city under streaming on a real phone** and name any far landmark that must stay visible; with a 512 target radius only 1 of the 6 robbery buildings is loaded at spawn (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Decide lighting and time of day** from `ServerStorage.CityQuarantine.Scripts` (8 scripts, disabled) (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Decide the fate of `CityQuarantine.Duplicates`, `LooseTycoon` and `StagingSlab`.** `StagingSlab` holds `UnderGroundCasino` and `WareHouseP2`, which look like the underground halves of the casino and warehouse robberies (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **`Workspace.Map.Loose` still holds 213 unsorted pieces**, including 138 unnamed Models (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Two spare slab plates (`Plot7`, `Plot8`) and the origin Baseplate are still in the place**; decide whether the slab stays (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
+- **Heaviest remaining models**, the candidates for a later simplification pass (2026-11-14). Workspace is 118,679 instances against a target of <= 163,700, so this is not a miss; the six robbery buildings alone are about 83,419 instances and the warehouse about 56,000. From the after-task3 probe, less the models quarantined since ([[2026-11-14 City Baseline and Cleanup]]):
+  1. `Map.Robbery.WareHouseRobbery(NotUnderGroundPart)` 56,397
+  2. `Map.City` 25,554 (a container)
+  3. `Map.City.Buildings` 13,465
+  4. `Map.City.nature` 6,935
+  5. `Map.Robbery.NewsStation` 6,434
+  6. `Map.Robbery.Gas2Go` 6,407
+  7. `Map.Robbery.SlowFoods` 6,399
+  8. `Gas2Go.BuildingGasStation` 5,468
+  9. `NewsStation.Model` 4,950
+  10. `Map.Robbery.Bank` 3,891 (tied with `CasinoMain` 3,891)
+  The last probe prints only the containers, so these counts are the last per-model figures measured (after Task 3), not a fresh read.
 
 ### Product calls waiting
 - **Price curve.** Nebula at 8200 Spraypaint is about 4,100 Criminal kills; re-size it (2026-09-24). Upgrade, cash-drop and Spraypaint rates are all placeholders (2026-09-16, 2026-09-23). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]] [[FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix]] -> [[Spraypaint]]
@@ -60,6 +82,7 @@ Harvested on 2026-11-14 from every change log whose `Status:` or Notes say not v
 
 ## Watch list
 
+- **City: colour-cycling casino parts and blinking alarm lights are now static**, because their scripts were removed; 43 scripts were disabled in place (`QuarantinedScript = true`) and most travelled into quarantine with their models, 1 remains in Workspace (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
 - **Revolvers' left hand drifts 0.55 studs while firing**: seen, not investigated (2026-09-24). [[FPS-New-Guns-Magazines-And-Pump-Forends]]
 - **RPG knockback on another player** is untested (2026-09-24). [[FPS-RPG-Gamepass-Launcher]]
 - **The shotgun's shop preview may be upside down** (2026-09-15). [[FPS-Weaponary-3D-Display-Fixes-Baton-Rebuild-Owned-Tab]]
