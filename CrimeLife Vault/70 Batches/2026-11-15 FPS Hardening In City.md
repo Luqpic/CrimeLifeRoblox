@@ -50,7 +50,7 @@ Rate state was first keyed per Tool instance; review found `SetLoadoutSlotReques
 
 ## Decisions
 
-Claude's calls (controller rulings from the ledger) are in [[CrimeLife Tycoon Decisions]] under 2026-11-15, phase 2b. The developer's one call: "Run, save checkpoints".
+Claude's calls (controller rulings from the ledger) are in [[CrimeLife Tycoon Decisions]] under 2026-11-15, phase 2b, including the empty leading-space files in `CityScripts/` and leaving `Workspace.HQ` untouched (saved with it present; removing it is the developer's call). The developer's one call: "Run, save checkpoints".
 
 ## Verified
 
@@ -68,7 +68,7 @@ Claude's calls (controller rulings from the ledger) are in [[CrimeLife Tycoon De
 - **A person at the keyboard:** pressing E on a quest giver, the quest dialogue by click, a phone, two players.
 - **Whether the four flipped ScreenGuis look the same on screen.** Equality is of modelled paint order (tree order for ties), not proven against the renderer; the counts include hidden objects.
 - **That `Crouching`'s dust reaches `Workspace.FX`:** the folder exists, the dust path was not exercised.
-- **The 3 server errors per Play from `Workspace.HQ`** (below) were not traced to who added that folder.
+- **The 3 server errors per Play from `Workspace.HQ`** (below); the controller left it untouched and saved with it present were not traced to who added that folder.
 
 ## Left open
 
@@ -77,5 +77,7 @@ All in [[Open Items]]. New this batch: the six ScreenGuis left `Global` with the
 ## Links
 
 [[Persistence and Saves]] · [[Quests and Dialogue]] · [[HUD and UI Shell]] · [[Streaming and Replication Traps]] · [[Luau and Scripting Traps]] · [[UI Layout Traps]] · [[Unit Test Runner]] · [[CrimeLife Tycoon Decisions]] · [[2026-11-15 FPS Systems Into City]] · [[Open Items]] · [[Batch Log]]
+
+Still open for the frozen FPS place only: `Lean` line 25 and line 41, `workspace.FX`, the preview script (fixed in the city; no action planned in the read-only reference).
 
 **Saved to `Crimelife city.rbxl` at checkpoints after Tasks 1 to 4; the controller saves once more after this task. NOT published.**

@@ -87,6 +87,8 @@ Claude's calls (the controller's rulings, from `.superpowers/sdd/2026-11-15-fps-
 - **Non-table quest data in a profile is repaired to `{}` in `hydrate`**, and `restore` gets tests for a lowered target, huge progress and a Completed entry: cheap data-loss prevention.
 - **ScreenGuis flip to `Sibling` only where the paint order is measured equal.** Four flipped, six left `Global` ([[Open Items]]).
 - **Created test modules count in the expected-difference list** of the closing checksum run; edits to a script that already carries `CityMergeDeviation` append to the attribute, never overwrite it.
+- **26 empty files with leading-space names in `CityScripts/` are left alone.** A failed shell loop in Task 1 made them; the implementer's delete was blocked by a safety check, so the controller did not delete them on its behalf. They are hidden from git through `.git/info/exclude` and were reported to the developer. Cost if wrong: clutter only.
+- **`Workspace.HQ` is left untouched.** It (58,277 descendants, 24 enabled scripts) appeared in the place during the run, was not added by any task and was the selected object in Studio. The controller saved with it present, because removing it is the developer's call. Cost if wrong: a heavier saved place until it is removed (`ServerStorage.HQ` still holds the source).
 - **Work stays on `main`** (vault convention, the developer's standing consent for commits; not pushed).
 
 Related: [[Economy and Progression Decisions]], [[Robbery Decisions]], [[Decisions MOC]].
