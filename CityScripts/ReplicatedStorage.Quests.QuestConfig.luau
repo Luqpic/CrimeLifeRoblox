@@ -130,6 +130,10 @@ QuestConfig.STATE_ACCEPTED = "Accepted"
 QuestConfig.STATE_READY_TO_TURN_IN = "ReadyToTurnIn"
 QuestConfig.STATE_COMPLETED = "Completed"
 
+-- Player attribute QuestService sets true after restoring saved quests. A completions change seen
+-- before it is a restore, not a turn-in, so clients must not celebrate it.
+QuestConfig.RESTORED_ATTRIBUTE = "QuestsRestored"
+
 -- How close a player must stand to the quest giver for the server to accept or hand in its quest.
 -- The dialogue itself closes at 10 studs (DialogModule's walk-away range); 30 leaves room for lag.
 QuestConfig.MAX_INTERACT_DISTANCE = 30

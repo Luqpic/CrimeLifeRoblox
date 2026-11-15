@@ -117,4 +117,15 @@ Quest progress saved (phase 2b Task 3), same columns:
 
 New test case module: `ServerStorage.UnitTest.Cases.QuestSave_Test` (1,915 / 731278334), `CityMergeDeviation = "2026-11-15 new: QuestConfig.restore rules"`. All six sources exported to `CityScripts/`; on-disk Adler-32 equals the place.
 
+Quest restore does not replay the completion toast (phase 2b Task 3, fix round 1), same columns:
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-15 | `ReplicatedStorage.Quests.QuestConfig` (ModuleScript) | 6,674 / 3462569414 | 6,900 / 1331490080 | One constant `RESTORED_ATTRIBUTE = "QuestsRestored"` shared by server and client. Attribute appended: `"...; 2026-11-15 RESTORED_ATTRIBUTE"`. |
+| 2026-11-15 | `ServerScriptService.Quests.Scripts.QuestService` (Script) | 8,577 / 3078525795 | 8,992 / 2852790903 | `hydrate` resets `profile.Data.quests` / `questCompletions` to `{}` only when not a table, and sets `QuestsRestored = true` last. Attribute appended: `"...; 2026-11-15 hydrate sets QuestsRestored last, resets non-table quest fields"`. |
+| 2026-11-15 | `StarterPlayer.StarterPlayerScripts.QuestFeedbackController` (LocalScript) | 3,283 / 1810268451 | 3,847 / 965953225 | Measured: hydration raising `Quest_Level1Thugs_Completions` 0 -> 1 showed a QUEST COMPLETE card and played the sound. A completions change seen while the script's own `questsRestored` flag (set from the attribute's changed signal, so same-frame changes keep their order) is false now only seeds the last-seen count. `CityMergeDeviation = "2026-11-15 completions seen before QuestsRestored are a seed, not a completion"`. |
+| 2026-11-15 | `ServerStorage.UnitTest.Cases.QuestSave_Test` (ModuleScript) | 1,915 / 731278334 | 3,101 / 1803481558 | Four cases: Accepted at the target, ReadyToTurnIn with low progress, huge and infinite progress, Completed kept. Attribute appended. |
+
+`QuestDialogueController` (line 132) reads the completions count for its dialogue text only; no celebration, so unchanged.
+
 NOT saved / NOT published

@@ -40,4 +40,26 @@ return function(t)
 		local saved = {}
 		expect.falsy(QuestConfig.restore(saved, saved) == saved)
 	end)
+	t.test("accepted at exactly the target (a lowered target) reads as ready", function()
+		local q = QuestConfig.restore({ Level1Thugs = { state = A, progress = target } }, {})
+		expect.deepEqual(q, { Level1Thugs = { state = R, progress = target } })
+	end)
+	t.test("ready saved with low progress comes back at the target", function()
+		local q = QuestConfig.restore({ Level1Thugs = { state = R, progress = 2 } }, {})
+		expect.deepEqual(q, { Level1Thugs = { state = R, progress = target } })
+	end)
+	t.test("huge and infinite progress clamp to the target and read as ready", function()
+		local q = QuestConfig.restore({
+			Level1Thugs = { state = A, progress = 1e12 },
+			Level10Smugglers = { state = A, progress = math.huge },
+		}, {})
+		expect.deepEqual(q, {
+			Level1Thugs = { state = R, progress = target },
+			Level10Smugglers = { state = R, progress = QuestConfig.Quests.Level10Smugglers.objectiveTarget },
+		})
+	end)
+	t.test("a completed entry stays completed", function()
+		local q = QuestConfig.restore({ Level1Thugs = { state = QuestConfig.STATE_COMPLETED, progress = 3 } }, {})
+		expect.deepEqual(q, { Level1Thugs = { state = QuestConfig.STATE_COMPLETED, progress = 3 } })
+	end)
 end

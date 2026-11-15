@@ -69,12 +69,21 @@ local function hydrate(player: any, profile: any?)
 	if not profile then
 		return
 	end
+	-- A malformed save would make every later save() throw; reset only that field.
+	if type(profile.Data.quests) ~= "table" then
+		profile.Data.quests = {}
+	end
+	if type(profile.Data.questCompletions) ~= "table" then
+		profile.Data.questCompletions = {}
+	end
 	local quests, completions = QuestConfig.restore(profile.Data.quests, profile.Data.questCompletions)
 	playerQuests[player] = quests
 	for questId in QuestConfig.Quests do
 		publishQuestAttributes(player, questId)
 		player:SetAttribute(QuestConfig.completionsAttributeFor(questId), completions[questId] or 0)
 	end
+	-- Last, so a client sees every restored count before it: those are not completions to celebrate.
+	player:SetAttribute(QuestConfig.RESTORED_ATTRIBUTE, true)
 end
 
 ProfileGateway.registerHydrator(hydrate)
