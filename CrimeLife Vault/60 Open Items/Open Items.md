@@ -50,7 +50,9 @@ Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[
 - **`Documents/Roblox/CLAUDE.md` still names FPS System as the primary place.** It is the developer's file: one line to change (the primary place is now Crimelife City, [[Which Project This Is]]). [[2026-11-15 FPS Systems Into City]]
 - **Checks that need a person at the keyboard in the city:** how shooting feels, pressing E on a quest giver, the weapon shop by real clicks, a phone, two players. [[2026-11-15 FPS Systems Into City]]
 - **Walk the `TycoonPreview`.** Its fit on `Plot3` was checked by one screenshot and bounding numbers only. [[2026-11-15 FPS Systems Into City]]
-- **Phase 2b carries three items listed below**: the remote ownership audit, the eleven `ZIndexBehavior.Global` ScreenGuis, and quest progress not being saved (see "Documentation drift"). Its plan is to be written from `CityMerge/first-run.md`. [[2026-11-15 FPS Systems Into City]]
+- **Six ScreenGuis stay `ZIndexBehavior.Global` in the city** because `Sibling` would change their paint order (swapped pairs / overlapping pairs): `CashShopGui` 233 / 0, `GamepassShopGui` 51 / 0, `WeaponaryShopGui` 609 / 0, `QuestLogGui` 2 / 0, `DeathScreenGui` 3 / 3, `Custom Inventory` 123 / 0. Only `DeathScreenGui` has overlapping pairs (container ZIndex 5 over children at 2, hidden): fixing its numbers is the developer's call. The counts include hidden objects and model ties as tree order. [[2026-11-15 FPS Hardening In City]] -> [[UI Layout Traps]]
+- **`Workspace.HQ` is in the city place** (a Folder with 58,277 descendants and 24 scripts, a copy of `ServerStorage.HQ`); it was not there at the start of the phase 2b closing run and every Play now logs 3 server errors from it (the reception door script reads a missing `opendoor`, the barista script reads a missing `ServerStorage.Bar`). Who added it is not recorded: keep or remove it, then decide whether those scripts are fixed. [[2026-11-15 FPS Hardening In City]]
+- **Phone and two-player checks still owed** for everything in phase 2b (quest reach at the giver, the quest toast, the flipped ScreenGuis). [[2026-11-15 FPS Hardening In City]]
 
 ### Product calls waiting
 - **Price curve.** Nebula at 8200 Spraypaint is about 4,100 Criminal kills; re-size it (2026-09-24). Upgrade, cash-drop and Spraypaint rates are all placeholders (2026-09-16, 2026-09-23). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]] [[FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix]] -> [[Spraypaint]]
@@ -76,23 +78,25 @@ Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[
 
 ## Open bugs
 
-- **Lean/Turning is switched off, not fixed** (2026-09-11); the Lean script still errors at line 25 (2026-09-24) in the frozen FPS place. **Fixed in the city on 2026-11-15** (`WaitForChild` on the three lookups, [[2026-11-15 FPS Systems Into City]]), but line 41 `lowerTorso.Root` is still a direct index in both places. [[FPS-Death-Screen-Stuck-Crowbar-Desync-Lean-Turning-Errors]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
-- **`Crouching` line 250 references `workspace.FX`**, which does not exist in either place (`dust.Parent = workspace.FX`; not reached in the runs); `ServerScriptService.WeaponAnimationPreview` waits forever on `Workspace.WeaponAnimationPreview`, absent in both places, so every Play logs an infinite-yield warning (2026-11-15). [[2026-11-15 FPS Systems Into City]]
+- **Re-slotting a held weapon leaves a second copy** with a full magazine: `SetLoadoutSlotRequest` clears the old slot, does not destroy the held Tool and grants a fresh one (not a FIX: the weapon is owned) (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Weapons and Blaster]]
+- **A skin choice can be stored for a weapon the player does not own** (`EquipSkinRequest`, `BuySkinRequest` check the weapon exists, not ownership); nothing is granted (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Cosmetics and Skins]]
+- **One burst after idle is accepted by the server rate of fire:** any claimed timestamp from the last second of server time passes, so about 12 AK47 shots at 600 rpm or 1 swing of a 30 rpm weapon go through before the cap holds (2026-11-15). [[2026-11-15 FPS Hardening In City]]
 - **Third-person `MuzzleAttachment` sits at the stock end** on the Glock 17, Benelli M4 and Spas 12 (2026-09-24). [[FPS-Eight-New-Pistols-And-Shotguns]]
 - **Mossberg 590 and Spas 12 fore-ends do not move** (2026-09-24). [[FPS-New-Guns-Magazines-And-Pump-Forends]]
 - **The RPG still plays Roblox's own explosion bang** under its impact sound; the RPG grid card still reads "GAMEPASS" once owned (2026-09-24). [[FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons]]
 - **No "shot denied" feedback during a weapon's cooldown** (2026-09-11). [[FPS-Loadout-Bugfixes-Sounds-VFX]]
 - **The ammo HUD shows a static "reloading"** through the shotgun's shell-by-shell reload (2026-09-11). [[FPS-Melee-Combo-And-Shotgun-Reload-Refactor]]
-- **Eleven ScreenGuis are still `ZIndexBehavior.Global`**, each one per-element `ZIndex` away from a blank card (2026-09-24). [[Notification-Blank-Card-ZIndexBehavior]]
 - **`IndicatorClient`'s `OverheadGui` and `PlayerNameplates` may both draw a name** in multiplayer (2026-09-18). [[FPS-Quest-Overflow-And-Dead-Code-Removal]]
 - **The weapon `Description` attribute is unset**, so that line renders empty (2026-09-18). [[FPS-Figma-UI-Bugfix-Pass-2]]
 - **`SpraypaintHud` can show a spurious toast at join** (2026-09-24). [[Per-Weapon-Spraypaint]]
-- **Remote ownership audit:** every client remote needs its ownership check; `UpgradeRequest` shipped without one (2026-09-23). [[FPS-Persistence-Phase-3]]
 - **`WalkSpeed` swings between 20 and 25.83 after the landing window**, cause unknown (2026-09-19). [[FPS-Sprint-Landing-Dead-Stop]]
 - **Robbery `CashClaimVFX` fails 12 specs** (a lazy require; moving it to module scope fixes it), and `RestaurantConfig` / `Gas2GoConfig` each fail a `CooldownDuration` check (config 60, spec expects 1200 and 600) (2026-09-20). [[Getaway-Distance-Replaces-Claim-Zone]]
 
 ## Watch list
 
+- **The server fire-rate margin (10% under the interval) has not been tried with real mouse fire**: a laggy but honest client could have shots dropped; only synthetic timestamps were run (2026-11-15). [[2026-11-15 FPS Hardening In City]]
+- **A client whose profile never restores never shows a quest completion** (`QuestsRestored` is never set). It cannot happen while a failed profile load kicks the player (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Quests and Dialogue]]
+- **All phase 2b save tests ran on the mock store only** (quest progress, purchase, kill, turn-in); a published place is untested (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Persistence and Saves]]
 - **`PromptUiController` scans `workspace:GetDescendants()` on the client**: 11.69 ms once at start in the city against 4.35 ms in the FPS place; instances that stream in later are handled only if it listens for them (a `DescendantAdded` handler exists; the restyle of a streamed-in prompt was not observed) (2026-11-15). [[2026-11-15 FPS Systems Into City]]
 - **8 CoreGui load-timeout errors** (`GraphQL extendSchema`, `StarterScript`, then the player list and top bar) on the client in the Task 5 run: Roblox's own modules, seen once, not in the earlier Plays (2026-11-15). [[2026-11-15 FPS Systems Into City]]
 - **The late-sibling rescue in `WeaponaryShopController` is unobserved**: the race did not recur in five Plays, so only the `WaitForChild` contract backs it (2026-11-15). [[2026-11-15 FPS Systems Into City]]
@@ -113,6 +117,6 @@ Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[
 
 ## Documentation drift
 
-- **`CLAUDE.md` says progression is session-only.** Stale since 2026-09-23: ProfileStore saves Cash, level and XP, weapons and loadout, upgrades, Spraypaint, skins and kill counts; quest progress is still not saved. The header comment in `LevelingService` is stale too. [[Persistence and Saves]]
+- **`CLAUDE.md` says progression is session-only.** Stale since 2026-09-23: ProfileStore saves Cash, level and XP, weapons and loadout, upgrades, Spraypaint, skins, kill counts and (city, 2026-11-15) quest progress. The header comment in `LevelingService` is stale too. [[Persistence and Saves]]
 - **`CLAUDE.md` still lists `StandardEnemy`** under `ServerStorage.EnemyTemplates`; it was removed on 2026-09-11. [[Enemies and Spawner]]
 - **Repo copies lag Studio:** `FPSSystem/Blaster/ShotResolver.luau` and `WeaponViewmodelMotion.luau` have no RPG explosion code and no profiles for the RPG or the eight 2026-09-24 guns. [[Weapons and Blaster]]

@@ -26,6 +26,12 @@ What replicates, who owns what, and instance streaming. Whether FPS System has `
 ### A server-set attribute can land before a client HUD compares it
 - Setting `Spraypaint` on the server produced no notification card: `SpraypaintHud` compares against a cached `previous`, and the replicated value had already landed before the comparison. Driving the attribute from the client fires the same handler and reproduces faithfully. Use the real trigger for attribute-driven HUD tests. [[Notification-Blank-Card-ZIndexBehavior]].
 
+### Hydration that raises an attribute after the client seeded it replays a "changed" effect
+- **Symptom:** rejoining with a saved quest completion showed a QUEST COMPLETE card and played its sound (measured, city, 2026-11-15).
+- **Cause:** `QuestFeedbackController` seeds its last-seen completions count from the attribute at join (0); the quest hydrator then yields on the profile load and sets `Quest_<id>_Completions` to 1, which the client reads as a new completion. Same family as the HUD race above and the double reward in [[Luau and Scripting Traps]], on the client side.
+- **Fix:** the server sets a player attribute (`QuestsRestored`) last in the hydrator, and the client treats changes before it as seeds. The client's own flag is set from the attribute's changed signal so same-frame changes keep their order. A client whose profile never restores never sees it (cannot happen while a failed load kicks).
+- **Bit us:** [[2026-11-15 FPS Hardening In City]].
+
 ### The client owns its character
 - A server push or `PivotTo` on a player can be overwritten by their client. RPG knockback on another player is unverified for this reason ([[FPS-RPG-Gamepass-Launcher]]).
 

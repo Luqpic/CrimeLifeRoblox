@@ -19,8 +19,8 @@ Quirks of the Studio MCP harness and the Mac (not the engine) are in [[Tools MOC
 - [[Sound and Asset Traps]]: PlaybackLoudness ignoring Volume, unauthorized sound assets, dead animation assets, AnimSaves, opaque-alpha slices, decal ids.
 - [[Tween and Render Traps]]: render-driven tweens and a collapsed viewport, preview pivots, SpecialMesh plastic, Metal, float properties.
 - [[Physics and Character Traps]]: hits absorbed by carried tools, line of sight blocked by allies, Humanoids climbing each other, impulse vs settled distance, client-owned characters, rig hubs.
-- [[Luau and Scripting Traps]]: deferred attribute signals, `string.gsub` magic characters, grep hitting comments, `task.wait` overshoot, setup checks that abort wiring, stale instance paths, free-model backdoors (numeric `require`, `getfenv`).
-- [[Streaming and Replication Traps]]: ServerStorage does not replicate, client scripts that index a separately-arriving instance race under a heavier place, ownership, session locking only testable when published, streaming (if enabled).
+- [[Luau and Scripting Traps]]: deferred attribute signals, `string.gsub` magic characters, grep hitting comments, a rate limit keyed on a Tool instance reset by a fresh clone, an order test on an empty GUI, `task.wait` overshoot, setup checks that abort wiring, stale instance paths, free-model backdoors (numeric `require`, `getfenv`).
+- [[Streaming and Replication Traps]]: ServerStorage does not replicate, hydration that raises an attribute after the client seeded it, client scripts that index a separately-arriving instance race under a heavier place, ownership, session locking only testable when published, streaming (if enabled).
 
 ## The Known traps list, by note
 

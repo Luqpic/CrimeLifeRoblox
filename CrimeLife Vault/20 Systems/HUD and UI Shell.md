@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, ui, hud]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Instance tree, Systems, Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md … Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Close-Button-Unified-With-Robbery.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-UltimateUIPack-Effects-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md"]
 ---
 
@@ -23,6 +23,7 @@ The frame every screen sits in: the five HUD buttons (weaponary, player card, qu
 - `ReplicatedStorage.GuiTemplates.*`: panel templates (WeaponaryShop, PlayerCard, QuestLog, DeathScreen, Notification, WeaponCard, EnemyGUI, ...).
 - `StarterGui."Custom Inventory"`: the HUD button column and hotbar ([[Inventory and Hotbar]]).
 - `ReplicatedStorage.Blaster.Scripts.GuiController`: ammo / weapon-name HUD (desktop: middle-right).
+- City, `ZIndexBehavior = Sibling` (one line after `Instance.new("ScreenGui")`, each script marked `CityMergeDeviation`): `StarterPlayerScripts.PromptUiController`, `AdminLevelController`, `DamageDirectionIndicator`, `ReplicatedStorage.UI.CashBurst`. Audit: `CityMerge/phase2b/zindex-audit.md`; tool: `CityMerge/phase2b/paint-order.luau`.
 - Robbery place: `StarterPlayerScripts.UiButtonEffects` (focus mode), `Modules.PropertyAuthority`, `Modules.CameraAuthority`.
 
 ## How it works
@@ -37,20 +38,21 @@ The frame every screen sits in: the five HUD buttons (weaponary, player card, qu
 
 ## Extend it
 - A new panel: register with `UI.Panels` (its own close function), use `Effects.bindClose()`, raise `MenuFovBlur`, route camera through [[Camera Authority]]. Reuse `WeaponCard` for card templates (cosmetics spec).
-- A new `ScreenGui` built with `Instance.new`: set `ZIndexBehavior = Sibling` explicitly.
+- A new `ScreenGui` built with `Instance.new`: set `ZIndexBehavior = Sibling` explicitly. To flip an existing one, measure its paint order under both modes first (`CityMerge/phase2b/paint-order.luau`) and flip only when the order is equal.
 - Keep `UI.Effects` / `UI.Transitions` byte-identical across both places; change both or neither.
 
 ## Watch out
 - `UIPadding` offsets children as well as text; give a button a `Label` child instead (cost two passes on the shop's price pill).
 - A template's property values are the clone's resting state. Anything that fades needs its hidden state asserted in code for every sub-element (death scrim, dialogue plate, level-up popup twice).
 - A `CanvasGroup`'s `GroupTransparency` does not fade its own `UIStroke`.
-- `ZIndexBehavior` is per `ScreenGui`. As surveyed on 2026-09-24, `NotificationGui` was fixed to Sibling; `CashShopGui`, `GamepassShopGui`, `WeaponaryShopGui`, `QuestLogGui`, `DeathScreenGui`, `PromptUiGui`, `AdminLevelGui`, `DamageDirectionIndicator`, `Custom Inventory`, `Freecam` were still `Global`.
+- `ZIndexBehavior` is per `ScreenGui`. In the city since 2026-11-15 `NotificationGui`, `PromptUiGui`, `AdminLevelGui`, `DamageDirectionIndicator` and `CashSpendBurst` are `Sibling` (paint order measured equal). Still `Global`: `CashShopGui`, `GamepassShopGui`, `WeaponaryShopGui`, `QuestLogGui`, `DeathScreenGui` and `Custom Inventory`, because `Sibling` would change their order (swapped pairs 233, 51, 609, 2, 3, 123; only `DeathScreenGui` has overlapping pairs, 3) ([[Open Items]]). `Freecam` was not measured.
 - A `ScreenGui` with no `UIScale` of its own gets scaled up by `UIScaleController` on wide viewports.
 - Images lazy-load: `IsLoaded = false` on a hidden GUI is not a bad asset id.
 - `multi_edit` `replace_all` has reported success while under-applying, in both places; grep for the inserted text after editing.
 - `ReplicatedStorage.UI.Theme` was dead code and was deleted on 2026-09-18 (its asset registry survives in the Figma change logs). Styling lives on instances.
 
 ## History
+- 2026-11-15 (city): four ScreenGuis flipped to `Sibling` where the paint order is unchanged; six left `Global` with counts recorded. [[2026-11-15 FPS Hardening In City]]
 - 2026-09-23: ammo/weapon HUD moved bottom-right to middle-right (`AnchorPoint (1,0.5)`); touch layout untouched. [[Notification-Card-Fix-And-Weapon-HUD-Move]]
 - 2026-09-19: close buttons unified on `Effects.bindClose()` (five sizes/shapes/behaviours -> one 36px slice). [[Close-Button-Unified-With-Robbery]] / [[Close-Button-Unified-With-FPS]]
 - 2026-09-19: titles re-centred in banner plates; `UI.Transitions` + `UiTransitionBinder` fades ported from Robbery. [[FPS-Banner-Title-Centring-And-UI-Fades]]

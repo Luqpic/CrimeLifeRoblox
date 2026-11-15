@@ -72,4 +72,21 @@ Under this heading, all made by the developer on 2026-11-14, by picking from off
 - Merging without a copy leaves no clean fallback inside Studio. A file copy made in Finder before the first cleanup costs nothing.
 - Two calls in the design are Claude's and unconfirmed: one drivable car from OBT in the first milestone, and Moderate as the maturity target.
 
+## 2026-11-15, phase 2b (hardening in the city)
+
+The developer's call, quoted: "Run, save checkpoints". Claude saved `Crimelife city.rbxl` after each task whose review was clean, never published ([[Save and Publish Rules]]).
+
+Claude's calls (the controller's rulings, from `.superpowers/sdd/2026-11-15-fps-hardening-in-city/progress.md`; the developer has not confirmed them):
+
+- **A missing rate limit alone is OK plus a note, but `Shoot` rate of fire is a FIX.** 100 swings a second kill everything in reach and pay out (rule c). It is enforced on claimed timestamps (already bounded to the last second of server time) with a 10% margin under the interval. Cost if wrong: legit shots dropped under lag, unverifiable without a person shooting.
+- **Rate state is keyed by player and weapon name, not by Tool.** The wording "per tool" was the defect: a fresh clone reset the limit. Cost if wrong: two copies of one weapon share a cooldown, which is the intent.
+- **`SetLevelRequest` NaN is a FIX** (one line): NaN reached the save. Admin-only, so low stakes either way.
+- **Accept and turn-in need the character within 30 studs of the giver** (`MAX_INTERACT_DISTANCE`, from the prompt distance of 10).
+- **OK plus a note, no change:** re-slotting a held weapon leaves a second copy; a skin can be stored for an unowned weapon type; one burst after idle; out-of-range ray keys pass the canonical check and `ShotResolver` skips them.
+- **A completion toast must not replay on restore.** Fix on the client with a server signal (player attribute `QuestsRestored`, set last by the hydrator); the smallest change that does not reorder the load. Cost if wrong: one more attribute.
+- **Non-table quest data in a profile is repaired to `{}` in `hydrate`**, and `restore` gets tests for a lowered target, huge progress and a Completed entry: cheap data-loss prevention.
+- **ScreenGuis flip to `Sibling` only where the paint order is measured equal.** Four flipped, six left `Global` ([[Open Items]]).
+- **Created test modules count in the expected-difference list** of the closing checksum run; edits to a script that already carries `CityMergeDeviation` append to the attribute, never overwrite it.
+- **Work stays on `main`** (vault convention, the developer's standing consent for commits; not pushed).
+
 Related: [[Economy and Progression Decisions]], [[Robbery Decisions]], [[Decisions MOC]].

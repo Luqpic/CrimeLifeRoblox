@@ -13,9 +13,9 @@ sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Syste
 Six quest givers in the FPS place, gated at levels 1, 10, 20, 35, 50 and 70, each ask for kills of one enemy type and pay cash and XP on hand-in. Players talk to them through a billboard dialogue with numbered replies; a Quests button opens a log. Quests are repeatable. The same dialogue engine also runs the Robbery place's Illegal Supplier.
 
 ## Where it lives
-- `ReplicatedStorage.Quests.QuestConfig`: every quest (giver, required level, target enemy name, count, rewards, giver lines). Single source.
+- `ReplicatedStorage.Quests.QuestConfig`: every quest (giver, required level, target enemy name, count, rewards, giver lines). Single source. In the city also `MAX_INTERACT_DISTANCE` (30 studs), `withinReach`, `restore` and `RESTORED_ATTRIBUTE`.
 - `ReplicatedStorage.Quests.Remotes` (`AcceptQuestRequest`, `TurnInQuestRequest`).
-- `ServerScriptService.Quests.Scripts.QuestService`: server authority on quest state, kill counting, payout.
+- `ServerScriptService.Quests.Scripts.QuestService`: server authority on quest state, kill counting, payout; in the city also the save mirror and the hydrator (sets the player attribute `QuestsRestored` last).
 - `ReplicatedStorage.DialogModule` (+ `sounds` `tick`, `tick2`): the conversation engine. Byte-identical copy in the Robbery place since 2026-09-19.
 - `StarterGui.QuestResponsesGui`: the one reply billboard, owned by the player, kept across respawns (set explicitly), `Active = true` (set in the Robbery copy; the FPS one was authored with it on).
 - `StarterPlayer.StarterPlayerScripts.QuestDialogueController`, `.QuestLogController`, `.QuestFeedbackController`.
@@ -41,6 +41,13 @@ Measured 2026-11-15 ([[2026-11-15 FPS Systems Into City]]):
 - No script stores an absolute position of a giver, and no giver has a joint, weld or `ObjectValue` outside its model: moving one with `PivotTo` is self-contained.
 - They now stand on the sidewalk at z 2477.5, x -44.89 to -114.89, facing the spawn ([[City Map and Plots]]); provisional. In the run from the city spawn all six were present with their prompts.
 
+## In the city, phase 2b
+Measured 2026-11-15 ([[2026-11-15 FPS Hardening In City]]):
+- Accept and turn-in need the character within 30 studs of the giver (`QuestService` `canReach`): a far turn-in at 45.0 studs was refused, a near one at 4.6 paid. A test must place the character first (server `PivotTo`).
+- Progress and completions are saved (`quests`, `questCompletions`, [[Persistence and Saves]]) and restored on join. Level 1 turn-in: cash 350 to 875, because the 100 XP crossed a level and the 25 level-up bonus came with the 500 reward.
+- `QuestFeedbackController` shows QUEST COMPLETE only for completions seen after the `QuestsRestored` attribute is set; earlier changes only seed the count.
+- Kills for a test: `TakeDamage` then fire `ServerScriptService.Blaster.Events.Eliminated` from a server Script; the Shoot remote is now rate-limited ([[Weapons and Blaster]]).
+
 ## Extend it
 - New quest: one entry in `QuestConfig` (target enemy name inside the quest, never hard-coded in lines) plus a giver in `Workspace.Quests` with the same billboard, prompt and `NPCprompt` tag.
 - New NPC conversation in either place: a controller like `QuestDialogueController` / `SupplierDialogueController` driving `DialogModule`; keep outcomes server-side.
@@ -51,12 +58,13 @@ Measured 2026-11-15 ([[2026-11-15 FPS Systems Into City]]):
 - The reply GUI must survive respawn or the conversation holds a dead reference and the player stays zoomed in after dying.
 - Scripts in `Workspace` NPCs do not run; dialogue logic lives in player scripts.
 - Fading the dialogue plate must include `BackgroundTransparency`.
-- Quest progress and completions are not saved ([[Persistence and Saves]]).
+- Quest progress and completions are saved in the city only; the frozen FPS place still loses them ([[Persistence and Saves]]).
 - Automation cannot trigger the `Style = Custom` quest prompts; press E by hand to test.
 - The Security shirt is a marketplace asset printed "RO-GHOUL" on the back.
 - The five later givers were placed in a line at temporary positions on 2026-09-16; no log records them being moved.
 
 ## History
+- 2026-11-15: city: accept and turn-in need the giver within 30 studs; quest progress saved and restored; no replayed completion toast on rejoin. [[2026-11-15 FPS Hardening In City]]
 - 2026-11-15: ported into the city as an exact copy; the six givers moved to the city sidewalk by the spawn; pressing E still needs a person. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: givers dressed by tier from the enemy templates' uniforms; talking to one not verified. [[FPS-Quest-Givers-Law-Enforcement-Outfits]]
 - 2026-09-23: quest toasts queue behind open panels. [[Notification-Queue-While-Panel-Open]]

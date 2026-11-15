@@ -1,7 +1,7 @@
 ---
 type: trap
 tags: [trap, luau, scripting, signals]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "70 Batches/Robbery System/Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-New-Guns-Missing-MuzzleAttachment-Fix.md", "70 Batches/FPS System/FPS-Enemy-Search-State-Spin-Fix.md", "70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "OBT Vault/50 Engine Traps/Luau and Scripting Traps.md (generic traps)"]
 ---
 
@@ -27,6 +27,18 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 
 ### Hydration order and deferral can pay rewards twice
 - `SpraypaintService` seeded `lastLevel` from the `Level` attribute and listened for changes; the profile load yields, so `LevelingService.hydrate`'s `SetAttribute("Level", 12)` always landed after and fired the listener: a level-up award that never happened. The fix refuses to pay while `ProfileGateway.get(player)` is nil, so restoration is never progression **by construction**, not by ordering luck. [[FPS-Persistence-Phase-3]].
+
+### A rate limit keyed on a Tool instance is reset by a fresh clone
+- **Symptom:** the first version of the server rate of fire on `Shoot` kept its last-shot time per Tool; `SetLoadoutSlotRequest` and `EquipRequest` hand out a fresh Tool clone on every call, which had no last time, so slot-move, equip, shoot repeated swung a Crowbar every 0.22 to 0.24 s instead of every 0.67 s.
+- **Cause:** the state lived on something the client can make the server replace.
+- **Fix:** key per-weapon state on `player` plus `tool.Name` and clear it on `PlayerRemoving` (`validateShot`, `validateFireInterval`). Measured: before 85, 77.5, 70 (two hits), after 130, 122.5, 122.5 (refused).
+- **Bit us:** [[2026-11-15 FPS Hardening In City]] (found in review, not by the first test).
+
+### An order test on an empty GUI passes trivially
+- **Symptom:** a paint-order comparison between `Global` and `Sibling` reported "equal" for a ScreenGui that held 0 objects at 25 s (`PromptUiGui`, `DamageDirectionIndicator`).
+- **Cause:** the lists are both empty, so any rule gives the same order; the test cannot fail.
+- **Fix:** run the tool on a known-different tree first (the notification card case must report a difference), then measure again with content live: after a notification, with arrows on screen, with the coins. `CityMerge/phase2b/paint-order.luau` has the self-check.
+- **Bit us:** [[2026-11-15 FPS Hardening In City]]. See also [[UI Layout Traps]] (ZIndexBehavior) and [[Unit Test Runner]] ("A test that cannot fail is not a test").
 
 ## Strings and source edits
 

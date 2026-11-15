@@ -38,9 +38,12 @@ if humanoid.RigType == Enum.HumanoidRigType.R15 then
 	if not lowerTorso then
 		return
 	end
-	m6d = lowerTorso.Root
+	m6d = lowerTorso:WaitForChild("Root", 10)
 else
-	m6d = humanoidRootPart.RootJoint
+	m6d = humanoidRootPart:WaitForChild("RootJoint", 10)
+end
+if not m6d then
+	return
 end
 
 -- This rig's R15 joints are AnimationConstraints, not Motor6Ds (see RagdollController's own notes

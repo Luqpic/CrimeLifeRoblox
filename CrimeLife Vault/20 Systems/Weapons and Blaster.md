@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, weapons, combat, blaster]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Loadout-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Eight-New-Pistols-And-Shotguns.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau", "CrimeLifeRoblox/FPSSystem/Blaster/BuildNewPistolsShotguns.luau", "CLAUDE.md (Systems)"]
 ---
 
@@ -29,6 +29,8 @@ Every gun, melee weapon and the RPG runs on one shared, data-driven blaster: sta
 - **Muzzle.** Every weapon must carry `MuzzleAttachment` in both its Tool and viewmodel; melee carries an empty one. It sets flash, tracer start, sound origin and shop preview orientation, not aim.
 - **RPG** (Category `Launcher`, `Gamepass = "RPG"`, no `Price`): its ray only finds the landing point; `ShotResolver.explode` fires after `distance / PROJECTILE_SPEED` (250), 200 damage at centre to 60 at the 16-stud rim, never the shooter. Engine `Explosion` is flash only (BlastPressure 0). The killed are flung, survivors get `RagdollController.stagger` 1.2 s plus a push. `HideWhenEmpty` parts (the loaded rocket) follow `_ammo`. Pass id is `Monetization.Constants` RPG `gamepassId` ([[Gamepasses]]).
 - **Roster** (as recorded): starters plus loadout batches 2026-09-11 (M1911, Mateba 2006M, AKM, HCAR, Kriss Vector, Scar L, six more unnamed in the log), 2026-09-15/16 (M14 EBR, AR-18, HK G3, APS, PB, MP443, Glock 17, S&W 29, Itacha Mag-10, Benelli M4, Spas 12), 2026-09-24 (Glock 18, SIG M17, M45A1, USP Compact, Remington 870, Sawed-Off 870, MP-153, SPAS-13, RPG). Melee: Crowbar, Baton, Knife ([[Melee]]). One log counts 34 guns in its sweep (2026-09-24).
+
+- In the city, `ServerScriptService.Blaster.Scripts.Blaster.validateFireInterval` (pure) is called last by `validateShot`: a shot is refused when its claimed timestamp is less than 0.9 x 60 / rateOfFire after the last accepted one for the same player and weapon name; a nil or non-number rate-of-fire attribute is accepted. `validateShootArguments` refuses non-canonical hit keys. Tests `ShotRate_Test`, `BlasterGuard_Test` ([[2026-11-15 FPS Hardening In City]]).
 
 ## Extend it
 - New gun: run the donor-skeleton build (`BuildNewPistolsShotguns.luau`): same-class donor, keep its `Body` as a hidden anchor, hang the new mesh off it, never replace the core part. Add a `profiles` entry in `WeaponViewmodelMotion` or first person never starts. Give it `Category` (+ `Price` or `Gamepass`) and the shop picks it up. Upload a `TextureId` icon.

@@ -139,4 +139,15 @@ ScreenGuis moved to Sibling (phase 2b Task 4, `phase2b/zindex-audit.md`), same c
 
 `StarterGui."Custom Inventory"`: `ZIndexBehavior` property checked and left `Global` (not order-equal: 123 swapped pairs); no property change made, no script of it touched. Left `Global` as well: `CashShopGui`, `GamepassShopGui`, `WeaponaryShopGui`, `QuestLogGui`, `DeathScreenGui` (reasons in `phase2b/zindex-audit.md`).
 
+First-run leftovers (phase 2b Task 5), same columns:
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-15 | `StarterPlayer.StarterCharacterScripts.Lean` (LocalScript) | 5,970 / 3351089419 | 6,038 / 2152900123 | `lowerTorso.Root` and `humanoidRootPart.RootJoint` became `WaitForChild(name, 10)` with a quiet `return` when nil, matching the three lookups above them. Attribute appended: `"...; 2026-11-15 Root / RootJoint lookups wait instead of indexing (phase 2b Task 5)"`. Exported to `CityScripts/`; on-disk Adler-32 equals the place. |
+
+Not a source change, same deviation record:
+
+- `ServerScriptService.WeaponAnimationPreview` (Script): `Enabled` true -> false (source unchanged, 2,906 / 2351876902). `CityMergeDeviation = "preview rig folder is not in the city"`. It drives a Studio-only preview folder the city does not have. BaseScripts enabled 121 -> 120.
+- `Workspace.FX`: new empty `Folder` (attribute `PlacedBy = "phase 2b"`). `StarterCharacterScripts.Crouching` parents its dust there; the script is not edited.
+
 NOT saved / NOT published
