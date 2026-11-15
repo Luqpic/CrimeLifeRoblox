@@ -1,0 +1,1247 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local guiTemplates = ReplicatedStorage:WaitForChild("GuiTemplates")
+local catalog = ReplicatedStorage.Weapons:WaitForChild("Catalog")
+local buyRequest = ReplicatedStorage.Weapons.Remotes.BuyRequest
+local upgradeRequest = ReplicatedStorage.Weapons.Remotes.UpgradeRequest
+local setLoadoutSlotRequest = ReplicatedStorage.Weapons.Remotes.SetLoadoutSlotRequest
+local UpgradeConfig = require(ReplicatedStorage.Weapons.UpgradeConfig)
+local MenuFovBlur = require(ReplicatedStorage.Modules.MenuFovBlur)
+local Effects = require(ReplicatedStorage.UI.Effects)
+local CashBurst = require(ReplicatedStorage.UI.CashBurst)
+local SkinsCardController = require(script.Parent:WaitForChild("SkinsCardController"))
+local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
+local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
+local promptGamepass = ReplicatedStorage.Monetization.Remotes.PromptGamepassPurchase
+
+local FADE_TIME = 0.25
+local SHOP_CLOSED_SIZE = UDim2.fromOffset(870, 545)
+local SHOP_OPEN_SIZE = UDim2.fromOffset(920, 580)
+
+-- The five icon asset ids the shop needs: one per category chip (Melee/Pistol/AutoRifle/Shotgun)
+-- plus the Spraypaint balance's own natively-drawn spray-can badge (DetailPanel.SpraypaintChip.Icon,
+-- see FPS-Spraypaint-Badge-Beside-Price-Label.md). Blocked on assets, not on wiring: upload_image
+-- only accepts http/https URLs and serving these five PNGs from localhost was denied by the sandbox,
+-- so real asset ids need a person to upload them and paste the ids here. Every id defaults to "" and
+-- every chip/badge below falls back to its CURRENT rendering (text label / native shapes) whenever
+-- its id is empty, so this table is a no-op until the ids are filled in -- do not invent placeholder
+-- ids and do not reuse an unrelated existing one.
+local ICON_ASSET_IDS = {
+	Melee = "rbxassetid://106906257244958", -- /Users/luqpic/Downloads/Weaponary/Melee.png
+	Pistol = "rbxassetid://94971487013526", -- /Users/luqpic/Downloads/Weaponary/Pistol.png
+	AutoRifle = "rbxassetid://125690668175292", -- /Users/luqpic/Downloads/Weaponary/Autorifle.png
+	Shotgun = "rbxassetid://113177593124606", -- /Users/luqpic/Downloads/Weaponary/Shotgun.png
+	Gamepass = "rbxassetid://138640924680599", -- /Users/luqpic/Downloads/Gamepass.png, re-exported white so it tints
+	Spray = SpraypaintConstants.ICON_ASSET_ID, -- /Users/luqpic/Downloads/Weaponary/Spray.png (id owned by Spraypaint.Constants)
+}
+
+-- Hover outline for the loadout slots, shown only while the equip picker is waiting for a choice.
+-- Its own stroke rather than the state stroke refreshInventoryColumn paints, because that one
+-- encodes filled-versus-empty through colour and thickness and can be repainted mid-hover.
+--
+-- Thicker than that stroke's filled 2px so it still reads on an occupied slot, where both are the
+-- same accent green on the same edge: hovering a filled slot thickens its outline, hovering an
+-- empty one brings a green outline in from nothing.
+--
+-- Declared up here rather than beside the loop that builds the strokes, because setSlotPickMode
+-- clears the outlines when the picker closes and is defined above that loop -- a local declared
+-- after it would simply not be in its scope.
+local HOVER_STROKE_THICKNESS = 3
+local HOVER_STROKE_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+local PURCHASE_SOUND_ID = "rbxassetid://17161225362"
+local UPGRADE_SOUND_ID = "rbxassetid://127170375041015"
+-- The same tick the dialogue response buttons hover with (ReplicatedStorage.DialogModule.sounds.tick2),
+-- reused deliberately so UI hover feedback is one sound across the game rather than one per system.
+local HOVER_SOUND_ID = "rbxassetid://10066931761"
+
+local purchaseSound = Instance.new("Sound")
+purchaseSound.Name = "WeaponPurchaseSound"
+purchaseSound.SoundId = PURCHASE_SOUND_ID
+purchaseSound.Volume = 0.7
+purchaseSound.Parent = SoundService
+
+local upgradeSound = Instance.new("Sound")
+upgradeSound.Name = "WeaponUpgradeSound"
+upgradeSound.SoundId = UPGRADE_SOUND_ID
+upgradeSound.Volume = 0.7
+upgradeSound.Parent = SoundService
+
+-- Find-or-create against the same name the Custom Inventory package uses for its slot click, so
+-- equipping from this shop and equipping from the hotbar are one sound rather than two instances of
+-- the same asset. Whichever system loads first owns it.
+local EQUIP_SOUND_ID = "rbxassetid://111258886624386"
+local equipSound = SoundService:FindFirstChild("InventoryEquipSound")
+if not equipSound then
+	equipSound = Instance.new("Sound")
+	equipSound.Name = "InventoryEquipSound"
+	equipSound.SoundId = EQUIP_SOUND_ID
+	equipSound.Volume = 0.6
+	equipSound.Parent = SoundService
+end
+
+-- Find-or-create rather than plain create: the per-object hover-effect LocalScripts on ActionButton,
+-- EquipButton and every WeaponCard clone need this same sound and each does the identical check, so
+-- whichever runs first owns it and the rest share it. One Sound, however many cards the grid holds.
+local hoverSound = SoundService:FindFirstChild("UIHoverSound")
+if not hoverSound then
+	hoverSound = Instance.new("Sound")
+	hoverSound.Name = "UIHoverSound"
+	hoverSound.SoundId = HOVER_SOUND_ID
+	hoverSound.Volume = 0.5
+	hoverSound.Parent = SoundService
+end
+
+-- Set right before firing BuyRequest, cleared once the resulting Backpack change is observed. This
+-- is what stops the purchase sound from also firing on a silent respawn restore, which now also
+-- adds Tools to the Backpack and would otherwise chime on every death.
+local awaitingPurchaseSound = false
+-- The weapon this client just pressed BUY on. Its ownership arriving drops the panel straight into the
+-- slot picker, so a new gun is bought and placed in one flow instead of BUY then EQUIP. Keyed on the
+-- weapon rather than a flag, so an ownership change for anything else (a restore, another grant)
+-- never opens the picker; upgrades never set it at all.
+local awaitingEquipAfterPurchase: string? = nil
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "WeaponaryShopGui"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 5
+gui.Parent = playerGui
+
+local shop = guiTemplates:WaitForChild("WeaponaryShop"):Clone()
+shop.Visible = false
+shop.Parent = gui
+-- Where the shop rests with no Skins card beside it. Captured from the template, not hard-coded,
+-- so moving the shop in the template moves this with it.
+local SHOP_REST_POSITION = shop.Position
+
+-- The shop's own scaling policy. UIScaleController (see its header note) skips any ScreenGui that
+-- already ships a UIScale -- the same escape hatch BlasterGui/BlasterTouchGui already use, for the
+-- same reason: the Skins card sits in a SEPARATE ScreenGui beside this one (see
+-- SkinsCardController), and UIScaleController's per-ScreenGui measurement has no way to know this
+-- shop must also leave room for that sibling panel. Taking scaling over here, rather than letting
+-- two systems write the same UIScale.Scale property, lets `reservedWidth` below budget for the card
+-- whenever it's open -- see SkinsCardController.RESERVED_WIDTH for why that budget is doubled.
+--
+-- Created immediately after `shop.Parent = gui` (mirroring exactly when GuiController/
+-- TouchInputController create BlasterGui's own UIScale) so it exists before UIScaleController's own
+-- deferred ChildAdded/DescendantAdded signals get a chance to manage this ScreenGui first.
+local camera = Workspace.CurrentCamera
+local SHOP_MAX_SCALE = 1 -- never upscale above the authored size -- same ceiling UIScaleController uses
+local SHOP_MIN_SCALE = 0.4 -- same floor UIScaleController uses: unreadable below this regardless
+local SHOP_MARGIN = 0.94 -- same breathing room UIScaleController leaves around a fitted panel
+local shopScale = gui:FindFirstChildOfClass("UIScale")
+if not shopScale then
+	shopScale = Instance.new("UIScale")
+	shopScale.Name = "ResponsiveScale"
+	shopScale.Parent = gui
+end
+local reservedWidth = 0 -- SkinsCardController.RESERVED_WIDTH while the Skins card is open, else 0
+
+local function refreshShopScale(tween: TweenInfo?)
+	local viewport = camera.ViewportSize
+	if viewport.X <= 0 or viewport.Y <= 0 then
+		return
+	end
+	local width = SHOP_OPEN_SIZE.X.Offset + reservedWidth
+	local fitX = (viewport.X * SHOP_MARGIN) / width
+	local fitY = (viewport.Y * SHOP_MARGIN) / SHOP_OPEN_SIZE.Y.Offset
+	local target = math.clamp(math.min(fitX, fitY, SHOP_MAX_SCALE), SHOP_MIN_SCALE, SHOP_MAX_SCALE)
+	-- Eased when the Skins card opens or closes, so a viewport too narrow for the pair at full size
+	-- shrinks smoothly instead of snapping; a viewport resize still applies at once (no tween). The
+	-- caller passes the easing so it matches the shop's own slide: measured on a 978-wide viewport, a
+	-- Quad-Out scale paired with the Quad-In slide-back grew the shop about its still-shifted centre
+	-- before it moved, and its left edge briefly left the screen (x = -17.6).
+	if tween then
+		TweenService:Create(shopScale, tween, { Scale = target }):Play()
+	else
+		shopScale.Scale = target
+	end
+end
+
+-- The card's open easing is Back, which overshoots: fine for a position, but on the scale it would
+-- briefly push past SHOP_MAX_SCALE. So the scale eases with Quad over the same duration and direction.
+local SHOP_SCALE_OPEN_TWEEN = TweenInfo.new(SkinsCardController.OPEN_TWEEN.Time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- The shop makes room for the Skins card by sliding LEFT by half the card's footprint, so the two
+-- sit centred together at the shop's own size -- rather than staying centred and shrinking to fit
+-- the card beside it, which is what made it suddenly become small. Same timing and easing as the
+-- card's own slide, so the pair reads as one motion.
+local function slideShop(makeRoom: boolean)
+	local target = if makeRoom
+		then SHOP_REST_POSITION - UDim2.fromOffset(SkinsCardController.SHOP_SHIFT, 0)
+		else SHOP_REST_POSITION
+	local info = if makeRoom then SkinsCardController.OPEN_TWEEN else SkinsCardController.CLOSE_TWEEN
+	TweenService:Create(shop, info, { Position = target }):Play()
+end
+
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(refreshShopScale)
+refreshShopScale()
+
+local titleBar = shop:WaitForChild("TitleBar")
+local closeButton = titleBar:WaitForChild("CloseButton")
+local inventoryColumn = shop:WaitForChild("InventoryColumn")
+local swapPrompt = inventoryColumn:WaitForChild("SwapPrompt")
+local slotsContainer = inventoryColumn:WaitForChild("Slots")
+local shopArea = shop:WaitForChild("ShopArea")
+local categoryTabs = shopArea:WaitForChild("CategoryTabs")
+local weaponGrid = shopArea:WaitForChild("WeaponGrid")
+local detailPanel = shopArea:WaitForChild("DetailPanel")
+local backButton = detailPanel:WaitForChild("BackButton")
+local detailViewport = detailPanel:WaitForChild("DetailViewport") :: ViewportFrame
+local detailName = detailPanel:WaitForChild("DetailName")
+local statsContainer = detailPanel:WaitForChild("StatsContainer")
+local priceLabel = detailPanel:WaitForChild("PriceLabel")
+-- The price now lives as a dark pill INSIDE the buy button, the way the Figma detail state draws
+-- it, rather than as a separate icon+text row that duplicated the cash glyph beside it.
+-- The cash glyph is a SIBLING of PriceLabel, not a child: a UIPadding on the label offsets its
+-- children as well as its text, so while the icon lived inside it the two could only ever move
+-- together and the glyphs sat straight on top of the icon.
+local priceIcon = detailPanel:WaitForChild("PriceIcon")
+local pricePill = detailPanel:WaitForChild("ActionButton"):WaitForChild("Price")
+local pricePillLabel = pricePill:WaitForChild("Label")
+local categoryChip = detailPanel:WaitForChild("CategoryChip"):WaitForChild("Label")
+local descriptionLabel = detailPanel:WaitForChild("Description")
+-- The selected weapon's Spraypaint balance, shown as a pill below the 3D preview -- the same
+-- dark-chip-plus-accent-text language CashChip and the Skins card's chip prices already use.
+local spraypaintChip = detailPanel:WaitForChild("SpraypaintChip")
+local spraypaintAmountLabel = spraypaintChip:WaitForChild("Amount") :: TextLabel
+
+-- The selected weapon's upgrade level, as a second pill directly below the Spraypaint one. Cloned from
+-- SpraypaintChip rather than added to the template, so the pair can never drift apart in size, corner
+-- or type -- and cloned HERE, before the spray-can image is swapped in further down, so the clone
+-- carries only the native badge shapes, which it then discards for the bullet. Blue is the RANGE stat
+-- bar's own fill, so the two pills read as a pair but never as the same currency.
+local LEVEL_BLUE = Color3.fromRGB(61, 165, 255)
+local LEVEL_ICON_ID = "rbxassetid://118647925274215" -- ~/Downloads/Bullet.png, re-exported white so it tints
+local levelChip = spraypaintChip:Clone()
+levelChip.Name = "LevelChip"
+levelChip.Position = spraypaintChip.Position + UDim2.fromOffset(0, spraypaintChip.Size.Y.Offset + 10)
+local levelStroke = levelChip:FindFirstChildOfClass("UIStroke")
+if levelStroke then
+	levelStroke.Color = LEVEL_BLUE
+end
+local levelIcon = levelChip:WaitForChild("Icon")
+for _, child in levelIcon:GetChildren() do
+	child:Destroy()
+end
+local bulletImage = Instance.new("ImageLabel")
+bulletImage.Name = "BulletImage"
+bulletImage.BackgroundTransparency = 1
+bulletImage.Size = UDim2.fromOffset(16, 16)
+bulletImage.Image = LEVEL_ICON_ID
+bulletImage.ImageColor3 = LEVEL_BLUE
+bulletImage.Parent = levelIcon
+local levelAmountLabel = levelChip:WaitForChild("Amount") :: TextLabel
+levelAmountLabel.TextColor3 = LEVEL_BLUE
+levelChip.Parent = detailPanel
+
+-- Full-bar reference values for the stat tracks. A bar needs a ceiling to read against, and these
+-- are the top of each stat's range across the 32-weapon catalogue rather than per-weapon maxima,
+-- so the bars stay comparable BETWEEN weapons -- which is the whole point of showing them.
+local STAT_MAX = { Damage = 100, FireRate = 1200, Magazine = 100, Range = 1000 }
+
+local function setStatBar(rowName: string, value: number)
+	local row = statsContainer:FindFirstChild(rowName)
+	local track = row and row:FindFirstChild("Track")
+	local fill = track and track:FindFirstChild("Fill")
+	if not fill then
+		return
+	end
+	local ratio = math.clamp(value / (STAT_MAX[rowName] or 1), 0, 1)
+	-- A zero-width fill still shows its 5px corner radius as a dot, so floor it at nothing visible.
+	fill.Visible = ratio > 0.001
+	fill.Size = UDim2.new(ratio, 0, 1, 0)
+end
+local actionButton = detailPanel:WaitForChild("ActionButton")
+-- The button's caption is a child TextLabel, not the button's own Text. A TextLabel cannot be inset
+-- from its edges without a UIPadding, and a UIPadding on the BUTTON would also offset the price
+-- pill (padding moves children, not just text) -- which is exactly what pushed the pill onto the
+-- caption. Giving the caption its own instance lets both be positioned independently.
+local actionLabel = actionButton:WaitForChild("Label")
+local Sounds = require(ReplicatedStorage:WaitForChild("UI"):WaitForChild("Sounds"))
+
+-- Acid outline on a filled loadout slot, hairline on an empty one.
+local SLOT_FILLED_COLOR = Color3.fromHex("CBF23C")
+local SLOT_EMPTY_COLOR = Color3.fromHex("2A2F3C")
+-- Flash colour when an action is refused for lack of funds.
+local DENIED_COLOR = Color3.fromHex("FF4B4B")
+
+-- Cash readout in the title bar, so the price on a weapon card can be judged against what the
+-- player actually has without closing the shop. Same leaderstats.Cash the HUD and the cash shop
+-- read, so the three can never disagree.
+do
+	local chip = shop:WaitForChild("TitleBar"):WaitForChild("CashChip")
+	local amount = chip:WaitForChild("amount") :: TextLabel
+
+	local function render(value: number)
+		local text = tostring(math.floor(value))
+		local grouped = text:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+		amount.Text = (grouped:gsub("^,", ""))
+	end
+
+	task.spawn(function()
+		-- leaderstats is created by whichever of CashService/LevelingService runs first and Cash is
+		-- added separately, so neither can be assumed present at join.
+		local leaderstats = player:WaitForChild("leaderstats", 30)
+		local cash = leaderstats and leaderstats:WaitForChild("Cash", 30)
+		if not cash then
+			return
+		end
+		render(cash.Value)
+		cash.Changed:Connect(render)
+	end)
+end
+local equipButton = detailPanel:WaitForChild("EquipButton") :: TextButton
+
+-- Tabs are laid out with a fixed Padding but a COMPUTED equal width, so any number of category
+-- tabs always exactly fills CategoryTabs' width instead of overflowing it. Re-run whenever the
+-- container resizes (the shop's own open/close tween changes ShopArea's, and therefore
+-- CategoryTabs', width from 650px to 700px), so this one calculation stays correct in both states
+-- and for however many categories exist in the future -- not just the 6 that exist today.
+local TAB_HEIGHT = 36
+local TAB_PADDING = 8
+
+local function layoutCategoryTabs()
+	local tabs = {}
+	for _, child in categoryTabs:GetChildren() do
+		if child:IsA("TextButton") then
+			table.insert(tabs, child)
+		end
+	end
+	if #tabs == 0 then
+		return
+	end
+
+	local available = categoryTabs.AbsoluteSize.X
+	local totalPadding = TAB_PADDING * (#tabs - 1)
+	local tabWidth = math.max((available - totalPadding) / #tabs, 1)
+
+	for _, tab in tabs do
+		tab.Size = UDim2.fromOffset(math.floor(tabWidth), TAB_HEIGHT)
+	end
+end
+
+categoryTabs:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutCategoryTabs)
+layoutCategoryTabs()
+
+-- Renders an ImageLabel over a category tab's text once its icon id arrives (see ICON_ASSET_IDS).
+-- A no-op while the id is "": the tab's own authored Text ("Melee", "Pistol", ...) is never touched,
+-- so the shop looks and works exactly as it does today until the ids are filled in.
+local function applyCategoryIcon(tab: TextButton, category: string)
+	local iconId = ICON_ASSET_IDS[category]
+	if not iconId or iconId == "" then
+		return
+	end
+	tab.Text = ""
+	local icon = tab:FindFirstChild("Icon") :: ImageLabel?
+	if not icon then
+		icon = Instance.new("ImageLabel")
+		icon.Name = "Icon"
+		icon.BackgroundTransparency = 1
+		icon.AnchorPoint = Vector2.new(0.5, 0.5)
+		icon.Position = UDim2.fromScale(0.5, 0.5)
+		icon.Size = UDim2.fromOffset(20, 20)
+		icon.ZIndex = 2
+		icon.Parent = tab
+		-- The glyphs are white so ImageColor3 can tint them: it MULTIPLIES, so the black originals
+		-- stayed black under any tint and all but vanished on the dark tab plate. Following the tab's
+		-- own TextColor3 makes the icon read exactly as the word it replaced did, including any
+		-- selected-state recolour, without this function needing to know the tab styling rules.
+		tab:GetPropertyChangedSignal("TextColor3"):Connect(function()
+			icon.ImageColor3 = tab.TextColor3
+		end)
+	end
+	icon.Image = iconId
+	icon.ImageColor3 = tab.TextColor3
+end
+
+for _, tab in categoryTabs:GetChildren() do
+	if tab:IsA("TextButton") then
+		applyCategoryIcon(tab, tab.Name:gsub("^Tab", ""))
+	end
+end
+
+-- Same fallback for the Spraypaint balance's spray-can badge (native Body/Cap/Dot1/Dot2 shapes --
+-- see FPS-Spraypaint-Badge-Beside-Price-Label.md). A no-op while ICON_ASSET_IDS.Spray is "": the
+-- native shapes are left exactly as they render today.
+if ICON_ASSET_IDS.Spray ~= "" then
+	local nativeIcon = spraypaintChip:WaitForChild("Icon")
+	for _, shape in nativeIcon:GetChildren() do
+		if shape:IsA("GuiObject") then
+			shape.Visible = false
+		end
+	end
+	local sprayImage = Instance.new("ImageLabel")
+	sprayImage.Name = "SprayImage"
+	sprayImage.BackgroundTransparency = 1
+	sprayImage.Size = UDim2.fromOffset(16, 16)
+	sprayImage.Image = ICON_ASSET_IDS.Spray
+	-- Tinted to match the balance figure it sits beside -- see the ImageColor3 note in
+	-- applyCategoryIcon for why the source glyph has to be white for this to work at all.
+	local amount = spraypaintChip:FindFirstChild("Amount")
+	if amount and amount:IsA("TextLabel") then
+		sprayImage.ImageColor3 = amount.TextColor3
+	end
+	sprayImage.Parent = nativeIcon
+end
+
+-- TextScaled with nothing capping it balloons "Empty" to fill the entire slot frame.
+for i = 1, 4 do
+	local slot = slotsContainer:FindFirstChild("Slot" .. i)
+	local emptyLabel = slot and slot:FindFirstChild("EmptyLabel")
+	if emptyLabel and not emptyLabel:FindFirstChildOfClass("UITextSizeConstraint") then
+		local constraint = Instance.new("UITextSizeConstraint")
+		constraint.MaxTextSize = 18
+		constraint.MinTextSize = 10
+		constraint.Parent = emptyLabel
+	end
+end
+
+-- Action-button colours, retuned to the redesign palette (ReplicatedStorage.UI.Theme).
+--
+-- refreshDetailStats writes these onto ActionButton/EquipButton on every state change, so they
+-- OVERRIDE the template's colours -- restyling the template alone left BUY rendering in the old
+-- bright Roblox green. This script is the one owner of these buttons' colour while the shop is
+-- open, so the palette change belongs here.
+--
+-- BUY is the primary action: Accent fill, and refreshDetailStats pairs it with Deep text. UPGRADE
+-- stays distinct from BUY (it spends rather than acquires) and EQUIP/DEQUIP read as secondary.
+local BUY_COLOR = Color3.fromRGB(203, 242, 60) -- Theme Accent #CBF23C
+local UPGRADE_COLOR = Color3.fromRGB(159, 192, 36) -- Theme AccentDim #9FC024
+local EQUIP_COLOR = Color3.fromRGB(18, 20, 26) -- Theme Inset #12141A, with the accent stroke
+local DEQUIP_COLOR = Color3.fromRGB(42, 47, 60) -- Theme Line #2A2F3C
+-- A gamepass weapon's locked button, and its Robux figures: Roblox's own Robux green, so it reads as a
+-- Robux purchase and never as a Cash one.
+local GAMEPASS_COLOR = Color3.fromHex("00B06F")
+
+-- The gamepass a weapon is unlocked by, or nil for a cash weapon.
+local function gamepassFor(entry: Instance): MonetizationConstants.Gamepass?
+	local key = entry:GetAttribute("Gamepass")
+	if typeof(key) ~= "string" then
+		return nil
+	end
+	for _, pass in MonetizationConstants.Gamepasses do
+		if pass.key == key then
+			return pass
+		end
+	end
+	return nil
+end
+
+local function ownsGamepass(pass: MonetizationConstants.Gamepass): boolean
+	return player:GetAttribute(MonetizationConstants.ownedAttributeFor(pass.key)) == true
+end
+
+
+
+local GUN_ROTATION_SPEED = math.rad(40) -- degrees/second, expressed in radians
+local MELEE_ROTATION_SPEED = math.rad(20) -- slower -- melee weapons read larger/closer in the box
+
+local isOpen = false
+local pendingEquipWeapon: string? = nil -- set while waiting for the player to pick a slot to equip into
+-- What each slot rendered last time, so only slots whose contents actually changed get animated.
+local lastRenderedSlots: { [number]: string } = {}
+-- Which weapon the detail panel is currently showing. Held out here, not captured in a per-call
+-- closure: the action button is connected exactly once, so a closure created inside showDetail
+-- would pin the FIRST weapon ever viewed and every later Buy/Upgrade would act on that one.
+local currentDetailWeapon: string? = nil
+local showDetail
+local refreshDetailStats
+local currentSpinConnection: RBXScriptConnection? = nil
+local currentSkinConnection: RBXScriptConnection? = nil
+
+local function stopSpin()
+	if currentSpinConnection then
+		currentSpinConnection:Disconnect()
+		currentSpinConnection = nil
+	end
+	for _, child in detailViewport:GetChildren() do
+		if child:IsA("Model") then
+			child:Destroy()
+		end
+	end
+end
+
+-- ============================================
+-- OWNERSHIP + LOADOUT SLOTS (both replicated as player attributes by WeaponShopService -- the
+-- Backpack is a downstream effect of slot state now, never the source of truth for either)
+-- ============================================
+local function isOwned(weaponName: string): boolean
+	return player:GetAttribute(UpgradeConfig.ownedAttributeFor(weaponName)) == true
+end
+
+-- slot index (1-4) -> weapon name, only for slots that are actually occupied
+local function getEquippedWeaponNames(): { [number]: string }
+	local slots = {}
+	for i = 1, 4 do
+		local name = player:GetAttribute("LoadoutSlot" .. i)
+		if typeof(name) == "string" and name ~= "" then
+			slots[i] = name
+		end
+	end
+	return slots
+end
+
+local function findEquippedSlot(weaponName: string): number?
+	for i, name in getEquippedWeaponNames() do
+		if name == weaponName then
+			return i
+		end
+	end
+	return nil
+end
+
+-- ============================================
+-- INVENTORY COLUMN (also the swap picker)
+-- ============================================
+local function refreshInventoryColumn()
+	local slots = getEquippedWeaponNames()
+	for i = 1, 4 do
+		local slot = slotsContainer:FindFirstChild("Slot" .. i) :: ImageButton
+		local icon = slot:WaitForChild("Icon") :: ImageLabel
+		local nameLabel = slot:WaitForChild("NameLabel") :: TextLabel
+		local emptyLabel = slot:WaitForChild("EmptyLabel") :: TextLabel
+		local popScale = slot:FindFirstChild("PopScale") :: UIScale?
+
+		local weaponName = slots[i]
+		local changed = lastRenderedSlots[i] ~= weaponName
+		if weaponName then
+			-- Read from the catalog, not a live Tool -- a weapon can be equipped while this client's
+			-- own Backpack replication hasn't caught up yet, and the catalog always has the icon
+			-- regardless of ownership.
+			local entry = catalog:FindFirstChild(weaponName)
+			local iconId = (entry and entry:GetAttribute("iconId")) or ""
+			icon.Image = iconId
+			icon.Visible = iconId ~= ""
+			nameLabel.Text = weaponName
+			nameLabel.Visible = true
+			emptyLabel.Visible = false
+		else
+			icon.Image = ""
+			nameLabel.Text = ""
+			icon.Visible = false
+			nameLabel.Visible = false
+			emptyLabel.Visible = true
+		end
+
+		-- Occupied slots take an acid outline so a filled slot reads as filled at a glance, rather
+		-- than only by whether it happens to have an icon in it.
+		-- By NAME, not by class. The slots now carry a second UIStroke (the hover outline added
+		-- below), and FindFirstChildOfClass returns whichever comes first in child order -- which
+		-- would silently hand the filled/empty state paint to the hover outline instead.
+		local slotStroke = slot:FindFirstChild("UIStroke") :: UIStroke?
+		if slotStroke then
+			slotStroke.Color = if weaponName then SLOT_FILLED_COLOR else SLOT_EMPTY_COLOR
+			slotStroke.Thickness = if weaponName then 2 else 1
+		end
+
+		-- Pop only the slot(s) whose content actually changed. Skipped entirely on the shop's first
+		-- render, when lastRenderedSlots is still empty and every slot would otherwise count as
+		-- changed and pop all four on open.
+		if changed and popScale and next(lastRenderedSlots) ~= nil then
+			popScale.Scale = 0.75
+			TweenService:Create(
+				popScale,
+				TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+				{ Scale = 1 }
+			):Play()
+		end
+	end
+	lastRenderedSlots = slots
+end
+
+local function setSlotPickMode(active: boolean)
+	swapPrompt.Visible = active
+	swapPrompt.Text = "Select a slot to equip"
+	for i = 1, 4 do
+		local slot = slotsContainer:FindFirstChild("Slot" .. i) :: ImageButton
+		local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+		if active then
+			-- Every slot is a valid pick target now (empty ones included), so every slot pulses.
+			TweenService:Create(slot, tweenInfo, { BackgroundTransparency = 0.6 }):Play()
+		else
+			TweenService:Create(slot, TweenInfo.new(0.15), { BackgroundTransparency = 0.3 }):Play()
+		end
+
+		-- Leaving pick mode clears the hover outline directly. Picking a slot ends the mode with the
+		-- pointer still sitting on that slot, so MouseLeave never fires for it -- without this the
+		-- outline stays lit on a panel that has stopped asking for a choice.
+		if not active then
+			local hoverStroke = slot:FindFirstChild("HoverOutline") :: UIStroke?
+			if hoverStroke then
+				TweenService:Create(hoverStroke, HOVER_STROKE_TWEEN, { Transparency = 1 }):Play()
+			end
+		end
+	end
+end
+
+for i = 1, 4 do
+	local slot = slotsContainer:WaitForChild("Slot" .. i) :: ImageButton
+
+	local hoverStroke = Instance.new("UIStroke")
+	hoverStroke.Name = "HoverOutline"
+	hoverStroke.Color = SLOT_FILLED_COLOR
+	hoverStroke.Thickness = HOVER_STROKE_THICKNESS
+	hoverStroke.Transparency = 1
+	hoverStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	hoverStroke.Parent = slot
+
+	-- Gated on pick mode. Outside it these slots are a read-only summary of the loadout -- the click
+	-- handler below returns immediately when nothing is pending -- so highlighting one would offer a
+	-- choice that clicking does not actually make. The outline appears only while the panel is
+	-- genuinely asking which slot to equip into.
+	slot.MouseEnter:Connect(function()
+		if not pendingEquipWeapon then
+			return
+		end
+		hoverSound:Play()
+		TweenService:Create(hoverStroke, HOVER_STROKE_TWEEN, { Transparency = 0 }):Play()
+	end)
+	-- Deliberately NOT gated: pick mode can end while the pointer is on a slot, and this still has to
+	-- be able to put the outline away afterwards.
+	slot.MouseLeave:Connect(function()
+		TweenService:Create(hoverStroke, HOVER_STROKE_TWEEN, { Transparency = 1 }):Play()
+	end)
+
+	slot.MouseButton1Click:Connect(function()
+		if not pendingEquipWeapon then
+			return
+		end
+		equipSound:Play()
+		setLoadoutSlotRequest:FireServer(pendingEquipWeapon, i)
+		pendingEquipWeapon = nil
+		setSlotPickMode(false)
+	end)
+end
+
+-- ============================================
+-- DETAIL PANEL
+-- ============================================
+local function formatFireRate(rpm: number): string
+	return `{rpm} RPM`
+end
+
+-- The single player-wide Spraypaint balance -- reverted from a per-weapon figure (own balance plus a
+-- shared-bucket fallback). `weaponName` is accepted, and unused, only so every call site that reads
+-- "the balance for the weapon on screen" still has one signature to call.
+local function refreshSpraypaintBalance(_weaponName: string)
+	local balance = player:GetAttribute(SpraypaintConstants.ATTRIBUTE) or 0
+	spraypaintAmountLabel.Text = balance .. " SPRAYPAINT"
+end
+
+-- The weapon's upgrade level: 0 until its first upgrade, and for a weapon not owned yet.
+local function refreshLevelChip(weaponName: string)
+	local level = player:GetAttribute(UpgradeConfig.attributeFor(weaponName)) or 0
+	levelAmountLabel.Text = "LEVEL " .. level
+end
+
+-- Refuses an action the player cannot pay for: flashes the button red and plays the denied tone,
+-- then puts the colour back. Checked on the client purely as feedback -- the server still validates
+-- every purchase and upgrade, so this cannot be used to buy anything.
+local function denyAction()
+	local original = actionButton.BackgroundColor3
+	Sounds.denied():Play()
+	local toRed = TweenService:Create(actionButton, TweenInfo.new(0.12), { BackgroundColor3 = DENIED_COLOR })
+	toRed:Play()
+	toRed.Completed:Connect(function()
+		TweenService:Create(actionButton, TweenInfo.new(0.25), { BackgroundColor3 = original }):Play()
+	end)
+end
+
+local function currentCash(): number
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
+	return cash and cash.Value or 0
+end
+
+local function performAction()
+	local weaponName = currentDetailWeapon
+	if not weaponName then
+		return
+	end
+
+	local entry = catalog:FindFirstChild(weaponName)
+	-- Locked behind a gamepass: refuse, and offer the pass. MonetizationService only prompts a pass whose
+	-- id is configured (a placeholder 0 is logged and ignored), so the refusal is the feedback either way.
+	local pass = entry and gamepassFor(entry)
+	if pass and not isOwned(weaponName) and not ownsGamepass(pass) then
+		denyAction()
+		promptGamepass:FireServer(pass.key)
+		return
+	end
+	if entry then
+		local cost
+		if isOwned(weaponName) then
+			local level = player:GetAttribute(UpgradeConfig.attributeFor(weaponName)) or 0
+			cost = UpgradeConfig.COST_PER_LEVEL * (level + 1)
+		elseif not pass then
+			cost = entry:GetAttribute("Price")
+		end
+		if cost and currentCash() < cost then
+			denyAction()
+			return
+		end
+	end
+
+	if isOwned(weaponName) then
+		-- Deliberately no local repaint here: the WeaponUpgrade_ attribute listener repaints when
+		-- the server's new level actually replicates. The fixed task.delay(0.1) this replaces raced
+		-- that replication -- whenever the attribute arrived later than 100ms the panel repainted
+		-- with the PRE-upgrade level and nothing refreshed it again, so the Damage stat looked as
+		-- though the upgrade had never applied even though the server had already applied it.
+		upgradeRequest:FireServer(weaponName)
+		return
+	end
+
+	awaitingPurchaseSound = true
+	awaitingEquipAfterPurchase = weaponName
+	buyRequest:FireServer(weaponName)
+end
+
+-- Equipping is always an explicit slot choice, even when a slot is free. This and a fresh purchase
+-- (see awaitingEquipAfterPurchase) are the two ways into that choice; the server never auto-equips.
+local function performEquipAction()
+	local weaponName = currentDetailWeapon
+	if not weaponName then
+		return
+	end
+
+	if findEquippedSlot(weaponName) then
+		setLoadoutSlotRequest:FireServer(weaponName, nil) -- dequip
+	else
+		pendingEquipWeapon = weaponName
+		setSlotPickMode(true)
+	end
+end
+
+function showDetail(weaponName: string)
+	local entry = catalog:FindFirstChild(weaponName)
+	if not entry then
+		return
+	end
+
+	currentDetailWeapon = weaponName
+	weaponGrid.Visible = false
+	categoryTabs.Visible = false
+	detailPanel.Visible = true
+
+	stopSpin()
+
+	local displayModel
+	local blasterTemplate = entry:FindFirstChild("Blaster")
+	if blasterTemplate then
+		displayModel = blasterTemplate:Clone()
+		displayModel.Parent = detailViewport
+
+		local isMelee = entry:GetAttribute("Category") == "Melee"
+		local rotationSpeed = if isMelee then MELEE_ROTATION_SPEED else GUN_ROTATION_SPEED
+
+		-- Invisible parts are dropped before anything measures this model. Every calculation below --
+		-- the centring, the orientation derivation and the camera distance -- works off the bounding
+		-- box, and a weapon whose rig hub is an invisible shaft (the Knife's Body is 3.32 studs of
+		-- nothing) has a box far larger than what a player can see. The result is a model shoved to
+		-- one side of the frame and shrunk to fit geometry that is not there.
+		--
+		-- Guarded so a weapon that is somehow all-transparent keeps its parts rather than vanishing.
+		local visibleCount = 0
+		for _, descendant in displayModel:GetDescendants() do
+			if descendant:IsA("BasePart") and descendant.Transparency < 1 then
+				visibleCount += 1
+			end
+		end
+		if visibleCount > 0 then
+			for _, descendant in displayModel:GetDescendants() do
+				if descendant:IsA("BasePart") and descendant.Transparency >= 1 then
+					descendant:Destroy()
+				end
+			end
+		end
+
+		-- Centred on the origin first, so every rotation below turns about the model's own centre
+		-- rather than about wherever its pivot happened to be authored.
+		local boundsCFrame = displayModel:GetBoundingBox()
+		displayModel:PivotTo(CFrame.new(-boundsCFrame.Position) * displayModel:GetPivot())
+
+		-- Stand the model up side-on. A single fixed rotation cannot do this: these meshes were
+		-- authored with at least three different "up" conventions. Measured across all 17 weapons,
+		-- a fixed 90 degree correction about X framed 12 correctly and left every pistol and melee
+		-- weapon wrong. Deriving the orientation per model from its own bounding box instead --
+		-- longest extent across the screen, thinnest toward the camera, middle vertical -- frames
+		-- 17 of 17, and needs no per-weapon override attribute to do it.
+		local oriented, orientedSize = displayModel:GetBoundingBox()
+		local axes = {
+			{ v = oriented.RightVector, len = orientedSize.X },
+			{ v = oriented.UpVector, len = orientedSize.Y },
+			{ v = -oriented.LookVector, len = orientedSize.Z },
+		}
+		table.sort(axes, function(a, b)
+			return a.len > b.len
+		end)
+		local longAxis, midAxis = axes[1].v, axes[2].v
+		-- rebuilt via cross products so the basis is guaranteed right-handed
+		local thinAxis = longAxis:Cross(midAxis).Unit
+		midAxis = thinAxis:Cross(longAxis).Unit
+		if isMelee then
+			-- Melee stands UP: its longest extent goes to the screen's vertical rather than across it.
+			-- A gun reads best lying along its barrel, but a blade or a bar laid flat wastes the tall
+			-- viewport and reads as a stick. Z is negated because swapping two axes of a right-handed
+			-- basis flips its handedness, and a left-handed basis mirrors the model.
+			displayModel:PivotTo(CFrame.fromMatrix(Vector3.zero, midAxis, longAxis, -thinAxis):Inverse() * displayModel:GetPivot())
+		else
+			displayModel:PivotTo(CFrame.fromMatrix(Vector3.zero, longAxis, midAxis, thinAxis):Inverse() * displayModel:GetPivot())
+		end
+
+		-- Per-weapon escape hatch (XYZ Euler degrees), applied ON TOP of the derivation above rather
+		-- than instead of it. The derivation picks which axis faces the camera, but a bounding box is
+		-- symmetric -- it cannot tell which of the two 180-degree rolls about that axis is "up", so a
+		-- model can still come out flipped. This corrects that one residual case. Absent on a weapon
+		-- (which is every weapon unless someone sets it) = exactly the pure derived result.
+		local rotationOverride = entry:GetAttribute("ShopViewRotation") :: Vector3?
+		if rotationOverride then
+			displayModel:PivotTo(
+				CFrame.Angles(
+					math.rad(rotationOverride.X),
+					math.rad(rotationOverride.Y),
+					math.rad(rotationOverride.Z)
+				) * displayModel:GetPivot()
+			)
+		end
+
+		local _, correctedSize = displayModel:GetBoundingBox()
+		local camera = detailViewport:FindFirstChildOfClass("Camera")
+		if not camera then
+			camera = Instance.new("Camera")
+			camera.Parent = detailViewport
+		end
+		detailViewport.CurrentCamera = camera
+
+		-- Framing distance: spinning around the world Y axis sweeps the model's X/Z footprint
+		-- through every angle, so the worst-case visible width across a full spin is the diagonal
+		-- of THOSE two dimensions, not the 3D bounding box's overall magnitude -- the vertical (Y)
+		-- extent never changes during a Y-axis spin and is checked separately.
+		local horizontalDiagonal = math.sqrt(correctedSize.X ^ 2 + correctedSize.Z ^ 2)
+		local distance = math.max(horizontalDiagonal, correctedSize.Y) * 0.9
+		camera.CFrame = CFrame.new(Vector3.new(0, 0, distance), Vector3.zero)
+
+		if currentSpinConnection then
+			currentSpinConnection:Disconnect()
+		end
+		-- Rotated about the ORIGIN, not the model's own pivot. The bounding box was just centred on
+		-- the origin, but a weapon's authored pivot is not its centre -- spinning about the pivot
+		-- makes the model orbit instead of turning in place (measured: the M16A1's centre swings
+		-- 0.62 studs per revolution that way, versus 0.00 about the origin).
+		currentSpinConnection = RunService.RenderStepped:Connect(function(dt)
+			displayModel:PivotTo(CFrame.Angles(0, rotationSpeed * dt, 0) * displayModel:GetPivot())
+		end)
+	end
+
+	-- Rebuilt per weapon because the equipped ring depends on which weapon is on screen. The
+	-- connection is stored and replaced the same way currentSpinConnection is, so viewing twenty
+	-- weapons leaves one behind rather than twenty. The Skins card's own ownership connection lives
+	-- for the whole session inside SkinsCardController -- it does not depend on which weapon is on
+	-- screen, so it is not rewired here.
+	if currentSkinConnection then
+		currentSkinConnection:Disconnect()
+	end
+	-- Reserve the card's footprint BEFORE opening it: refreshShopScale must settle the shop's real
+	-- AbsoluteSize first, since SkinsCardController.open() reads that size to compute where the card
+	-- lands and how big it renders.
+	reservedWidth = SkinsCardController.RESERVED_WIDTH
+	refreshShopScale(SHOP_SCALE_OPEN_TWEEN)
+	slideShop(true)
+	local repaintSkins = SkinsCardController.open(shop, weaponName, displayModel)
+	currentSkinConnection = player:GetAttributeChangedSignal(
+		"EquippedSkin_" .. (string.gsub(weaponName, "[^%w_]", "_"))
+	):Connect(repaintSkins)
+
+	refreshDetailStats(weaponName)
+	refreshSpraypaintBalance(weaponName)
+	refreshLevelChip(weaponName)
+end
+
+-- Everything in the detail panel EXCEPT the 3D model: name, stats, price and button state. Safe to
+-- call as often as needed for the weapon already on screen -- unlike showDetail it never touches
+-- the viewport, so it cannot destroy the display model or restart the spin. Splitting this out is
+-- what stops buying/upgrading/equipping from visibly resetting the preview.
+function refreshDetailStats(weaponName: string)
+	local entry = catalog:FindFirstChild(weaponName)
+	if not entry then
+		return
+	end
+
+	detailName.Text = weaponName
+
+	local stockDamage = entry:GetAttribute("damage")
+	local level = player:GetAttribute(UpgradeConfig.attributeFor(weaponName)) or 0
+	local bonus = level * UpgradeConfig.DAMAGE_PER_LEVEL
+	statsContainer.Damage.Value.Text = if bonus > 0
+		then `{stockDamage + bonus} (+{bonus})`
+		else tostring(stockDamage)
+	statsContainer.FireRate.Value.Text = formatFireRate(entry:GetAttribute("rateOfFire"))
+	statsContainer.Magazine.Value.Text = tostring(entry:GetAttribute("magazineSize"))
+	statsContainer.Range.Value.Text = tostring(entry:GetAttribute("range"))
+
+	setStatBar("Damage", stockDamage + bonus)
+	setStatBar("FireRate", entry:GetAttribute("rateOfFire") or 0)
+	setStatBar("Magazine", entry:GetAttribute("magazineSize") or 0)
+	setStatBar("Range", entry:GetAttribute("range") or 0)
+
+	-- A melee weapon has no magazine, so the row is hidden rather than shown reading 0 -- which
+	-- looked like a stat the crowbar was simply bad at. The UIListLayout closes the gap.
+	local isMelee = entry:GetAttribute("Category") == "Melee"
+	local magazineRow = statsContainer:FindFirstChild("Magazine")
+	if magazineRow then
+		magazineRow.Visible = not isMelee
+	end
+
+	categoryChip.Text = string.upper(entry:GetAttribute("Category") or "WEAPON")
+	descriptionLabel.Text = entry:GetAttribute("Description") or ""
+
+	if isOwned(weaponName) then
+		local nextLevel = level + 1
+		local cost = UpgradeConfig.COST_PER_LEVEL * nextLevel
+		-- No emoji: the money glyph is carried by the MoneyStack ImageLabel beside this label. Having
+		-- both meant two different cash visuals in the same row, and the emoji's own advance width
+		-- was what pushed this text into the icon.
+		priceLabel.Text = `Upgrade to Lv.{nextLevel}`
+		priceLabel.Visible = true
+		priceIcon.Visible = true
+		-- The level moved to the line above: with the cost pill occupying the button's right side
+		-- there is only ~94px of label room, and "UPGRADE Lv.2" ran underneath the pill.
+		actionLabel.Text = "UPGRADE"
+		actionButton.BackgroundColor3 = UPGRADE_COLOR
+		actionButton.Visible = true
+		pricePillLabel.Text = tostring(cost)
+		pricePill.Visible = true
+
+		local isEquipped = findEquippedSlot(weaponName) ~= nil
+		equipButton.Text = if isEquipped then "DEQUIP" else "EQUIP"
+		equipButton.BackgroundColor3 = if isEquipped then DEQUIP_COLOR else EQUIP_COLOR
+		equipButton.Visible = true
+	else
+		equipButton.Visible = false
+		local price = entry:GetAttribute("Price")
+		local pass = gamepassFor(entry)
+		if pass then
+			-- A gamepass weapon: free to CLAIM once the pass is owned, locked behind it until then. The
+			-- card still opens and shows its stats -- only taking the weapon is locked.
+			local unlocked = ownsGamepass(pass)
+			priceLabel.Text = if unlocked then "Unlocked by the " .. pass.name .. " gamepass" else "Requires the " .. pass.name .. " gamepass"
+			priceLabel.Visible = true
+			priceIcon.Visible = false
+			actionLabel.Text = if unlocked then "CLAIM" else "GAMEPASS"
+			actionButton.BackgroundColor3 = if unlocked then BUY_COLOR else GAMEPASS_COLOR
+			actionButton.Visible = true
+			pricePillLabel.Text = if unlocked then "FREE" else "R$" .. pass.robux
+			pricePill.Visible = true
+		elseif price then
+			-- The pill carries the number, so the separate icon+text row would be a second cash
+			-- visual saying the same thing.
+			priceLabel.Visible = false
+			priceIcon.Visible = false
+			actionLabel.Text = "BUY"
+			actionButton.BackgroundColor3 = BUY_COLOR
+			actionButton.Visible = true
+			pricePillLabel.Text = tostring(price)
+			pricePill.Visible = true
+		else
+			-- Reachable now that the catalog is keyed on Category: an owned-only weapon the player
+			-- has given up (the Crowbar can be swapped away) has no Price, and the server would
+			-- reject a buy for it anyway. Showing a dead BUY button and "money nil" would be worse.
+			priceLabel.Text = "Not for sale"
+			priceLabel.Visible = true
+			priceIcon.Visible = false
+			pricePill.Visible = false
+			actionButton.Visible = false
+		end
+	end
+end
+
+-- Cash physically leaving the button the player just pressed: coins explode out of it and fade.
+-- See UI.CashBurst for why this replaced the red "-<amount>" label, and for how it pairs with the
+-- Robbery System place's inbound CashClaimVFX.
+--
+-- Origin is the action button rather than the price label: the button is what was clicked, and the
+-- price pill sits inside it, so the burst still covers the figure it is confirming.
+local function showCashBurst(amount: number)
+	CashBurst.burstFrom(actionButton, amount)
+end
+
+actionButton.MouseButton1Click:Connect(performAction)
+equipButton.MouseButton1Click:Connect(performEquipAction)
+
+backButton.MouseEnter:Connect(function()
+	hoverSound:Play()
+end)
+
+backButton.MouseButton1Click:Connect(function()
+	stopSpin()
+	SkinsCardController.close()
+	reservedWidth = 0
+	refreshShopScale(SkinsCardController.CLOSE_TWEEN)
+	slideShop(false)
+	detailPanel.Visible = false
+	categoryTabs.Visible = true
+	weaponGrid.Visible = true
+	currentDetailWeapon = nil
+	if pendingEquipWeapon then
+		pendingEquipWeapon = nil
+		setSlotPickMode(false)
+	end
+end)
+
+-- ============================================
+-- WEAPON GRID
+-- ============================================
+-- The tab the shop opens on. "All" was replaced by the Gamepass tab (at the end of the row), so the
+-- shop now opens on the first weapon category instead.
+local DEFAULT_CATEGORY = "Melee"
+local currentCategory = DEFAULT_CATEGORY
+
+local function buildGrid()
+	for _, child in weaponGrid:GetChildren() do
+		if child:IsA("ImageButton") then
+			child:Destroy()
+		end
+	end
+
+	local entries = {}
+	for _, entry in catalog:GetChildren() do
+		local matchesCategory
+		if currentCategory == "Gamepass" then
+			-- Every weapon unlocked by a pass, whatever its own category (the RPG is a Launcher).
+			matchesCategory = entry:GetAttribute("Gamepass") ~= nil
+		elseif currentCategory == "Owned" then
+			matchesCategory = isOwned(entry.Name)
+		else
+			matchesCategory = entry:GetAttribute("Category") == currentCategory
+		end
+		if matchesCategory then
+			table.insert(entries, entry)
+		end
+	end
+	table.sort(entries, function(a, b)
+		return (a:GetAttribute("Price") or 0) < (b:GetAttribute("Price") or 0)
+	end)
+
+	for order, entry in entries do
+		local card = guiTemplates.WeaponCard:Clone()
+		card.LayoutOrder = order
+		card.Name = entry.Name
+		local iconId = entry:GetAttribute("iconId") or ""
+		local icon = card:WaitForChild("Icon")
+		icon.Image = iconId
+		icon.Visible = iconId ~= ""
+		card:WaitForChild("NameLabel").Text = entry.Name
+
+		local priceOrOwned = card:WaitForChild("PriceOrOwned") :: TextLabel
+		if isOwned(entry.Name) then
+			priceOrOwned.Text = "OWNED"
+			priceOrOwned.TextColor3 = Color3.fromRGB(120, 220, 140)
+		elseif gamepassFor(entry) then
+			priceOrOwned.Text = "GAMEPASS"
+			priceOrOwned.TextColor3 = GAMEPASS_COLOR
+		elseif entry:GetAttribute("Price") then
+			priceOrOwned.Text = `{entry:GetAttribute("Price")}`
+			priceOrOwned.TextColor3 = Color3.fromRGB(255, 220, 120)
+		else
+			priceOrOwned.Text = "\u{2014}"
+			priceOrOwned.TextColor3 = Color3.fromRGB(150, 150, 155)
+		end
+
+		card.MouseButton1Click:Connect(function()
+			showDetail(entry.Name)
+		end)
+
+		card.Parent = weaponGrid
+	end
+end
+
+local function highlightTab(selected: TextButton?)
+	for _, tab in categoryTabs:GetChildren() do
+		if tab:IsA("TextButton") then
+			tab.BackgroundTransparency = (tab == selected) and 0 or 0.3
+		end
+	end
+end
+
+for _, tab in categoryTabs:GetChildren() do
+	if tab:IsA("TextButton") then
+		tab.MouseButton1Click:Connect(function()
+			currentCategory = tab.Name:gsub("^Tab", "")
+			buildGrid()
+			highlightTab(tab)
+		end)
+	end
+end
+-- Shown selected from the start, so the opening grid is visibly the Melee tab's.
+highlightTab(categoryTabs:FindFirstChild("Tab" .. DEFAULT_CATEGORY))
+
+-- ============================================
+-- OPEN / CLOSE
+-- ============================================
+local Panels = require(game:GetService("ReplicatedStorage"):WaitForChild("UI"):WaitForChild("Panels"))
+-- Forward declaration: closeShop is defined below openShop, and openShop needs to hand it to Panels.
+local closeShop: () -> ()
+
+local function openShop()
+	if isOpen then
+		return
+	end
+	isOpen = true
+	-- Exclusive: closes whichever other panel is up, and hides the HUD behind this one.
+	Panels.opened("WeaponaryShop", closeShop)
+	MenuFovBlur.open()
+	shop.Visible = true
+	shop.Size = SHOP_CLOSED_SIZE
+	shop.Position = SHOP_REST_POSITION
+	refreshInventoryColumn()
+	buildGrid()
+	detailPanel.Visible = false
+	categoryTabs.Visible = true
+	weaponGrid.Visible = true
+	currentDetailWeapon = nil
+
+	TweenService:Create(
+		shop,
+		TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Size = SHOP_OPEN_SIZE }
+	):Play()
+end
+
+function closeShop()
+	if not isOpen then
+		return
+	end
+	isOpen = false
+	Panels.closed("WeaponaryShop")
+	MenuFovBlur.close()
+	pendingEquipWeapon = nil
+	currentDetailWeapon = nil
+	awaitingPurchaseSound = false
+	stopSpin()
+	SkinsCardController.close()
+	reservedWidth = 0
+	refreshShopScale(SkinsCardController.CLOSE_TWEEN)
+	slideShop(false)
+	setSlotPickMode(false)
+
+	local closeTween = TweenService:Create(
+		shop,
+		TweenInfo.new(FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+		{ Size = SHOP_CLOSED_SIZE }
+	)
+	closeTween:Play()
+	closeTween.Completed:Connect(function()
+		shop.Visible = false
+	end)
+end
+
+-- Motion + hover/click audio come from the shared module, identical to every other close X in
+-- this place and in Robbery System. This used to play only a hover sound and nothing on click,
+-- which is why this X felt different from the other four.
+Effects.bindClose(closeButton)
+closeButton.MouseButton1Click:Connect(closeShop)
+
+-- Ownership and slot assignment are both replicated as player attributes now, so this single
+-- listener keeps the open shop honest through buy, equip and dequip alike -- no Backpack watching,
+-- since Backpack contents are a downstream effect of slot state rather than the signal for it.
+-- This also survives respawn for free: attributes live on the Player, which is never recreated,
+-- unlike the Backpack (which Roblox destroys and rebuilds on every death).
+player.AttributeChanged:Connect(function(attributeName: string)
+	if attributeName:match("^WeaponUpgrade_") then
+		upgradeSound:Play()
+		-- Gated on the attribute being THIS weapon's, and the amount read fresh from the level the
+		-- server just wrote, so the burst can never show a figure that differs from what was charged.
+		if currentDetailWeapon and attributeName == UpgradeConfig.attributeFor(currentDetailWeapon) then
+			local newLevel = player:GetAttribute(attributeName) or 0
+			showCashBurst(UpgradeConfig.COST_PER_LEVEL * newLevel)
+			-- Repaint here, where the new level is guaranteed to have arrived, rather than on a timer.
+			if isOpen then
+				refreshDetailStats(currentDetailWeapon)
+				refreshLevelChip(currentDetailWeapon)
+			end
+		end
+	elseif attributeName:match("^WeaponOwned_") then
+		if awaitingPurchaseSound then
+			awaitingPurchaseSound = false
+			purchaseSound:Play()
+		end
+		if currentDetailWeapon and attributeName == UpgradeConfig.ownedAttributeFor(currentDetailWeapon) then
+			local entry = catalog:FindFirstChild(currentDetailWeapon)
+			local price = entry and entry:GetAttribute("Price")
+			if typeof(price) == "number" then
+				showCashBurst(price)
+			end
+		end
+		if isOpen then
+			buildGrid()
+			-- Stats only: the weapon on screen has not changed, so rebuilding the 3D model here is
+			-- what used to reset the spin on every purchase.
+			if currentDetailWeapon then
+				refreshDetailStats(currentDetailWeapon)
+			end
+		end
+		-- The purchase just landed: go straight to choosing its slot -- the same pick mode the EQUIP
+		-- button opens -- while the player is still looking at the gun they bought.
+		local bought = awaitingEquipAfterPurchase
+		if bought and attributeName == UpgradeConfig.ownedAttributeFor(bought) and isOwned(bought) then
+			awaitingEquipAfterPurchase = nil
+			if isOpen and currentDetailWeapon == bought and not findEquippedSlot(bought) then
+				pendingEquipWeapon = bought
+				setSlotPickMode(true)
+			end
+		end
+	elseif attributeName:match("^LoadoutSlot") then
+		if isOpen then
+			refreshInventoryColumn()
+			if currentDetailWeapon then
+				refreshDetailStats(currentDetailWeapon) -- Equip/Dequip button label flip
+			end
+		end
+	elseif attributeName == SpraypaintConstants.ATTRIBUTE then
+		if isOpen and currentDetailWeapon then
+			refreshSpraypaintBalance(currentDetailWeapon)
+		end
+	elseif attributeName:match("^GamepassOwned_") then
+		-- A pass bought mid-session unlocks its weapon at once: GAMEPASS turns into CLAIM with the panel open.
+		if isOpen then
+			buildGrid()
+			if currentDetailWeapon then
+				refreshDetailStats(currentDetailWeapon)
+			end
+		end
+	end
+end)
+
+-- ============================================
+-- TRIGGER: button + keybind
+-- ============================================
+local inventoryGui = playerGui:WaitForChild("Custom Inventory")
+local weaponaryButton = inventoryGui:WaitForChild("weaponaryButton") :: ImageButton
+weaponaryButton.MouseButton1Click:Connect(function()
+	if isOpen then
+		closeShop()
+	else
+		openShop()
+	end
+end)
+
+ContextActionService:BindAction("ToggleWeaponaryShop", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin then
+		if isOpen then
+			closeShop()
+		else
+			openShop()
+		end
+	end
+end, false, Enum.KeyCode.B)
