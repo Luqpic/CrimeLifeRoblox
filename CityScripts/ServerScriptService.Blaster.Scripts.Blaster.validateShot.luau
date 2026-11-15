@@ -2,6 +2,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local Constants = require(ReplicatedStorage.Blaster.Constants)
+local validateFireInterval = require(script.Parent.validateFireInterval)
+
+-- player -> Tool -> claimed timestamp of the last accepted shot. Tools are weak keys, so a dropped or
+-- re-granted Tool takes its entry with it.
+local lastShotAt: { [Player]: { [Tool]: number } } = {}
+game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
+	lastShotAt[player] = nil
+end)
 
 local TIMESTAMP_BUFFER_CONSTANT = 1
 local POSITION_BUFFER_CONSTANT = 5
@@ -61,6 +69,18 @@ local function validateShot(player: Player, timestamp: number, blaster: Tool, or
 	if distance > maxDistance then
 		return false
 	end
+
+	-- Rate of fire, checked last so only a shot that passed everything else is recorded.
+	local shotsByTool = lastShotAt[player]
+	local rateOfFire = blaster:GetAttribute(Constants.RATE_OF_FIRE_ATTRIBUTE)
+	if not validateFireInterval(shotsByTool and shotsByTool[blaster], timestamp, rateOfFire) then
+		return false
+	end
+	if not shotsByTool then
+		shotsByTool = setmetatable({}, { __mode = "k" }) :: any
+		lastShotAt[player] = shotsByTool
+	end
+	shotsByTool[blaster] = timestamp
 
 	return true
 end

@@ -59,6 +59,22 @@ Players.PlayerRemoving:Connect(function(player: Player)
 	playerQuests[player] = nil
 end)
 
+-- Accept and turn-in both require standing at the giver, as the dialogue does on the client.
+local function canReach(player: Player, quest): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+	local npc = questsFolder and questsFolder:FindFirstChild(quest.npcName)
+	local npcRoot = npc and npc:FindFirstChild("HumanoidRootPart")
+	if not npcRoot then
+		return false
+	end
+	return QuestConfig.withinReach(root.Position, npcRoot.Position)
+end
+
 -- ============================================
 -- ACCEPT
 -- ============================================
@@ -68,6 +84,9 @@ acceptQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 	end
 	local quest = QuestConfig.Quests[questId]
 	if not quest then
+		return
+	end
+	if not canReach(player, quest) then
 		return
 	end
 
@@ -133,6 +152,9 @@ turnInQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 	end
 	local quest = QuestConfig.Quests[questId]
 	if not quest then
+		return
+	end
+	if not canReach(player, quest) then
 		return
 	end
 

@@ -27,6 +27,13 @@ local function validateShootArguments(
 	if not validateSimpleTable(tagged, "string", taggedValidator) then
 		return false
 	end
+	-- One spelling per ray, the client's own tostring(index): tonumber folds "01", "1.0", "1e0" and
+	-- others onto ray 1, which let one ray be claimed (and deal damage) many times.
+	for key in tagged do
+		if tostring(tonumber(key)) ~= key then
+			return false
+		end
+	end
 
 	return true
 end

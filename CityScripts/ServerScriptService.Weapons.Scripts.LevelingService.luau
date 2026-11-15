@@ -31,7 +31,7 @@ setLevelRequest.OnServerEvent:Connect(function(player: Player, targetLevel: any)
 	if player.UserId ~= ADMIN_USER_ID then
 		return
 	end
-	if typeof(targetLevel) ~= "number" then
+	if typeof(targetLevel) ~= "number" or targetLevel ~= targetLevel then -- NaN survives floor and clamp
 		return -- covers /setlevel abc, and anything a crafted remote call might send
 	end
 	-- Clamped rather than rejected, so 0, negatives and absurd values all resolve to something

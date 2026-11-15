@@ -130,4 +130,13 @@ QuestConfig.STATE_ACCEPTED = "Accepted"
 QuestConfig.STATE_READY_TO_TURN_IN = "ReadyToTurnIn"
 QuestConfig.STATE_COMPLETED = "Completed"
 
+-- How close a player must stand to the quest giver for the server to accept or hand in its quest.
+-- The dialogue itself closes at 10 studs (DialogModule's walk-away range); 30 leaves room for lag.
+QuestConfig.MAX_INTERACT_DISTANCE = 30
+
+-- A NaN magnitude compares false, so a NaN position is never within reach.
+function QuestConfig.withinReach(a: Vector3, b: Vector3): boolean
+	return (a - b).Magnitude <= QuestConfig.MAX_INTERACT_DISTANCE
+end
+
 return QuestConfig
