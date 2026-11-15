@@ -117,6 +117,16 @@ Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[
 - **Robbery:** the getaway distance formula exists twice (server and client) with nothing checking they agree (2026-09-20); the Bank and BankVault models are heavy at 572 and 624 parts (2026-09-12). [[Getaway-Distance-Replaces-Claim-Zone]] [[Performance-Optimization-And-Unification]]
 - **The Crowbar's swing delay** is 0.25 s in one 2026-09-20 log and 0.2 s in another; which is current is unrecorded. [[Melee]]
 
+- **From the final review of the hardening batch (2026-11-15), none blocking:** [[2026-11-15 FPS Hardening In City]]
+  - `ShotRate_Test` does not pin the 0.9 tolerance (changing it to 0.5 still passes); one case at 0.85 of an interval would. `validateShot`'s wiring (keyed by weapon name, records only accepted shots) and `canReach`'s no-character and dead branches are proven in Play or by reading only.
+  - The `ProfileAdoption_Test` quest case is titled "a restored quest wins" but only re-tests the unbound `mirror` guard and `QuestConfig.restore`; that the hydrator wins is shown by the Play round trip, not pinned by a unit test.
+  - Quest entries that `restore` drops or clamps stay in the saved table until that id is saved again: a quest id removed and later re-added would bring old progress back.
+  - Melee stamps its shot after `swingDelay`: Knife and Baton are 90 rpm with a 0.2 s delay, so a frame hitch over about 67 ms during a swing can get the next back-to-back swing refused. Stamping at the press would remove it. Not tried with a real mouse.
+  - The idle burst recurs after every idle second, not once; the long-run rate stays capped at the weapon's rate / 0.9. Rate clocks are per weapon name, so up to four loadout weapons each fire at their own legal rate.
+  - The quest reach check trusts the character position, which the client owns: it stops a remote fired from across the map, not a client that also teleports. Needs server movement validation to close.
+  - A refused accept or turn-in gives the client no feedback (the dialogue still says its line); a refused shot leaves client ammo one lower than the server until the next reload or equip.
+  - `QuestService` turn-in pays before it clears state; safe only because nothing between yields.
+
 ## Documentation drift
 
 - **`CLAUDE.md` says progression is session-only.** Stale since 2026-09-23: ProfileStore saves Cash, level and XP, weapons and loadout, upgrades, Spraypaint, skins, kill counts and (city, 2026-11-15) quest progress. The header comment in `LevelingService` is stale too. [[Persistence and Saves]]
