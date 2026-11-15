@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, quests, dialogue, npc]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-System-Level1-KillThugs.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Billboard-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Billboard-Input-And-Toast-Duration.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md"]
 ---
 
@@ -34,6 +34,13 @@ Six quest givers in the FPS place, gated at levels 1, 10, 20, 35, 50 and 70, eac
 - Givers wear law-enforcement outfits by tier: Security (1, 10), Police (20, 35), SWAT (50, 70).
 - Supplier: offer / explainer / decline; selling with nothing carried is refused by the server and answered in dialogue.
 
+## In the city
+Measured 2026-11-15 ([[2026-11-15 FPS Systems Into City]]):
+- A quest giver is an R15 `Model` directly under `Workspace.Quests`, named exactly as `QuestConfig`'s `npcName` (`Level 1 Quest`, `Level 10 Quest`, `Level 20 Quest`, `Level 35 Quest`, `Level 50 Quest`, `Level 70 Quest`): `Humanoid`, `HumanoidRootPart` (anchored, 3 studs above the pivot), 15 MeshPart limbs, clothing, outfit accessories and an `Animate` folder; 302 to 320 descendants each, 1,892 in all with 119 parts. The pivot is at the feet.
+- `HumanoidRootPart.ProximityPrompt` carries tag `NPCprompt`, `Style = Custom`, `MaxActivationDistance = 10`, no line of sight needed. `Head.gui` is the name and dialogue billboard. The `Outfit` attribute (Security, Police, Armed Police) is read by nothing at runtime.
+- No script stores an absolute position of a giver, and no giver has a joint, weld or `ObjectValue` outside its model: moving one with `PivotTo` is self-contained.
+- They now stand on the sidewalk at z 2477.5, x -44.89 to -114.89, facing the spawn ([[City Map and Plots]]); provisional. In the run from the city spawn all six were present with their prompts.
+
 ## Extend it
 - New quest: one entry in `QuestConfig` (target enemy name inside the quest, never hard-coded in lines) plus a giver in `Workspace.Quests` with the same billboard, prompt and `NPCprompt` tag.
 - New NPC conversation in either place: a controller like `QuestDialogueController` / `SupplierDialogueController` driving `DialogModule`; keep outcomes server-side.
@@ -50,6 +57,7 @@ Six quest givers in the FPS place, gated at levels 1, 10, 20, 35, 50 and 70, eac
 - The five later givers were placed in a line at temporary positions on 2026-09-16; no log records them being moved.
 
 ## History
+- 2026-11-15: ported into the city as an exact copy; the six givers moved to the city sidewalk by the spawn; pressing E still needs a person. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: givers dressed by tier from the enemy templates' uniforms; talking to one not verified. [[FPS-Quest-Givers-Law-Enforcement-Outfits]]
 - 2026-09-23: quest toasts queue behind open panels. [[Notification-Queue-While-Panel-Open]]
 - 2026-09-19 (Robbery): Illegal Supplier moved onto `DialogModule`; reply billboard `Active = true`, prompt line-of-sight off; real-mouse clicks verified. [[Supplier-Dialogue-On-Shared-Billboard-Engine]], [[Supplier-Billboard-Input-And-Toast-Duration]]

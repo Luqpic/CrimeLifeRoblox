@@ -1,17 +1,35 @@
 ---
 type: decision
 tags: [decision, tycoon, merge, crimelife-tycoon]
-updated: 2026-11-14
-sources: ["The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
+updated: 2026-11-15
+sources: [".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
 ---
 
 # CrimeLife Tycoon Decisions
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
 
-## Newest first
+## 2026-11-15: the FPS port and the tycoon building
 
-All made by the developer on 2026-11-14, by picking from offered options. Quoted text is the developer's own.
+Made during the overnight run recorded in [[2026-11-15 FPS Systems Into City]]. Quoted text is the developer's own.
+
+### The developer's calls
+- **Saving at checkpoints.** "Yes, save at checkpoints": Claude may save `Crimelife city.rbxl` after each finished task that night; never publish. A one-night permission ([[Save and Publish Rules]]). The on-disk file was copied first to `Crimelife city BACKUP pre-cleanup 2026-08-20.rbxl`.
+- **When the city differs from the FPS place:** "Fix it in the city and continue". The FPS place stays untouched.
+- **Scope for the night:** "HQ in the city + FPS playable there". Later phases get plans only.
+- **The HQ goes in by copy-paste.** "I'll copy-paste it now": Test30.4's window refused the local transfer, and the developer pasted `Workspace.HQ` into the city's `ServerStorage`.
+- **How far to go:** "run until the very end ... everything is made according to plan and polished".
+- They asked "where's the tycoon building?" and expected it in the city; it is phase 4 in the approved order, so a static preview was built on `Plot3` (below).
+
+### Claude's calls
+- **Crimelife City is the primary place; FPS System is frozen** as the reference the port was taken from. This follows the approved design (the developer chose the city as the merge target on 2026-11-14). [[Which Project This Is]].
+- **Enemy placement rules:** each of the six points at least 180 studs from the spawn, 120 from every plot and from the tycoon preview, 130 from every quest giver, 60 from every other point and robbery building, on a road or footpath, not on the arm toward Plot3; weakest enemy nearest. Positions are provisional.
+- **The preview stands on `Plot3`**, the plot nearest the city spawn (any plot would do; `PivotTo` moves it). `ServerStorage.HQ` stays as the untouched source for phases 4 and 5.
+- **Fix the class, not the instance** for the client load-order race, and leave `PromptUiController` unchanged.
+
+## Newest first (2026-11-14)
+
+Under this heading, all made by the developer on 2026-11-14, by picking from offered options. Quoted text is the developer's own.
 
 ### The game
 - **Why a new game:** OBT "isn't pulling a lot of players nowadays"; "this game was prominent back in 2021. Now it's 2026." CrimeLife Tycoon is "also a tycoon" but "more innovative and fun", "more into cartoonish and low poly unlike OBT".

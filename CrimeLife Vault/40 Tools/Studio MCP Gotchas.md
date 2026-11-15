@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tools, mcp, testing, gotchas]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "70 Batches/FPS System/FPS-Skins-Card-Sticky-Fix-Responsive-Scale-Budget.md", ".superpowers/sdd/uploaded-asset-ids.md", "OBT Vault/40 Tools/Studio MCP Gotchas.md (generic parts)"]
 ---
 
@@ -39,6 +39,12 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 - **`start_stop_play`** runs solo Play only; a multiplayer test needs the developer ([[Two-Player Test]]).
 - The MCP cannot press Studio's own toolbar (device emulator, Test > Clients and Servers) ([[Phone Testing]]).
 - `script_grep`, `script_search`, `script_read`, `search_game_tree`, `inspect_instance` read the live place: the cheapest way to "read before you edit" ([[Code Graph]]).
+
+## Moving instances between two Studio windows (2026-11-15)
+
+- **`SerializationService` + `EncodingService` Base64 + `HttpService:RequestAsync` to a localhost store.** The source window serializes (`SerializationService:SerializeInstancesAsync`), encodes (`EncodingService` Base64) and posts to a localhost-only store on this Mac (`CrimeLifeRoblox/CityMerge/transfer/server.py`); the other window fetches, decodes and deserializes (`export.luau`, `import.luau` in the same folder). Nothing passes through the agent's context and no source is retyped, so the copy is exact. Proven: `ReplicatedStorage.Blaster` serialized to 873,531 bytes and posted as a 1,164,708-character Base64 body, and arrived as 1,554 descendants and 21 scripts; 88 roots (3,559,520 Base64 bytes) moved this way. Keep one root over 100,000 bytes per `execute_luau` call and yield between roots. A service itself (`StarterGui`) cannot be serialized; its children can.
+- **A cloud place's window can refuse `127.0.0.1`.** Test30.4's window answered that localhost is not in the Assistant HTTP allowlist, while the local-file windows (the FPS and city places) accepted it. It was not worked around: the developer pasted the instance by hand ([[2026-11-15 FPS Systems Into City]]).
+- **`screen_capture` timed out repeatedly late in the 2026-11-15 session** (several tries, with and without markers, for the implementer and for the controller). Why is not recorded. Property read-back stood in for the look ([[Screen Captures]]).
 
 ## Moving the tester
 

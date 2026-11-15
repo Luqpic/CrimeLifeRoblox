@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, enemies, npc-ai, fps]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
 ---
 
@@ -9,7 +9,7 @@ sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault
 
 **Skills:** `roblox-npc-ai`, `roblox-physics`, `roblox-game-systems` (load these for work here)
 
-FPS System place only.
+In the FPS place and, since 2026-11-15, in the city (an exact copy; see "In the city").
 
 ## What it does
 Keeps a criminal-side enemy population alive around the map: each spawn point tops up its own enemy type to a per-type cap, the AI patrols, detects, chases, shoots or swings, searches when it loses a living target, and reacts to stun. Kills feed quests, leveling, cash drops and the kill toast.
@@ -32,6 +32,13 @@ Keeps a criminal-side enemy population alive around the map: each spawn point to
 - **Stun.** `ShotResolver` stamps `StunnedUntil`; EnemyAI sets `WalkSpeed = 0`, cancels movement and fire loop once, and restarts an automatic weapon's fire loop when the stun lifts. The baton stun is also a 1 s ragdoll stagger ([[Ragdoll]], [[Melee]]).
 - **Rewards.** A kill has a 30% chance to drop a physical cash pickup scaled by the enemy's weapon tier ([[Economy and Cash]]); quest credit comes from the spawn-kind tag ([[Quests and Dialogue]]).
 
+## In the city
+Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 FPS Systems Into City]]):
+- A spawn point is a `Part` (4 by 1 by 4, anchored, `CanCollide` false) in `Workspace.EnemySpawns` with tag `EnemySpawnPoint` and one child, a `StringValue` named `EnemyType`. No attributes.
+- `EnemySpawner` reads `point.Position` on every spawn and ignores orientation; the rig appears at the position plus a random scatter within 22 studs, plus 3 studs up. A point is skipped while any living player is within 60 studs. Cap 5 alive per type, top-up every 2.5 s.
+- The AI patrols to random points within 70 studs of the spawn point's position at spawn time, with `PathfindingService` (agent radius 2, height 5, can jump); an unreachable target fails and is retried. So a point needs walkable ground for about 22 studs and ideally 70 around it, and must not sit where a patrol reaches a plot or a quest giver.
+- Where the six points stand now: [[City Map and Plots]]. The positions are provisional. In the run from the city spawn all 30 enemies came up (5 per type) and 5 of 6 types moved; one Thug stuck at about (215, 5, 2485) against `Building_15`.
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.
@@ -48,6 +55,7 @@ Keeps a criminal-side enemy population alive around the map: each spawn point to
 - A staging folder of downloaded outfit assets was left in `ServerStorage` (2026-09-16), to remove once outfits were seen on spawned enemies; whether it was removed is not recorded.
 
 ## History
+- 2026-11-15: ported into the city as an exact copy; the six points moved onto the city's roads. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: overhead health bar gains a white Health icon; kill toast names the enemy from `EnemyTemplate`. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-22: per-type cap 10 -> 5 (60 -> 30 alive, plateau measured); missed-shot tracers capped at 150 studs. [[FPS-Miss-Tracers-And-Spawn-Cap]]
 - 2026-09-21: ally bodies and carried guns no longer block enemy line of sight; carried weapons no longer absorb hits; guard Baton gets `stunDuration` 1 s. [[FPS-Clustered-Enemies-Stop-Attacking]] [[FPS-Carried-Weapons-Absorbed-Hits]] [[FPS-Baton-Stun-Becomes-A-Stagger]]

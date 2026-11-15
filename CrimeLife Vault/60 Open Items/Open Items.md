@@ -1,13 +1,13 @@
 ---
 type: open
 tags: [open-items, bugs, watch-list]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/*.md (Status lines and Notes)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/*.md (Status lines and Notes)", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-persistence-phase-3-design.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md"]
 ---
 
 # Open Items
 
-Harvested on 2026-11-14 (city items added the same day) from every change log whose `Status:` or Notes say not verified, needs a person, follow-up or later. Each item names its source; the date is the source's date. When an item closes, remove it here and say so in the batch note. Systems: [[Systems MOC]]. How to re-check: [[Regression Suite]].
+Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[2026-11-15 FPS Systems Into City]] added) from every change log whose `Status:` or Notes say not verified, needs a person, follow-up or later. Each item names its source; the date is the source's date. When an item closes, remove it here and say so in the batch note. Systems: [[Systems MOC]]. How to re-check: [[Regression Suite]].
 
 ## Needs the developer
 
@@ -21,7 +21,6 @@ Harvested on 2026-11-14 (city items added the same day) from every change log wh
 - **Share the sound assets that fail "not authorized"** in the Creator Dashboard: about 9 weapon sounds (2026-09-18) and about 10 sounds (2026-09-24); the logs do not say whether these overlap. [[FPS-Figma-1to1-Image-Export-And-Font-Fix]] [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
 
 ### City map (2026-11-14)
-- **Save `Crimelife city.rbxl`.** Nothing was saved by the city cleanup (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
 - **Set `Workspace.ModelStreamingBehavior` to `Legacy`** in the Properties panel: it is not scriptable, so it is not confirmed (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
 - **Agree or change the provisional performance targets** in `CityCleanup/baseline-2026-11-14.md` (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
 - **Look at the city under streaming on a real phone** and name any far landmark that must stay visible; with a 512 target radius only 1 of the 6 robbery buildings is loaded at spawn (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
@@ -41,6 +40,17 @@ Harvested on 2026-11-14 (city items added the same day) from every change log wh
   9. `NewsStation.Model` 4,950
   10. `Map.Robbery.Bank` 3,891 (tied with `CasinoMain` 3,891)
   The last probe prints only the containers, so these counts are the last per-model figures measured (after Task 3), not a fresh read.
+
+### City and the FPS port (2026-11-15)
+- **Re-place the six enemy points and six quest givers by hand.** Their positions are provisional (placed by rules, not by eye; no screenshot could be taken). Old CFrames are in `CityMerge/placement.md`. [[2026-11-15 FPS Systems Into City]] -> [[City Map and Plots]]
+- **One Thug is stuck at about (215, 5, 2485)** against `Building_15` at the short east road end: the east arm has valid road only from 180 to 220 studs. Move the Thug point or shorten its reach. [[2026-11-15 FPS Systems Into City]] -> [[Enemies and Spawner]]
+- **Decide whether the city's 26 leftover prompts get the FPS prompt style.** `PromptUiController` forces every prompt to `Custom` and would restyle them as they stream in; untouched, and the script is shared with the Robbery place. [[2026-11-15 FPS Systems Into City]]
+- **About 79 asset-permission warnings per Play** from MeshIds in `Workspace.TycoonPreview` and `ServerStorage.HQ` (Test30.4 assets on an unpublished local file): share the assets or replace the meshes. [[2026-11-15 FPS Systems Into City]]
+- **`ServerStorage.CityQuarantine.LooseTycoon.TycoonSpawn` is an enabled `SpawnLocation`.** Inert in `ServerStorage`; disable it before anything from `LooseTycoon` is moved back into `Workspace`. [[2026-11-15 FPS Systems Into City]]
+- **`Documents/Roblox/CLAUDE.md` still names FPS System as the primary place.** It is the developer's file: one line to change (the primary place is now Crimelife City, [[Which Project This Is]]). [[2026-11-15 FPS Systems Into City]]
+- **Checks that need a person at the keyboard in the city:** how shooting feels, pressing E on a quest giver, the weapon shop by real clicks, a phone, two players. [[2026-11-15 FPS Systems Into City]]
+- **Walk the `TycoonPreview`.** Its fit on `Plot3` was checked by one screenshot and bounding numbers only. [[2026-11-15 FPS Systems Into City]]
+- **Phase 2b carries three items listed below**: the remote ownership audit, the eleven `ZIndexBehavior.Global` ScreenGuis, and quest progress not being saved (see "Documentation drift"). Its plan is to be written from `CityMerge/first-run.md`. [[2026-11-15 FPS Systems Into City]]
 
 ### Product calls waiting
 - **Price curve.** Nebula at 8200 Spraypaint is about 4,100 Criminal kills; re-size it (2026-09-24). Upgrade, cash-drop and Spraypaint rates are all placeholders (2026-09-16, 2026-09-23). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]] [[FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix]] -> [[Spraypaint]]
@@ -66,7 +76,8 @@ Harvested on 2026-11-14 (city items added the same day) from every change log wh
 
 ## Open bugs
 
-- **Lean/Turning is switched off, not fixed** (2026-09-11); the Lean script still errors at line 25 (2026-09-24). [[FPS-Death-Screen-Stuck-Crowbar-Desync-Lean-Turning-Errors]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
+- **Lean/Turning is switched off, not fixed** (2026-09-11); the Lean script still errors at line 25 (2026-09-24) in the frozen FPS place. **Fixed in the city on 2026-11-15** (`WaitForChild` on the three lookups, [[2026-11-15 FPS Systems Into City]]), but line 41 `lowerTorso.Root` is still a direct index in both places. [[FPS-Death-Screen-Stuck-Crowbar-Desync-Lean-Turning-Errors]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
+- **`Crouching` line 250 references `workspace.FX`**, which does not exist in either place (`dust.Parent = workspace.FX`; not reached in the runs); `ServerScriptService.WeaponAnimationPreview` waits forever on `Workspace.WeaponAnimationPreview`, absent in both places, so every Play logs an infinite-yield warning (2026-11-15). [[2026-11-15 FPS Systems Into City]]
 - **Third-person `MuzzleAttachment` sits at the stock end** on the Glock 17, Benelli M4 and Spas 12 (2026-09-24). [[FPS-Eight-New-Pistols-And-Shotguns]]
 - **Mossberg 590 and Spas 12 fore-ends do not move** (2026-09-24). [[FPS-New-Guns-Magazines-And-Pump-Forends]]
 - **The RPG still plays Roblox's own explosion bang** under its impact sound; the RPG grid card still reads "GAMEPASS" once owned (2026-09-24). [[FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons]]
@@ -82,6 +93,9 @@ Harvested on 2026-11-14 (city items added the same day) from every change log wh
 
 ## Watch list
 
+- **`PromptUiController` scans `workspace:GetDescendants()` on the client**: 11.69 ms once at start in the city against 4.35 ms in the FPS place; instances that stream in later are handled only if it listens for them (a `DescendantAdded` handler exists; the restyle of a streamed-in prompt was not observed) (2026-11-15). [[2026-11-15 FPS Systems Into City]]
+- **8 CoreGui load-timeout errors** (`GraphQL extendSchema`, `StarterScript`, then the player list and top bar) on the client in the Task 5 run: Roblox's own modules, seen once, not in the earlier Plays (2026-11-15). [[2026-11-15 FPS Systems Into City]]
+- **The late-sibling rescue in `WeaponaryShopController` is unobserved**: the race did not recur in five Plays, so only the `WaitForChild` contract backs it (2026-11-15). [[2026-11-15 FPS Systems Into City]]
 - **City: colour-cycling casino parts and blinking alarm lights are now static**, because their scripts were removed; 43 scripts were disabled in place (`QuarantinedScript = true`) and most travelled into quarantine with their models, 1 remains in Workspace (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
 - **Revolvers' left hand drifts 0.55 studs while firing**: seen, not investigated (2026-09-24). [[FPS-New-Guns-Magazines-And-Pump-Forends]]
 - **RPG knockback on another player** is untested (2026-09-24). [[FPS-RPG-Gamepass-Launcher]]

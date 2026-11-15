@@ -15,7 +15,7 @@ A read-only count of the four Studio places that will be merged into CrimeLife T
 |---|---|---|
 | FPS System | `FPS System.rbxl` (local) | The only place with tested game code: guns, melee, enemies, quests, shop, skins, leveling, saves. See [[Systems MOC]]. |
 | Robbery System | `Robbery System.rbxl` (local) | Heists, puzzles, getaway; shares UI modules with FPS. |
-| Crimelife City | `Crimelife city.rbxl` (local) | The main map. Art only. **The merge target.** |
+| Crimelife City | `Crimelife city.rbxl` (local) | The main map. Art only (as surveyed 2026-11-14). **The merge target**, and the primary place from 2026-11-15 ([[2026-11-15 FPS Systems Into City]]). |
 | Test30.4 | PlaceId 94388758790319, universe 10770697737 (cloud) | The tycoon building. Art plus a marketplace tycoon kit. |
 
 ## Crimelife City (measured)

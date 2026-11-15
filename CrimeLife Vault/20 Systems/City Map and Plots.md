@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, city, plots, streaming]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
+updated: 2026-11-15
+sources: ["70 Batches/2026-11-15 FPS Systems Into City.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/CityMerge/placement.md", "CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
 ---
 
 # City Map and Plots
@@ -13,16 +13,27 @@ The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of Crim
 
 ## Where it lives
 
-`Workspace` has six children:
+`Workspace` had six children after the 2026-11-14 cleanup; since 2026-11-15 it has 13 (the table lists the six, then the seven added by [[2026-11-15 FPS Systems Into City]]; 168,624 descendants in Edit):
 
 | Child | Holds |
 |---|---|
 | `Map` | `City` (25,554 instances), `Robbery` (6 buildings, 83,419), `Roads` (3), `Props` (147), `Loose` (213 unsorted pieces) |
 | `Plots` | `Plot1` to `Plot8`, each one Lapis plate (300 by 1 by 361 studs) |
 | `Ground` | the origin Baseplate |
-| `SpawnLocation`, `Terrain`, `Camera` | unchanged |
+| `SpawnLocation`, `Terrain`, `Camera` | unchanged. `SpawnLocation` at (-11, 1.5, 2498.75) is the only enabled spawn; it sits on a four-way road crossing |
+| `TycoonPreview` | static preview of the tycoon building on `Plot3` (see below) |
+| `Dev` | the FPS test area on the slab (see below) |
+| `EnemySpawns`, `Quests`, `Targets`, `AnimVM`, `Accessory Storage` | imported from the FPS place, same names (scripts look them up by name). `EnemySpawns` and `Quests` now stand in the city (below); `Targets` (105 descendants) stays on the slab; `AnimVM` (the viewmodel container) and `Accessory Storage` are empty folders; what `Accessory Storage` is for is not recorded |
 
 `ServerStorage.CityQuarantine` (does not replicate): `Scripts` (8 disabled lighting and time scripts), `Duplicates` (11 models), `LooseTycoon` (1,367 children), `StagingSlab` (103 children).
+
+## The FPS port in the city (2026-11-15)
+
+- **`Workspace.TycoonPreview`** (Model, 47,894 instances, 24,053 parts, all anchored, 23 scripts disabled with `QuarantinedScript = true`; attributes `Preview = true`, `PlotIndex = 3`, `SourceDelta = (564, -123, 1778)`, `ImportedFrom`): the assembled HQ building from `ServerStorage.HQ`, standing on `Plot3`. A **preview only**: not buyable, not the working tycoon. `ServerStorage.HQ` (58,282 descendants) is the untouched source for phases 4 and 5, with the kit's button data intact. Left out of the preview: `Bunker`, the `Fence` compound (370 by 370, the plate is 361 by 300), `Road`, `V1`, 20 stray block-out parts. The assembled building in the source is at x -686 to -473, z 128 to 438, ground floor top Y 124.
+- **`Workspace.Dev`** (Folder, `ImportedFrom`): the FPS place's test area, still on the slab around the origin: `FpsMap` (the FPS `Map`, 23 instances), `UI`, `Part`, `Model`, and `DevSpawn` (the FPS `SpawnLocation`, **`Enabled = false`**). To test at the origin, enable `DevSpawn` and disable the city `SpawnLocation` (keep exactly one enabled), and put them back afterwards. `Dev` is a Folder, so it has no streaming mode; it streams out for a player at the city spawn, about 2,500 studs away.
+- **The six enemy spawn points** (`EnemySpawns`, tag `EnemySpawnPoint`, child `StringValue` `EnemyType`) stand on the roads and footpaths west, east and +Z of the spawn: Thug (169, 1.5, 2498.75), Smuggler (-11, 1.5, 2678.75), Offender (-291, 2.5, 2498.75), Bandits (-11, 1.5, 2778.75), Disrupters (-351, 2.5, 2498.75), Saboteur (-411, 1.5, 2498.75): 180 to 400 studs from the spawn, weakest nearest. Rules and the full table: [[2026-11-15 FPS Systems Into City]].
+- **The six quest givers** (`Quests`, `Level 1 Quest` to `Level 70 Quest`) stand on the sidewalk strip `Map.City.FootPaths.Part` at z 2477.5, pivot Y 2.0035, x from -44.89 to -114.89 (14 studs apart, 40 to 106 studs from the spawn), facing the spawn.
+- **Attributes that mark the work:** `ImportedFrom = "FPS System"` is on every root brought over from the FPS place (and on `Dev` and `TycoonPreview`): find all of it by that attribute. `PlacedBy = "CityMerge Task 5, provisional"` is on the twelve moved spawn points and givers (the positions are provisional; old CFrames are in `CityMerge/placement.md`). `CityMergeDeviation` is on the two scripts edited after the import (`Lean`, `WeaponaryShopController`): the only places where the city's code differs from the FPS place.
 
 ## How it works
 
@@ -39,11 +50,13 @@ Not recorded: no system code exists yet. The plots feed the tycoon phase of the 
 
 - `Workspace.ModelStreamingBehavior` is not scriptable and is **not confirmed `Legacy`**: set it in the Properties panel.
 - Under a 512-stud target radius, far landmarks and robbery buildings are not loaded at spawn. Nobody has looked at it on a phone.
-- The place holds no CrimeLife scripts yet, and the free-model scripts are gone on purpose: see [[Luau and Scripting Traps]], "Free-model backdoors". Do not copy parts or models back from an old place file without scanning them.
+- Since 2026-11-15 the place holds the CrimeLife scripts ported from the FPS place; the free-model scripts are gone on purpose: see [[Luau and Scripting Traps]], "Free-model backdoors". Do not copy parts or models back from an old place file without scanning them.
 - `Map.Loose` is unsorted (138 unnamed Models); `Plot7`, `Plot8` and the origin Baseplate remain from the slab.
 - `Robbery` buildings are about 83,419 instances in total; the warehouse alone is about 56,000.
-- Not saved: until the developer saves `Crimelife city.rbxl`, the cleanup exists only in the open Studio session ([[Open Items]]).
+- Saved by Claude at checkpoints on 2026-11-15 (last after Task 5), never published ([[Save and Publish Rules]]). Anything done after that checkpoint exists only in the open session.
+- The city map has 26 `ProximityPrompt`s saved `Default`; the imported `PromptUiController` forces every prompt to the FPS `Custom` face as it streams in ([[Open Items]]).
+- East arm of the city's road crossing: valid road only 180 to 220 studs from the spawn (`Building_15` across its end); one Thug stood stuck there at about (215, 5, 2485).
 
 ## History
 
-See [[Batch Log]]. Created by [[2026-11-14 City Baseline and Cleanup]].
+See [[Batch Log]]. Created by [[2026-11-14 City Baseline and Cleanup]]. 2026-11-15: FPS systems, `Dev`, placed enemies and givers, `TycoonPreview` ([[2026-11-15 FPS Systems Into City]]).

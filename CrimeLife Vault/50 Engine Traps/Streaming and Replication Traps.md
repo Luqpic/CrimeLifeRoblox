@@ -1,7 +1,7 @@
 ---
 type: trap
 tags: [trap, streaming, replication, network]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "OBT Vault/50 Engine Traps/Streaming and Replication Traps.md (generic traps)"]
 ---
 
@@ -10,6 +10,13 @@ sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Monetization-Cos
 What replicates, who owns what, and instance streaming. Whether FPS System has `StreamingEnabled` on is **not recorded**: read `workspace.StreamingEnabled` before relying on the streaming traps below.
 
 ## Replication
+
+### Client scripts that index a separately-arriving instance at start race under a heavier place
+- **Symptom:** in a heavy place (the city, 30,541 client instances against 8,261 in the FPS place) a client script errors at its first lines with `X is not a valid member of ...` or never builds its UI, in some Plays and not others. Seen 2026-11-15: `Lean` errored at line 25 (`HumanoidRootPart is not a valid member of Model`) in every city Play; `WeaponaryShopController` line 20 failed in 2 of 3 Plays, so the weapon shop and skins card were never built (PlayerGui 19 children instead of 21). The same scripts ran clean in the FPS place.
+- **Cause:** a LocalScript indexes with `.` an instance that reaches the client separately from the script: a sibling in `PlayerScripts`, a `PlayerGui` child, a character part. Replication order is not guaranteed and a heavier place stretches it. Measured: `Lean` starts about 39 ms before its `HumanoidRootPart` exists (from `CharacterAdded`: `Lean` 0.032 s, `LowerTorso` 0.064 s, `HumanoidRootPart` 0.071 s; the model had 0 children at `CharacterAdded`); in one Play `StarterGui`'s copy into `PlayerGui` arrived more than 5 s late (7 scripts logged `Infinite yield possible` on `PlayerGui:WaitForChild("Custom Inventory")`).
+- **Fix:** `WaitForChild` (with a timeout and a quiet return where a missing part is acceptable) on every such lookup: `WaitForChild(name, 10)` in `Lean`, `require(script.Parent:WaitForChild("SkinsCardController"))` in `WeaponaryShopController`. Fix the class, not the instance.
+- **The list:** `CrimeLifeRoblox/CityMerge/client-load-order-audit.md` has every client script row (138 rows: 4 FIX, 134 SAFE). The 85 `ReplicatedStorage` rows are SAFE by observation only (0 errors in 10 Plays); if one ever misses, the same change applies. Open: `Lean` line 41 `lowerTorso.Root` is still a direct index ([[Open Items]]).
+- **Bit us:** [[2026-11-15 FPS Systems Into City]].
 
 ### ServerStorage does not replicate (Known trap)
 - **Symptom:** a client cannot find a template.

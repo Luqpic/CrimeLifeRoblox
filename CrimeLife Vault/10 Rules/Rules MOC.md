@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [moc, rules]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (How to work in this project)", "OBT Vault/10 Rules/ (generic rules carried over)"]
 ---
 
@@ -13,7 +13,7 @@ Read [[Which Project This Is]], [[Safety and Security Rules]] and [[Save and Pub
 
 ## Where you are
 
-- [[Which Project This Is]]: FPS System is the target; Robbery System and OBT are never edited unless named.
+- [[Which Project This Is]]: Crimelife City is the target from 2026-11-15 (FPS System is frozen, it was the target until 2026-11-14); Robbery System and OBT are never edited unless named.
 
 ## Safety
 

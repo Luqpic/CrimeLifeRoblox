@@ -1,7 +1,7 @@
 ---
 type: reference
 tags: [start]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Roblox Development, Operating Context)", ".superpowers/sdd/skins-card-sticky-fix-report.md", ".superpowers/sdd/2026-09-23-renown-phase-2/task-1-report.md", "git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -10,10 +10,11 @@ sources: ["CLAUDE.md (Roblox Development, Operating Context)", ".superpowers/sdd
 ## Which project this is
 
 - **This vault:** CrimeLife, a Roblox crime game built from two places that share UI modules. See [[Which Project This Is]].
-  - **FPS System** (`Documents/Roblox/Roblox Games/FPS System.rbxl`): the primary place. Guns and melee, enemies, quests, shop, cosmetics, leveling, persistence.
+  - **Crimelife City** (`Documents/Roblox/Roblox Games/Crimelife city.rbxl`): **the primary place from 2026-11-15.** The cleaned city map with the FPS systems ported in as an exact copy (guns and melee, enemies, quests, shop, cosmetics, leveling, persistence), the six plots and a static tycoon preview on `Plot3`. See [[City Map and Plots]] and [[2026-11-15 FPS Systems Into City]].
+  - **FPS System** (`Documents/Roblox/Roblox Games/FPS System.rbxl`): **frozen from 2026-11-15** as the reference the port was taken from; do not edit it. It was the primary place until 2026-11-14 and all `70 Batches/FPS System/` work was done in it.
   - **Robbery System** (`Documents/Roblox/Roblox Games/Robbery System.rbxl`): the sister place (robbery prompts, heists, getaway). A separate project: **never edit it unless the developer names it**.
-- Live Studio access runs through the `Roblox_Studio` MCP server (`Documents/Roblox/.mcp.json`). Run `list_roblox_studios` and **confirm the attached instance is the FPS System place before any write**.
-- Last recorded Studio instance: `e72599f8-83cc-49ef-a389-c6be7ed27e4d`, "FPS System Upgraded", PlaceId 87650598860298 (2026-09-24). Earlier: `ea0a6094-7699-4852-be8a-dc37e0a66ab1` ("FPS System.rbxl", 2026-09-22 and 2026-09-23). The id changes when Studio restarts. See [[Studio Host and Instance Id]] and [[Places and Studio Windows]].
+- Live Studio access runs through the `Roblox_Studio` MCP server (`Documents/Roblox/.mcp.json`). Run `list_roblox_studios` and **confirm the attached instance is the Crimelife City place before any write** (before 2026-11-15 the rule named FPS System).
+- Last recorded FPS System Studio instance: `e72599f8-83cc-49ef-a389-c6be7ed27e4d`, "FPS System Upgraded", PlaceId 87650598860298 (2026-09-24). Earlier: `ea0a6094-7699-4852-be8a-dc37e0a66ab1` ("FPS System.rbxl", 2026-09-22 and 2026-09-23). The id changes when Studio restarts. See [[Studio Host and Instance Id]] and [[Places and Studio Windows]].
 - **Outbreak Tycoon (OBT)** is a third, unrelated project with its own vault (`Documents/Roblox/OBT Vault/`). Nothing from OBT is edited from here.
 
 ## Where things live
@@ -21,7 +22,7 @@ sources: ["CLAUDE.md (Roblox Development, Operating Context)", ".superpowers/sdd
 | What | Where |
 |---|---|
 | Live game | Studio (source of truth for code and instances) |
-| Code mirrors (exported copies of Studio scripts) | `CrimeLifeRoblox/FPSSystem/<area>/*.luau` (40 files on 2026-11-14, plus 2 in `ViewmodelAnimations/baseline/`). A local edit alone does not change Studio. |
+| Code mirrors (exported copies of Studio scripts) | `CrimeLifeRoblox/FPSSystem/<area>/*.luau` (40 files on 2026-11-14, plus 2 in `ViewmodelAnimations/baseline/`): they mirror the FPS place as exported, not the city. Two city scripts deviate (`Lean`, no mirror; `WeaponaryShopController`, mirror out of date). A local edit alone does not change Studio. |
 | Unit tests | `ServerStorage.UnitTest.Cases.*` in Studio; mirrors as `*_Test.luau` and `*.spec.luau`. See [[Unit Test Runner]] |
 | Project knowledge | this vault |
 | Batch history | `70 Batches/` ([[Batch Log]]); before 2026-11-14 the 143 change logs |

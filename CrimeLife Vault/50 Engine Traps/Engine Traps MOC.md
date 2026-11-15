@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [trap, moc, engine]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Known traps)", "70 Batches/ (Notes and Cause sections of the change logs)", "OBT Vault/50 Engine Traps/ (generic traps)"]
 ---
 
@@ -20,7 +20,7 @@ Quirks of the Studio MCP harness and the Mac (not the engine) are in [[Tools MOC
 - [[Tween and Render Traps]]: render-driven tweens and a collapsed viewport, preview pivots, SpecialMesh plastic, Metal, float properties.
 - [[Physics and Character Traps]]: hits absorbed by carried tools, line of sight blocked by allies, Humanoids climbing each other, impulse vs settled distance, client-owned characters, rig hubs.
 - [[Luau and Scripting Traps]]: deferred attribute signals, `string.gsub` magic characters, grep hitting comments, `task.wait` overshoot, setup checks that abort wiring, stale instance paths, free-model backdoors (numeric `require`, `getfenv`).
-- [[Streaming and Replication Traps]]: ServerStorage does not replicate, ownership, session locking only testable when published, streaming (if enabled).
+- [[Streaming and Replication Traps]]: ServerStorage does not replicate, client scripts that index a separately-arriving instance race under a heavier place, ownership, session locking only testable when published, streaming (if enabled).
 
 ## The Known traps list, by note
 

@@ -1,13 +1,13 @@
 ---
 type: moc
 tags: [moc, system]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md"]
 ---
 
 # Systems MOC
 
-What exists in CrimeLife and where it lives, one note per system. Each note has a `Skills:` line naming the `roblox-*` skills to load for work there. The **FPS System** place is the primary place; the **Robbery System** place shares UI modules with it but is a separate project: never edit it unless it is named.
+What exists in CrimeLife and where it lives, one note per system. Each note has a `Skills:` line naming the `roblox-*` skills to load for work there. **Crimelife City** is the primary place from 2026-11-15 (the FPS systems below were ported into it; the **FPS System** place is frozen as the reference); the **Robbery System** place shares UI modules with it but is a separate project: never edit it unless it is named.
 
 ## FPS combat
 

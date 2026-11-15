@@ -1,7 +1,7 @@
 ---
 type: rule
 tags: [rule, save, publish, studio]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["OBT Vault/10 Rules/Save and Publish Rules.md (adapted)", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md"]
 ---
 
@@ -15,6 +15,10 @@ sources: ["OBT Vault/10 Rules/Save and Publish Rules.md (adapted)", "70 Batches/
 - **Remind the developer to save** at the end of a batch when Studio changed.
 - **Stop Play before an Edit change or a save.** Edit is where changes persist.
 - **The git commit is not a save.** `Batch: <topic>` commits the vault and the `.luau` mirrors; the place itself lives in Studio. Do not push unless asked.
+
+## Exception: one night, 2026-11-15
+
+On 2026-11-15 the developer allowed Claude to save `Crimelife city.rbxl` at checkpoints during the overnight run that ported the FPS systems into the city ("Yes, save at checkpoints"). Claude saved six times, never published, and the batch note ends "Saved to `Crimelife city.rbxl` (checkpoint after Task 5) / NOT published." ([[2026-11-15 FPS Systems Into City]]). **This was a one-night permission.** The standing rule above is unchanged: the developer saves, Claude never publishes, and every report ends with the save state. Claude saves again only if the developer allows it again.
 
 ## Why
 

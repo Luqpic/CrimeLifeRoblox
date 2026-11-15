@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [batch, moc]
-updated: 2026-11-14
+updated: 2026-11-15
 sources: ["git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-15 | City | [[2026-11-15 FPS Systems Into City]] | FPS systems ported into the city as an exact copy (199 script hashes equal, 147 / 147 tests in both places), two deviations, enemies and quest givers placed; tycoon building brought forward as a static preview on Plot3; Crimelife City becomes the primary place |
 | 2026-11-14 | City | [[2026-11-14 City Baseline and Cleanup]] | City cleanup: backdoor scripts and duplicate buildings removed, slab quarantined, plots named, streaming on (264,072 to 118,679 Workspace instances) |
 | 2026-09-25 | FPS | [[FPS-RPG-Reload-Hand-Carries-Rocket]] | RPG Reload — The Hand Carries the Rocket Into the Tube |
 | 2026-09-25 | FPS | [[FPS-Gamepass-Shop-Scrolling-Grid]] | Gamepass Shop Grid Scrolls Instead of Overflowing |
