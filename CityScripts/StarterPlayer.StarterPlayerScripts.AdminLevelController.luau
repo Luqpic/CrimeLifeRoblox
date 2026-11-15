@@ -59,6 +59,7 @@ end)
 -- PANEL
 -- ============================================
 local gui = Instance.new("ScreenGui")
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Sibling: see UI Layout Traps, "ZIndexBehavior is a global on the ScreenGui"
 gui.Name = "AdminLevelGui"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 20 -- above the shop/quest panels, so it is never buried while debugging

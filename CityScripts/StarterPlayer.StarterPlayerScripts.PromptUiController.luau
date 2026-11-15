@@ -18,6 +18,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- Its own ScreenGui so nothing else's focus-mode hiding or fade binding reaches world prompts.
 local screen = Instance.new("ScreenGui")
+screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Sibling: see UI Layout Traps, "ZIndexBehavior is a global on the ScreenGui"
 screen.Name = "PromptUiGui"
 screen.ResetOnSpawn = false
 screen.Parent = playerGui

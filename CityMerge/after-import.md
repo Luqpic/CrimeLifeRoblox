@@ -128,4 +128,15 @@ Quest restore does not replay the completion toast (phase 2b Task 3, fix round 1
 
 `QuestDialogueController` (line 132) reads the completions count for its dialogue text only; no celebration, so unchanged.
 
+ScreenGuis moved to Sibling (phase 2b Task 4, `phase2b/zindex-audit.md`), same columns. Each edit is one line after the `Instance.new("ScreenGui")`: `<var>.ZIndexBehavior = Enum.ZIndexBehavior.Sibling` with the comment `-- Sibling: see UI Layout Traps, "ZIndexBehavior is a global on the ScreenGui"`. Each script carries `CityMergeDeviation = "2026-11-15 ScreenGui ZIndexBehavior Sibling (paint order unchanged, phase 2b Task 4)"`. `PromptUiController` is shared in spirit with the Robbery place; this is the city copy only.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-15 | `StarterPlayer.StarterPlayerScripts.PromptUiController` (LocalScript) | 5,248 / 1225139167 (as imported) | 5,379 / 932925811 | `PromptUiGui` paint order equal under Global and Sibling in every measurement (0 and 4 objects). |
+| 2026-11-15 | `StarterPlayer.StarterPlayerScripts.AdminLevelController` (LocalScript) | 7,363 / 11968854 (as imported) | 7,491 / 3139161519 | `AdminLevelGui` equal (6 objects). |
+| 2026-11-15 | `StarterPlayer.StarterPlayerScripts.DamageDirectionIndicator` (LocalScript) | 3,400 / 1750238707 (as imported) | 3,534 / 2728768684 | `DamageDirectionIndicator` equal (empty at rest; live arrows all `ZIndex` 1). |
+| 2026-11-15 | `ReplicatedStorage.UI.CashBurst` (ModuleScript) | 5,163 / 2916064367 (as imported) | 5,292 / 1256638673 | `CashSpendBurst` equal (8 coins, all `ZIndex` 1). |
+
+`StarterGui."Custom Inventory"`: `ZIndexBehavior` property checked and left `Global` (not order-equal: 123 swapped pairs); no property change made, no script of it touched. Left `Global` as well: `CashShopGui`, `GamepassShopGui`, `WeaponaryShopGui`, `QuestLogGui`, `DeathScreenGui` (reasons in `phase2b/zindex-audit.md`).
+
 NOT saved / NOT published

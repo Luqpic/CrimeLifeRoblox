@@ -27,6 +27,7 @@ local HOLD_TIME = 0.15
 local FADE_TIME = 1.2
 
 local screenGui = Instance.new("ScreenGui")
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Sibling: see UI Layout Traps, "ZIndexBehavior is a global on the ScreenGui"
 screenGui.Name = "DamageDirectionIndicator"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true

@@ -60,6 +60,7 @@ function CashBurst.burstFrom(origin: GuiObject, amount: number?, style: BurstSty
 	end
 
 	local gui = Instance.new("ScreenGui")
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Sibling: see UI Layout Traps, "ZIndexBehavior is a global on the ScreenGui"
 	gui.Name = "CashSpendBurst"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
