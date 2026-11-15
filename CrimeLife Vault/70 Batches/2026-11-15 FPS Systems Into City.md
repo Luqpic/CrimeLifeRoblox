@@ -125,7 +125,7 @@ The givers stand on the sidewalk strip `Map.City.FootPaths.Part` (-115, 1.5, 247
 - Five clean city Plays after the two deviations (above); the Task 4 review read the live places and found only `Lean` and `WeaponaryShopController` differing from FPS, by the approved lines.
 - The run from the city spawn with the placed enemies and givers (above); the twelve anchors read back at the applied positions.
 - Invariants after the batch: Workspace 168,624 descendants, exactly one enabled `SpawnLocation` (the city's), `StreamingEnabled` true, `Plots` 8 children, 0 unanchored `BaseParts` under `Workspace.Map`.
-- Task 5's review was running when this note was written.
+- Task 5 was reviewed the same way and approved with no Critical or Important finding: every placement rule was recomputed from the live positions and holds (five numbers sit exactly on their limits: two points at 180.0 studs from the spawn, three pairs 60.0 apart), quest-giver spacing is 14.0 with 0.00 degrees of facing error, and nothing else moved. The reviewer measured the east point's surroundings: `Building_15`'s near face is about 24 studs away and only 44 of 64 sample rays within 70 studs land on road or footpath, which accounts for the stuck Thug.
 
 ## Not verified
 
