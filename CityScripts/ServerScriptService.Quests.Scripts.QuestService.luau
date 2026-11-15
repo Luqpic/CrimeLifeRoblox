@@ -1,7 +1,7 @@
 -- Three responsibilities: (1) tag every quest-giver NPC Invulnerable at server start, from the same
 -- QuestConfig data everything else reads, so a new quest's NPC is protected automatically without a
 -- second place remembering to do it; (2) track quest acceptance/progress/completion per player,
--- session-only, replicated via Player Attributes exactly like Level/Cash/WeaponUpgrade already are;
+-- saved in the profile through ProfileGateway (quests, questCompletions), replicated via Player Attributes exactly like Level/Cash/WeaponUpgrade already are;
 -- (3) handle accept/turn-in requests and the kill-count objective.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
@@ -11,6 +11,7 @@ local Workspace = game:GetService("Workspace")
 
 local QuestConfig = require(ReplicatedStorage.Quests.QuestConfig)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
+local ProfileGateway = require(ServerScriptService.Persistence.Scripts.ProfileGateway)
 
 local acceptQuestRequest = ReplicatedStorage.Quests.Remotes.AcceptQuestRequest
 local turnInQuestRequest = ReplicatedStorage.Quests.Remotes.TurnInQuestRequest
@@ -39,7 +40,7 @@ for questId, quest in QuestConfig.Quests do
 end
 
 -- ============================================
--- STATE (session-only, matches Cash/Leveling/weapon ownership)
+-- STATE (saved: restored by hydrate, written by save after every change)
 -- ============================================
 -- questId -> {progress: number, state: string}. Absent questId = never accepted.
 local playerQuests: { [Player]: { [string]: { progress: number, state: string } } } = {}
@@ -51,8 +52,35 @@ local function publishQuestAttributes(player: Player, questId: string)
 	player:SetAttribute(QuestConfig.progressAttributeFor(questId), entry and entry.progress or 0)
 end
 
+-- Mirrors one quest's entry and its completions count into the profile. A no-op while unbound.
+local function save(player: Player, questId: string)
+	local quests = playerQuests[player]
+	local entry = quests and quests[questId]
+	local completions = player:GetAttribute(QuestConfig.completionsAttributeFor(questId))
+	ProfileGateway.mirror(player, function(profile)
+		profile.Data.quests[questId] = entry and { state = entry.state, progress = entry.progress } or nil
+		profile.Data.questCompletions[questId] = (typeof(completions) == "number" and completions > 0) and completions or nil
+	end)
+end
+
+-- Same shape as WeaponUpgradeService.hydrate. Runs before the bind; may run before safePlayerAdded.
+local function hydrate(player: any, profile: any?)
+	profile = profile or ProfileGateway.get(player)
+	if not profile then
+		return
+	end
+	local quests, completions = QuestConfig.restore(profile.Data.quests, profile.Data.questCompletions)
+	playerQuests[player] = quests
+	for questId in QuestConfig.Quests do
+		publishQuestAttributes(player, questId)
+		player:SetAttribute(QuestConfig.completionsAttributeFor(questId), completions[questId] or 0)
+	end
+end
+
+ProfileGateway.registerHydrator(hydrate)
+
 safePlayerAdded(function(player: Player)
-	playerQuests[player] = {}
+	playerQuests[player] = playerQuests[player] or {} -- the hydrator may have run first
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
@@ -105,6 +133,7 @@ acceptQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 
 	quests[questId] = { progress = 0, state = QuestConfig.STATE_ACCEPTED }
 	publishQuestAttributes(player, questId)
+	save(player, questId)
 end)
 
 -- ============================================
@@ -140,6 +169,7 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 			entry.state = QuestConfig.STATE_READY_TO_TURN_IN
 		end
 		publishQuestAttributes(shooter, questId)
+		save(shooter, questId)
 	end
 end)
 
@@ -185,4 +215,5 @@ turnInQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 		entry.state = QuestConfig.STATE_COMPLETED
 	end
 	publishQuestAttributes(player, questId)
+	save(player, questId)
 end)

@@ -34,6 +34,8 @@ Schema.template = {
 	-- keys), so readers must accept string keys too. ProfileStore's Studio mock does NOT reproduce
 	-- this, which is what makes it an invisible-in-testing failure.
 	loadout = {},         -- [slotIndex] = weaponName
+	quests = {},          -- [questId] = { state = string, progress = number }; read back through QuestConfig.restore
+	questCompletions = {}, -- [questId] = number of times turned in
 }
 
 -- Values that are COMPUTED from something else and must never be written.

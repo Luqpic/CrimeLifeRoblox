@@ -139,4 +139,46 @@ function QuestConfig.withinReach(a: Vector3, b: Vector3): boolean
 	return (a - b).Magnitude <= QuestConfig.MAX_INTERACT_DISTANCE
 end
 
+-- Turns a saved profile's quests and completions back into clean session state. Pure: saved data is
+-- untrusted (old schema, removed quests, hand edits), so anything unknown or malformed is dropped,
+-- progress is clamped to the objective, and new tables are always returned.
+local RESTORABLE_STATES = {
+	[QuestConfig.STATE_ACCEPTED] = true,
+	[QuestConfig.STATE_READY_TO_TURN_IN] = true,
+	[QuestConfig.STATE_COMPLETED] = true,
+}
+
+function QuestConfig.restore(savedQuests: any, savedCompletions: any): ({ [string]: { progress: number, state: string } }, { [string]: number })
+	local quests, completions = {}, {}
+	if type(savedQuests) == "table" then
+		for questId, entry in savedQuests do
+			local quest = QuestConfig.Quests[questId]
+			if quest and type(entry) == "table" and RESTORABLE_STATES[entry.state] then
+				local progress = entry.progress
+				if type(progress) ~= "number" or progress ~= progress then
+					progress = 0
+				else
+					progress = math.clamp(math.floor(progress), 0, quest.objectiveTarget)
+				end
+				local state = entry.state
+				if state == QuestConfig.STATE_ACCEPTED and progress >= quest.objectiveTarget then
+					state = QuestConfig.STATE_READY_TO_TURN_IN
+				end
+				if state == QuestConfig.STATE_READY_TO_TURN_IN then
+					progress = quest.objectiveTarget
+				end
+				quests[questId] = { state = state, progress = progress }
+			end
+		end
+	end
+	if type(savedCompletions) == "table" then
+		for questId, count in savedCompletions do
+			if QuestConfig.Quests[questId] and type(count) == "number" and count == count and count >= 1 then
+				completions[questId] = math.floor(count)
+			end
+		end
+	end
+	return quests, completions
+end
+
 return QuestConfig

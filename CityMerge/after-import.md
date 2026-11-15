@@ -105,4 +105,16 @@ Remote ownership audit (phase 2b Task 2, `phase2b/remote-audit.md`), same column
 
 New test case modules (city only, exported to `CityScripts/`): `ServerStorage.UnitTest.Cases.QuestReach_Test` (788 / 4199154368), `BlasterGuard_Test` (1,294 / 2229383301), `ShotRate_Test` (1,272 / 1910810662).
 
+Quest progress saved (phase 2b Task 3), same columns:
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-15 | `ReplicatedStorage.Persistence.Schema` (ModuleScript) | 2,636 / 926383738 (as imported) | 2,816 / 2680666850 | Adds `quests = {}` (`[questId] = { state, progress }`) and `questCompletions = {}` (`[questId] = count`) to the template; `VERSION` stays 3 (Reconcile fills them). `CityMergeDeviation = "2026-11-15 quests and questCompletions fields (quest progress saved)"`. |
+| 2026-11-15 | `ReplicatedStorage.Quests.QuestConfig` (ModuleScript) | 5,014 / 2874046250 (Task 2) | 6,674 / 3462569414 | Adds pure `QuestConfig.restore(savedQuests, savedCompletions)`: drops unknown ids, bad states and bad entries, clamps progress, Accepted at target becomes ReadyToTurnIn, keeps whole completions >= 1, returns new tables. Test `QuestSave_Test`. Attribute appended: `"...; 2026-11-15 restore() for saved quest state"`. |
+| 2026-11-15 | `ServerScriptService.Quests.Scripts.QuestService` (Script) | 7,101 / 1546813160 (Task 2) | 8,577 / 3078525795 | Quest state was session-only. Requires `ProfileGateway`; local `save(player, questId)` mirrors the entry and completions after accept, each counted kill and turn-in; local `hydrate` (WeaponUpgradeService shape) restores through `QuestConfig.restore` and publishes every quest's attributes; `safePlayerAdded` keeps a table the hydrator already set. `canReach` kept. Attribute appended: `"...; 2026-11-15 quest state saved through ProfileGateway"`. |
+| 2026-11-15 | `ServerStorage.UnitTest.Cases.Schema_Test` (ModuleScript) | 3,688 / 1558435936 | 3,768 / 4116836260 | `quests`, `questCompletions` added to both field lists. `CityMergeDeviation = "2026-11-15 quests and questCompletions in the field lists"`. |
+| 2026-11-15 | `ServerStorage.UnitTest.Cases.ProfileAdoption_Test` (ModuleScript) | 18,152 / 2120294281 | 19,046 / 4287975109 | New case "quest progress written before the bind is not saved, and a restored quest wins". `CityMergeDeviation = "2026-11-15 case: quest progress before the bind is not saved, restore wins"`. |
+
+New test case module: `ServerStorage.UnitTest.Cases.QuestSave_Test` (1,915 / 731278334), `CityMergeDeviation = "2026-11-15 new: QuestConfig.restore rules"`. All six sources exported to `CityScripts/`; on-disk Adler-32 equals the place.
+
 NOT saved / NOT published
