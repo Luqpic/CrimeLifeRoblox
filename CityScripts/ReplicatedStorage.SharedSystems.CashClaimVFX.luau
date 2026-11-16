@@ -1,6 +1,9 @@
 --!strict
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+-- Module scope (city, phase 3 Task 5): a lazy require inside makeCoin ran after a test runner's
+-- freshRequire had destroyed its clone, so script.Parent was nil and every burst errored.
+local UITheme = require(script.Parent:WaitForChild("UITheme"))
 
 -- Screen-space cash burst + flying-cash-to-GUI sequence (spec addendum,
 -- 2026-09-09), shared verbatim between the Bank and SlowFoods claim flows --
@@ -85,7 +88,6 @@ local COIN_SIZE: Vector2? = nil
 
 local function makeCoin(parent: Instance, position: UDim2)
 	if not COIN_IMAGE_ID then
-		local UITheme = require(script.Parent:WaitForChild("UITheme"))
 		COIN_IMAGE_ID = UITheme.Assets.Coin
 		-- Size comes from the theme too. It was hardcoded at 40 while the theme said 48 -- the
 		-- exact kind of drift that put stale panel art on screen earlier in this project.

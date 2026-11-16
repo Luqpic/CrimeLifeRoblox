@@ -42,6 +42,7 @@ local SPECS = {
 	"NewsStationSafeSpec",
 	"LocationServerSpec",
 	"GetawaySpec",
+	"SupplierSaleSpec", -- city, phase 3 Task 5
 }
 
 return function()

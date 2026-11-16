@@ -315,6 +315,9 @@ do
 			playRobSound = function(part) part.SafeRobSound:Play() end,
 			onOpenGui = function(player) net:OpenSafeGui(player, safeId) end,
 			isBlocked = function(player) return carryState:IsCarrying(player) end,
+			-- City (phase 3 Task 5): one player's attempts at least RobSafePrompt.HoldDuration
+			-- apart, server-side (the hold itself is only enforced on the client).
+			enforceHold = true,
 		})
 		bank:RegisterComponent(safe)
 		newsStationSafeById[safeId] = safe
