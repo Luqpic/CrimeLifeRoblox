@@ -111,3 +111,12 @@ File layout under a new `ServerScriptService.Wanted` (service, dispatcher, pure 
 5. **"Seen":** `EnemyAI` gains a public `EnemyAI:canSee(character): boolean` using its own line-of-sight check, and a registry of live police instances; guards use the same ray check from their head (a small shared helper). The wanted service evaluates "seen" for each wanted player twice a second, not every frame.
 6. **Witnesses:** tag `Witness` on the heist civilian templates (`HeistShared.ModelTemplates.BankClerk`, `RestaurantShared.ModelTemplates.Cashier`, `NewsStationShared.ModelTemplates.NewsWorker`) and `ServerStorage.GuardTemplate`; spawned police get the tag at spawn. Witnesses are found with `CollectionService:GetTagged("Witness")`.
 7. **Quest givers:** quest data, including the givers' lines, is in `ReplicatedStorage.Quests.QuestConfig`; the shown name is the `Head.gui` billboard's name label on each of the six models in `Workspace.Quests`. The model names (`Level 1 Quest` ... `Level 70 Quest`) and `npcName` stay, since code finds givers by them; only the shown names and the lines change.
+
+## 9. Change after the first run (Claude's call, 2026-11-17)
+
+The first Play showed the drain rule ended every 1-star chase before police arrived: police spawn out of sight on purpose, so the robber was "unseen" from the alarm on and lost the star at 8 s, while the first officers needed about 34 s to reach SlowFoods. Changed:
+- **While a robbery the player is in is active** (its alarm ringing), the player counts as seen: the police know where the alarm is.
+- **After any rise in heat, a search window of 20 s** passes before the unseen timer may start (`SEARCH_SECONDS` in `Constants`); being seen during it simply keeps it from mattering.
+- **Officers head for where the police believe the player is**: the player's current position while the robbery is active or the search window runs, the last position an officer or guard saw them afterwards; they switch to the AI's own chase when they see the player.
+- Each officer prefers its own squad's player when that player is visible (section 5, now built).
+The escape is unchanged in spirit: once out of the building and the search window, break every officer's sight for 8 s per star.
