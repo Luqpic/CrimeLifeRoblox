@@ -944,7 +944,7 @@ local function watchCharacter(player, character)
 	end
 end
 
-Players.PlayerAdded:Connect(function(player)
+require(ReplicatedStorage.Utility.safePlayerAdded)(function(player)
 	if player.Character then watchCharacter(player, player.Character) end
 	player.CharacterAdded:Connect(function(character) watchCharacter(player, character) end)
 	-- City (phase 3 Task 5): a character removed WITHOUT dying (LoadCharacter, anything that

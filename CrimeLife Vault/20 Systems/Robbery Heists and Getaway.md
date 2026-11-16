@@ -60,6 +60,7 @@ Four robbery locations, Bank, SlowFoods, Gas2Go and NewsStation. A player trigge
 - `multi_edit` with `replace_all` can report success while missing call sites.
 
 ## History
+- 2026-11-16 (city, final review): Illegal Supplier, Bank Clerk and Cashier templates tagged `Invulnerable` (no city XP for killing them; guards still damageable); `PlayerAdded` hooks through `safePlayerAdded`; `GamepassManager` keeps a confirmed true over a stale false. [[2026-11-16 Robbery Systems Into City]]
 - 2026-11-16 (city): the four heists imported, placed at the city's buildings, bridged onto `leaderstats.Cash`, audited and run end to end. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-20: getaway distance replaces the claim zones; getaway widget; timer stays up during the escape; "get clear of the building to bank it" wording. [[Getaway-Distance-Replaces-Claim-Zone]]
 - 2026-09-19: supplier on the shared dialogue engine; supplier billboard clickable, toast 5 -> 2.5 s; robbed objects burst the real coin icon. [[Supplier-Dialogue-On-Shared-Billboard-Engine]] [[Supplier-Billboard-Input-And-Toast-Duration]] [[Cash-Burst-Emitter-Icon]]

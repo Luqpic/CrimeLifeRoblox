@@ -2,7 +2,7 @@
 type: batch
 tags: [batch, city, robbery, heists, economy, remotes, phase-3]
 updated: 2026-11-16
-sources: [".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", "CrimeLifeRoblox/CityMerge/phase3/robbery-manifest.md", "CrimeLifeRoblox/CityMerge/phase3/currency-api.md", "CrimeLifeRoblox/CityMerge/phase3/locations.md", "CrimeLifeRoblox/CityMerge/phase3/spec-baseline.md", "CrimeLifeRoblox/CityMerge/phase3/client-load-order-audit.md", "CrimeLifeRoblox/CityMerge/phase3/first-run.md", "CrimeLifeRoblox/CityMerge/phase3/remote-audit.md", "CrimeLifeRoblox/CityMerge/phase3/final-run.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-16-robbery-systems-into-city.md"]
+sources: [".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/final-fix-report.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", "CrimeLifeRoblox/CityMerge/phase3/robbery-manifest.md", "CrimeLifeRoblox/CityMerge/phase3/currency-api.md", "CrimeLifeRoblox/CityMerge/phase3/locations.md", "CrimeLifeRoblox/CityMerge/phase3/spec-baseline.md", "CrimeLifeRoblox/CityMerge/phase3/client-load-order-audit.md", "CrimeLifeRoblox/CityMerge/phase3/first-run.md", "CrimeLifeRoblox/CityMerge/phase3/remote-audit.md", "CrimeLifeRoblox/CityMerge/phase3/final-run.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-16-robbery-systems-into-city.md"]
 ---
 
 # 2026-11-16 Robbery Systems Into City
@@ -62,6 +62,18 @@ Claude's calls (the gate's G1 to G12 and the controller's rulings from the ledge
 ## Left open
 
 All in [[Open Items]]. New: the Bank escape ring has 5 of 32 clear points (`EscapeDistance` kept at 200); the checks that need a person; the removal toast says "You died before banking"; the duffel gamepass ids are still `0`; two gamepass systems (`GamepassManager`, `MonetizationService`); two notification styles on screen; the casino and warehouse are still art with no heist; the Task 2, 4 and 5 deferred minors; the three `Workspace.HQ` lines (two of them seen this run). Closed: the two cash systems, `CashClaimVFX` and the config specs, the robbery half of the remote audit, (the 26 leftover city prompts stay open: 2 went with the quarantined buildings, 4 remain in `Workspace.Map`, the other 20 are not located).
+
+## Final review
+
+Whole-batch review (Fable): **ready with fixes**, no Critical. Two Important findings: (1) the heist NPCs (Illegal Supplier, Bank Clerks, Cashiers) could be killed with city weapons, and each kill paid city XP and a kill toast; (2) `HeistServer`, `LocationServer`, `SuppliesServer` and `GamepassManager` connected `PlayerAdded` after yielding, with nothing for players already in the game. One fix wave, measured 2026-11-16 in one Play from the city spawn (commit `Batch: phase 3 final review fixes`):
+
+| fix | change | check |
+|---|---|---|
+| Heist NPCs not killable for XP | CollectionService tag `Invulnerable` (read by `canDamageHumanoid` on the humanoid's parent Model) on `Workspace["Illegal Supplier"]["Illegal Supplier"]`, `HeistShared.ModelTemplates.BankClerk` and `RestaurantShared.ModelTemplates.Cashier` (also Gas2Go's cashiers, same template). `NPCSpawnManager` spawns by `Clone()`, which keeps the tag. Bank guards (`ServerStorage.GuardTemplate`) untagged. No code edit | `canDamageHumanoid(player, ...)`: false for the supplier, both spawned Bank clerks, a SlowFoods and a Gas2Go cashier; true for a `GuardTemplate` clone and a city `Enemy`. A real Spas 12 volley through `Blaster.Remotes.Shoot` (8 pellets claimed, 4 studs away): ammo 8 -> 7 (shot resolved), supplier health 100 -> 100, XP 0 -> 0, no `KillConfirmed`, no `Eliminated`. Control, same path, at a guard clone: health 100 -> 0, XP 0 -> 15, one `Eliminated` |
+| Players already present | the four `PlayerAdded:Connect` calls now go through `ReplicatedStorage.Utility.safePlayerAdded`; handler bodies unchanged; the `PlayerRemoving` handlers need nothing (a player who left before the hook has nothing to clean) | read back from the exports; a full SlowFoods duffel (4,000 / 4,000, two registers) voided on death: `DuffelState` base 0, toast "You died before banking. Bag lost.", `leaderstats.Cash` 500 before, after and after respawn (786 studs out), profile cash 500 |
+| Stale false over a confirmed true | `GamepassManager:PlayerOwnsGamepass` skips the write when the entry is already `true` after the yielding check | spec "a stale false arriving after a confirmed true does not overwrite it": 19 / 1 before the guard, 20 / 0 after |
+
+Suites in the same Play: heist 616 passed, 1 failed (the `Zone` occupancy sweep timing, 10.19 ms); city 18 suites 193 / 193 / 0. Found in this run and left open: the NewsStation workers (`NewsStationShared.ModelTemplates.NewsWorker`) are still damageable (`canDamageHumanoid` true); not in the ruling. Rulings: [[CrimeLife Tycoon Decisions]] (2026-11-16).
 
 ## Links
 

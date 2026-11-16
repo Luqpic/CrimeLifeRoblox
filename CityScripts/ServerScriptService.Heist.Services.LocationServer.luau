@@ -430,7 +430,7 @@ function LocationServer:Start()
 		end
 	end))
 
-	table.insert(conns, Players.PlayerAdded:Connect(function(player)
+	table.insert(conns, require(ReplicatedStorage.Utility.safePlayerAdded)(function(player)
 		if player.Character then self:_watchCharacter(player, player.Character) end
 		player.CharacterAdded:Connect(function(character)
 			self:_watchCharacter(player, character)

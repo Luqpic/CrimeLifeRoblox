@@ -244,3 +244,21 @@ Fix round 1 (2026-11-16, review of Task 5): a real in-game purchase could stay u
 The four sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4).
 
 NOT saved / NOT published
+
+Final review fixes (2026-11-16, whole-batch review of phase 3). Same columns; "old" is the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-16 | `ServerScriptService.HeistServer` (Script) | 48,408 / 1992145438 | 48,431 / 4059546395 | `Players.PlayerAdded:Connect` -> `require(ReplicatedStorage.Utility.safePlayerAdded)(...)`, so players already present get the hooks; handler body unchanged. Attribute appended "; PlayerAdded through safePlayerAdded, covers players already present (phase 3 final review)". |
+| 2026-11-16 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 19,356 / 2128671370 | 19,379 / 2088958855 | Same in `Start` (the returned connection still goes into `conns`). Same attribute text. |
+| 2026-11-16 | `ServerScriptService.SuppliesServer` (Script) | 7,886 / 1620753643 | 7,909 / 1266664936 | Same. Same attribute text. |
+| 2026-11-16 | `ReplicatedStorage.SharedSystems.GamepassManager` (ModuleScript) | 6,364 / 1846783466 | 6,681 / 754457998 | `Init`'s `PlayerAdded` through `safePlayerAdded`; `PlayerOwnsGamepass` returns true without writing when the entry became `true` while the check yielded (a confirm landed). Attribute appended "; PlayerAdded through safePlayerAdded; a stale false never overwrites a cached true (phase 3 final review)". |
+| 2026-11-16 | `ServerScriptService.Heist.Tests.GamepassManagerSpec` (ModuleScript) | 11,371 / 2397584779 | 12,231 / 3341640635 | Case "a stale false arriving after a confirmed true does not overwrite it" (the stub caches true, then answers false): 19 / 1 before the guard, 20 / 0 after. Attribute appended "; stale-false-after-confirmed-true case (phase 3 final review)". |
+
+Not a source change:
+
+- CollectionService tag `Invulnerable` added to `Workspace["Illegal Supplier"]["Illegal Supplier"]` (the Model holding the Humanoid: `canDamageHumanoid` reads the tag on `Humanoid.Parent`), `ReplicatedStorage.HeistShared.ModelTemplates.BankClerk` and `ReplicatedStorage.RestaurantShared.ModelTemplates.Cashier` (used by SlowFoods and Gas2Go). `NPCSpawnManager` spawns by `Clone()`, which keeps tags: in Play the 2 Bank clerks, 3 SlowFoods and 2 Gas2Go cashiers carried it. Each of the three has `CityMergeDeviation` "Invulnerable tag: heist NPC not killable for city XP (phase 3 final review)". `ServerStorage.GuardTemplate` and `NewsStationShared.ModelTemplates.NewsWorker` untagged. Before: 0 `Invulnerable` objects in Edit; after: 3.
+
+The five sources exported to `CityScripts/` with `transfer/export-source.luau`; on-disk Adler-32 equals the place (5 / 5). After: 1 enabled SpawnLocation (`Workspace.SpawnLocation`), `Workspace` 29 direct children, no temporary object.
+
+NOT saved / NOT published

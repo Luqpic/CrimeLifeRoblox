@@ -231,5 +231,22 @@ return function()
 		expect.equal(#calls, 1, "no confirm attempt, and the cached entry was kept")
 	end)
 
+	-- City (phase 3 final review): a read that started before a purchase confirm landed must not
+	-- overwrite the confirmed true with its stale false when its own check returns.
+	suite:test("a stale false arriving after a confirmed true does not overwrite it", function(expect)
+		local player = fakePlayer()
+		local calls = 0
+		GamepassManager._ownershipCheck = function(userId, gamepassId)
+			calls += 1
+			GamepassManager:_setCached(userId, gamepassId, true) -- the confirm lands while this read yields
+			return false
+		end
+		local first = GamepassManager:PlayerOwnsGamepass(player, 307)
+		local second = GamepassManager:PlayerOwnsGamepass(player, 307)
+		expect.truthy(first, "the read that raced the confirm answers owned")
+		expect.truthy(second, "the confirmed true is still cached")
+		expect.equal(calls, 1, "the second read came from the cache")
+	end)
+
 	return suite:run()
 end

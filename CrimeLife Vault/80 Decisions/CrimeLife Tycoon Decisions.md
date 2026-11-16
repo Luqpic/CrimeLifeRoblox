@@ -120,5 +120,8 @@ Claude's calls (the Task 1 gate G1 to G12 in `CityMerge/phase3/classification.md
 - **Ruling, fix round 1: the purchase confirm clears the cached entry and retries** (up to 3 pcall'd `UserOwnsGamePassAsync` attempts 2 s apart; caches true on success, leaves nil otherwise so the next read re-queries; spec "cached false, then purchase confirmed -> owned"). The first ruling's premise was incomplete: a stale false right after a real purchase gave the buyer nothing for the session. Cost if wrong: one short retry loop per purchase.
 - **Ruling: the vault update belongs to Task 6,** as the plan orders: the batch note and its commit satisfy the review's "batch rule" finding. Cost if wrong: none.
 - **Ruling (plan): cooldowns follow the specs** (1200 and 600; "spec values win"); the developer reviewed the plan and said "Run, save checkpoints". Cost if wrong: SlowFoods and Gas2Go reopen after 20 and 10 minutes instead of 1.
+- **Ruling, final review (Claude's call): one fix wave tags the Illegal Supplier and the clerk and cashier templates `Invulnerable`:** robbing them is the design, killing them for XP is a farm; the Bank guards stay damageable. Cost if wrong: clerks cannot be shot, which no heist step needs.
+- **Ruling, final review (Claude's call): the four scripts use the city's `safePlayerAdded`** (`HeistServer`, `LocationServer`, `SuppliesServer`, `GamepassManager`). Cost if wrong: none.
+- **Ruling, final review (Claude's call): `GamepassManager:PlayerOwnsGamepass` skips writing false over a cached true** (the deferred race). Cost if wrong: none.
 
 Related: [[Economy and Progression Decisions]], [[Robbery Decisions]], [[Decisions MOC]].

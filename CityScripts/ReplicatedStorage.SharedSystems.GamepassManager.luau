@@ -1,6 +1,9 @@
 --!strict
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 
 -- Universal, location-agnostic gamepass logic (spec addendum, 2026-09-03).
 -- Lives under ReplicatedStorage.SharedSystems -- a sibling of HeistShared,
@@ -57,6 +60,9 @@ function GamepassManager:PlayerOwnsGamepass(player, gamepassId: number): boolean
 		return false
 	end
 
+	-- City (phase 3 final review): a purchase confirm may have cached true while this read yielded;
+	-- a stale false must not overwrite it.
+	if cache[gamepassId] == true then return true end
 	cache[gamepassId] = owns
 	return owns
 end
@@ -126,7 +132,7 @@ function GamepassManager:Init()
 	if _initialized then return end
 	_initialized = true
 
-	Players.PlayerAdded:Connect(function(player)
+	safePlayerAdded(function(player)
 		-- Fresh slate, not a pre-fetch: a stale cache from an earlier session on
 		-- this same server (rejoin) must not linger. The first real query after
 		-- this naturally re-fetches from the API.
