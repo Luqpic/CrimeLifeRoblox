@@ -262,3 +262,19 @@ Not a source change:
 The five sources exported to `CityScripts/` with `transfer/export-source.luau`; on-disk Adler-32 equals the place (5 / 5). After: 1 enabled SpawnLocation (`Workspace.SpawnLocation`), `Workspace` 29 direct children, no temporary object.
 
 NOT saved / NOT published
+
+# Police and wanted 2026-11-17
+
+Task 1 (heat model and WantedService). Same columns as above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Blaster.Scripts.ShotResolver` (ModuleScript) | 36,738 / 1560462989 | 37,245 / 2124116100 | `damagedEvent = events.Damaged`; `damagedEvent:Fire(shooter, humanoid, amount)` beside `taggedEvent:Fire` at the three damage sites (bleed tick, explosion, direct hit), only when the shooter is a `Player`. Attribute (new) "fires Blaster.Events.Damaged beside Tagged for a Player attacker (police and wanted Task 1)". |
+| 2026-11-17 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 19,379 / 2088958855 | 19,661 / 1203330187 | `TryTriggerRobbery`: after `NotifyRobberyTriggered`, `WantedService.onAlarm(self.name, self.bank:GetParticipants())` (lazy require; a location without an alarm level, such as the spec's `TestLoc`, gives nothing). Attribute appended "; robbery trigger calls WantedService.onAlarm with the participants (police and wanted Task 1)". |
+| 2026-11-17 | `ServerScriptService.HeistServer` (Script) | 48,431 / 4059546395 | 48,837 / 425282900 | `tryTriggerRobbery`: after `NotifyRobberyTriggered("Bank", ...)`, `WantedService.onAlarm("Bank", participants plus the trigger player)`. Attribute appended "; robbery trigger calls WantedService.onAlarm with the participants plus the trigger player (police and wanted Task 1)". |
+
+New: `ReplicatedStorage.Wanted` (Folder) with `Constants`, `HeatModel`; `ServerScriptService.Wanted` (Folder) with `WantedService` (ModuleScript), `WantedRunner` (Script); `ServerScriptService.Blaster.Events.Damaged` (BindableEvent); cases `ServerStorage.UnitTest.Cases.HeatModel_Test`, `WantedService_Test`.
+
+The nine sources exported to `CityScripts/` with `transfer/export-source.luau`; on-disk Adler-32 equals the place (9 / 9). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

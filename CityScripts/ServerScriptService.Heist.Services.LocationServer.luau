@@ -309,6 +309,9 @@ function LocationServer:TryTriggerRobbery(player)
 		-- SlowFoods hardcoded "You have two minutes." while Gas2Go/NewsStation
 		-- computed "%d minutes" from SessionDuration, rendering differently.
 		self.net:NotifyRobberyTriggered(self.name, player.Name)
+		-- Police and wanted (2026-11-17): every participant of this robbery gets the location's alarm
+		-- heat. A location without an alarm level (a spec's test location) gives nothing.
+		require(ServerScriptService.Wanted.WantedService).onAlarm(self.name, self.bank:GetParticipants())
 		return
 	end
 	if reason == "cooldown" then

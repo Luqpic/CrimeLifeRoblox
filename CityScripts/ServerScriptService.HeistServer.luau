@@ -904,6 +904,11 @@ local function tryTriggerRobbery(player)
 		-- through that factory, so fixing only the shared copy would have left
 		-- this duplicate behind.
 		net:NotifyRobberyTriggered("Bank", player.Name)
+		-- Police and wanted (2026-11-17): the robbery's participants get the Bank's alarm heat. The Bank
+		-- enrols through the gauntlet, so the player who set it off may not be a participant yet.
+		local robbers = bank:GetParticipants()
+		if not table.find(robbers, player) then table.insert(robbers, player) end
+		require(game:GetService("ServerScriptService").Wanted.WantedService).onAlarm("Bank", robbers)
 		return
 	end
 	if reason == "cooldown" then
