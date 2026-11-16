@@ -24,6 +24,13 @@ return function(t)
 	WantedService.setSeenProvider(function(player) return seen[player] == true end)
 	deps.witness = function() return witnessed end
 	deps.playerFromCharacter = function(character) return playerOfCharacter[character] end
+	local inactive = {} -- stand-ins that are dead or gone
+	local function testAttackerActive(player) return not inactive[player] end
+	deps.attackerActive = testAttackerActive
+	local function testSeen(player) return seen[player] == true end
+
+	-- Every test below runs inside this pcall, so the injected deps are restored even if building a case throws.
+	local ok, err = pcall(function()
 
 	local function standIn()
 		local attributes = {}
@@ -244,5 +251,68 @@ return function(t)
 		expect.deepEqual(got, { 2.5, 2 })
 	end)
 
+	t.test("start()'s filter ignores an NPC attacker and a non-Humanoid victim", function()
+		-- The handlers start() connects to Damaged and Eliminated, called directly. Needs the real Play player
+		-- (a Player instance, alive): the stand-ins are tables and the filter rightly rejects them.
+		local real = game:GetService("Players"):GetPlayers()[1]
+		expect.truthy(real)
+		deps.attackerActive = saved.attackerActive
+		local cop = victim("Police")
+		local npc = Instance.new("Model")
+		clock = 8000
+		WantedService._onDamagedEvent(npc, cop, 10)
+		WantedService._onEliminatedEvent(npc, cop)
+		WantedService._onDamagedEvent(real, Instance.new("Part"), 10)
+		WantedService._onEliminatedEvent(real, "not a humanoid")
+		local ignored = WantedService.getHeat(real)
+		-- and the same handler does pass a live Player on a Humanoid
+		WantedService._onDamagedEvent(real, cop, 10)
+		local passed = WantedService.getHeat(real)
+		WantedService.clear(real)
+		deps.attackerActive = testAttackerActive
+		expect.equal(ignored, 0)
+		expect.equal(passed, 0.25)
+	end)
+
+	t.test("PlayerRemoving clears heat; a hit from the departed player afterwards gives nothing", function()
+		local p = standIn()
+		WantedService.addHeat(p, 2, "test")
+		WantedService._onPlayerRemoving(p)
+		check(p, 0)
+		inactive[p] = true -- gone: no Parent, no character
+		clock = 8100
+		WantedService.onDamaged(p, victim("Police"), 10)
+		WantedService.onEliminated(p, victim("Police"))
+		check(p, 0)
+	end)
+
+	t.test("a dead attacker's hit or kill gives nothing", function()
+		local p = standIn()
+		inactive[p] = true
+		clock = 8200
+		local cop = victim("Police")
+		WantedService.onDamaged(p, cop, 10)
+		WantedService.onEliminated(p, cop)
+		witnessed = true
+		WantedService.onEliminated(p, victim("Gang Member"))
+		witnessed = false
+		check(p, 0)
+	end)
+
+	t.test("a throwing seen provider counts as not seen and does not stop the drain", function()
+		local p = standIn()
+		clock = 9000
+		WantedService.onAlarm("Bank", { p })
+		WantedService.setSeenProvider(function() error("seen provider test throw") end)
+		clock = 9008
+		local stepped = pcall(WantedService._step)
+		WantedService.setSeenProvider(testSeen)
+		expect.truthy(stepped)
+		check(p, 2)
+		WantedService.clear(p)
+	end)
+
+	end)
 	for key, value in saved do deps[key] = value end
+	if not ok then error(err, 0) end
 end

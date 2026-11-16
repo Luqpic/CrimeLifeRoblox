@@ -278,3 +278,15 @@ New: `ReplicatedStorage.Wanted` (Folder) with `Constants`, `HeatModel`; `ServerS
 The nine sources exported to `CityScripts/` with `transfer/export-source.luau`; on-disk Adler-32 equals the place (9 / 9). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Fix round 1 (2026-11-17, Task 1 review). Same columns; "old" is the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Blaster.Scripts.ShotResolver` (ModuleScript) | 37,245 / 2124116100 | 37,258 / 1179613095 | No `Damaged` per bleed tick (the cut that started the bleed already counted; a bleed kill still fires `Eliminated`); header comment says so. Attribute appended "; no Damaged per bleed tick (police and wanted Task 1 fix round 1)". |
+
+New sources changed (not deviations): `ServerScriptService.Wanted.WantedService` 7,246 / 1552071783 -> 8,474 / 783838274 (`attackerActive` dep: hits and kills from a dead or departed attacker ignored; seen provider under `pcall`, a throw = not seen, warned at most once a minute; `_onDamagedEvent`, `_onEliminatedEvent`, `_onPlayerRemoving` exposed as the handlers `start()` connects); `ServerScriptService.Wanted.WantedRunner` 389 / 3775104625 -> 556 / 847429352 (`_step` under `pcall`); `ServerStorage.UnitTest.Cases.WantedService_Test` 8,092 / 2339253098 -> 10,741 / 667327529 (4 cases; deps restored even when building the cases throws).
+
+The four sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

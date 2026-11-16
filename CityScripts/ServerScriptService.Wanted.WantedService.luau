@@ -26,12 +26,21 @@ WantedService._deps = {
 	-- Is the attacker seen by a witness? Task 3 replaces this stub with the Witness-tag check.
 	witness = function(_player): boolean return false end,
 	playerFromCharacter = function(character) return Players:GetPlayerFromCharacter(character) end,
+	-- Still in the game with a living character. A hit or kill from anyone else (a bleed or a bullet landing
+	-- after the shooter died or left) must not re-create heat on a player who was just cleared.
+	attackerActive = function(attacker): boolean
+		if attacker.Parent ~= Players then return false end
+		local character = attacker.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		return humanoid ~= nil and humanoid.Health > 0
+	end,
 }
 local deps = WantedService._deps
 
 local heatOf = {} -- [player] = heat, only while > 0
 local timerFrom = {} -- [player] = when the drain timer last restarted
 local lastPoliceHit = {} -- [player] = { [Humanoid] = time of the last credited hit }
+local lastSeenWarning = -math.huge
 
 local listeners = {}
 -- Changed(player, heat, stars), fired on every change of heat.
@@ -105,11 +114,11 @@ local function isNpc(character): boolean
 	return deps.playerFromCharacter(character) == nil
 end
 
--- attacker is a Player (the runner filters). Police hit: +0.25, pellets of one shot counted once. A heist
+-- attacker is a Player (start()'s handlers filter) still in the game and alive. Police hit: +0.25, pellets of one shot counted once. A heist
 -- civilian (tagged Witness) hurt while a witness sees: +0.25. Anything else: nothing.
 function WantedService.onDamaged(attacker, humanoid: Humanoid, _amount: number?)
 	local character = humanoid.Parent
-	if not character then return end
+	if not character or not deps.attackerActive(attacker) then return end
 	if isPolice(character) then
 		local now = deps.now()
 		local hits = lastPoliceHit[attacker]
@@ -127,7 +136,7 @@ end
 -- Police kill: +1. Any other NPC killed while a witness sees: +0.5. A player killed: nothing.
 function WantedService.onEliminated(attacker, humanoid: Humanoid)
 	local character = humanoid.Parent
-	if not character then return end
+	if not character or not deps.attackerActive(attacker) then return end
 	if isPolice(character) then
 		WantedService.addHeat(attacker, Constants.POLICE_KILL_HEAT, "police kill")
 	elseif isNpc(character) and deps.witness(attacker) then
@@ -135,11 +144,22 @@ function WantedService.onEliminated(attacker, humanoid: Humanoid)
 	end
 end
 
+-- A throwing seen provider counts as "not seen" (warned at most once a minute), so it cannot stop the drain.
+local function isSeen(player, t: number): boolean
+	local ok, result = pcall(deps.seen, player)
+	if ok then return result == true end
+	if t - lastSeenWarning >= 60 then
+		lastSeenWarning = t
+		warn("[WantedService] seen provider failed: " .. tostring(result))
+	end
+	return false
+end
+
 -- One drain evaluation for every wanted player. now defaults to the injected clock.
 function WantedService._step(now: number?)
 	local t = now or deps.now()
 	for player, heat in heatOf do
-		if deps.seen(player) then
+		if isSeen(player, t) then
 			timerFrom[player] = t
 		elseif t - (timerFrom[player] or t) >= Constants.DRAIN_INTERVAL then
 			set(player, HeatModel.drainStep(heat))
@@ -165,6 +185,22 @@ local function isHumanoid(value): boolean
 	return typeof(value) == "Instance" and value:IsA("Humanoid")
 end
 
+-- The handlers start() connects. Both events also carry NPC attackers (an enemy's shot); only a player
+-- commits a crime.
+function WantedService._onDamagedEvent(attacker, humanoid, amount)
+	if isPlayer(attacker) and isHumanoid(humanoid) then
+		WantedService.onDamaged(attacker, humanoid, amount)
+	end
+end
+
+function WantedService._onEliminatedEvent(attacker, humanoid)
+	if isPlayer(attacker) and isHumanoid(humanoid) then
+		WantedService.onEliminated(attacker, humanoid)
+	end
+end
+
+WantedService._onPlayerRemoving = WantedService.clear
+
 function WantedService.start()
 	local function onPlayer(player: Player)
 		player:SetAttribute("WantedHeat", 0)
@@ -177,20 +213,10 @@ function WantedService.start()
 		end
 	end
 	require(ReplicatedStorage.Utility.safePlayerAdded)(onPlayer)
-	Players.PlayerRemoving:Connect(WantedService.clear)
-
-	-- Both events also carry NPC attackers (an enemy's shot); only a player commits a crime.
+	Players.PlayerRemoving:Connect(WantedService._onPlayerRemoving)
 	local events = ServerScriptService.Blaster.Events
-	events.Damaged.Event:Connect(function(attacker, humanoid, amount)
-		if isPlayer(attacker) and isHumanoid(humanoid) then
-			WantedService.onDamaged(attacker, humanoid, amount)
-		end
-	end)
-	events.Eliminated.Event:Connect(function(attacker, humanoid)
-		if isPlayer(attacker) and isHumanoid(humanoid) then
-			WantedService.onEliminated(attacker, humanoid)
-		end
-	end)
+	events.Damaged.Event:Connect(WantedService._onDamagedEvent)
+	events.Eliminated.Event:Connect(WantedService._onEliminatedEvent)
 end
 
 return WantedService

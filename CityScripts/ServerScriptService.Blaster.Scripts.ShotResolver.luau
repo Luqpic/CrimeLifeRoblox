@@ -39,8 +39,9 @@ local damageIndicatorRemote = remotes.DamageIndicator
 local events = ServerScriptService.Blaster.Events
 local taggedEvent = events.Tagged
 local eliminatedEvent = events.Eliminated
--- Damaged(attacker: Player, humanoid, amount): fired beside Tagged wherever a PLAYER's weapon applies
--- damage, never for an NPC shooter. WantedService listens (police and wanted, 2026-11-17).
+-- Damaged(attacker: Player, humanoid, amount): fired beside Tagged where a PLAYER's hit or blast applies
+-- damage, never for an NPC shooter and never per bleed tick (the cut that started the bleed already
+-- counted; a bleed kill still fires Eliminated). WantedService listens (police and wanted, 2026-11-17).
 local damagedEvent = events.Damaged
 
 local DAMAGE_INDICATOR_WINDOW = 3
@@ -324,9 +325,6 @@ local function applyBleed(shooter: Player | Model, taggedHumanoid: Humanoid, dur
 
 			taggedHumanoid:TakeDamage(damagePerSecond)
 			taggedEvent:Fire(shooter, taggedHumanoid, damagePerSecond)
-			if shooter:IsA("Player") then
-				damagedEvent:Fire(shooter, taggedHumanoid, damagePerSecond)
-			end
 			-- Each tick shows the same floating number a direct hit does, so the player can see the
 			-- bleed working rather than watching a health bar drop for no visible reason. Never a
 			-- headshot: a bleed does not land anywhere in particular.
