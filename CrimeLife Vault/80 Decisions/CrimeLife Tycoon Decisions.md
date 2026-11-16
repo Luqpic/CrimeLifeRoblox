@@ -9,6 +9,12 @@ sources: [".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
 
+## 2026-11-17: the tycoon is parked
+
+- **The developer's call:** "Nevermind, skip the tycoon. I want to spend more time sharpening what's outside of the tycoon right now." Phases 4 to 6 wait; the phase 4 plan `docs/superpowers/plans/2026-11-17-plots-and-hq-template.md` is kept, not run.
+- **Found before parking (2026-11-17, measured):** the city's `ServerStorage.HQ` is a complete copy of Test30.4's `Workspace.HQ`. 80 meshes used by 3,441 of its `MeshPart`s fail in the city with "Requester does not have permission for Asset": they are private uploads by another account, and access is granted to the Test30.4 experience, which the unpublished city file is not part of. The droppers, signs and buy buttons were never in `HQ`: they are the tycoon kit (Test30.4 `Workspace.Ace`; a larger copy in the city's `CityQuarantine.LooseTycoon`). Fix routes for the meshes are in the phase 4 plan's Task 2.
+- The developer wants the exterior (fence, towers, porch with trees, roads) kept and fitted to the plate when the tycoon resumes: "modify them to the plot size but don't remove".
+
 ## 2026-11-15: the FPS port and the tycoon building
 
 Made during the overnight run recorded in [[2026-11-15 FPS Systems Into City]]. Quoted text is the developer's own.
