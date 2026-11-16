@@ -176,4 +176,18 @@ Not a source change:
 
 New test case modules (city only, exported to `CityScripts/`): `ServerStorage.UnitTest.Cases.CurrencyBridge_Test` (4,519 / 1400801589, 21 cases), `WeaponTag_Test` (685 / 3125862015, 1 case). All nine sources above exported; on-disk Adler-32 equals the place.
 
+Phase 3 Task 3 (2026-11-16): the 14 `carry` roots inside `Workspace` imported at top level under their own names (`ImportedFrom = "Robbery System"`), placed by `phase3/locations.md` section 6; the four city twins moved to `ServerStorage.CityQuarantine.ReplacedByHeist`. Their 9 BaseScripts (Animate LocalScripts and the builder's note Scripts) were disabled with `ImportEnabled` before parenting, then all 22 `ImportEnabled` scripts in the place (Task 2's 13 + these 9) restored to `Enabled = true` and the attribute removed. Afterwards: 432 source containers, 242 BaseScripts, 166 enabled, Enabled checksum 3576485474, source checksum 784918162; `Workspace` descendants 236,393; 1 enabled SpawnLocation (`Workspace.SpawnLocation`; `Workspace.Dev.DevSpawn` stays disabled; no SpawnLocation among the imports).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-16 | `ServerScriptService.SlowFoodsServer` (Script) | 10,173 / 3260473240 | 10,278 / 2040003535 | G12: line 198 `openCFrame` = `CFrame.new(76.727, 5.000, 1691.862) * CFrame.Angles(0, math.rad(-90), 0)` (the Robbery literal kept in a trailing comment). Re-derived from the SlowFoods T: 0.0000 stud, yaw 270. `CityMergeDeviation = "LockedDoor openCFrame transformed to the city location (phase 3 G12)"`. |
+| 2026-11-16 | `ServerScriptService.Gas2GoServer` (Script) | 12,710 / 2773693458 | 12,817 / 803557551 | G12: line 252 `openCFrame` = `CFrame.new(-975.507, 5.500, 2047.686) * CFrame.Angles(0, math.rad(-90), 0)`. Re-derived: 0.0001 stud, yaw 270. Same attribute text. |
+| 2026-11-16 | `ServerScriptService.NewsStationServer` (Script) | 19,168 / 2679640195 | 19,275 / 39267605 | G12: line 276 `openCFrame` = `CFrame.new(-672.500, 17.775, 1005.252) * CFrame.Angles(0, math.rad(45), 0)`. Re-derived: 0.0004 stud, yaw 45. Same attribute text. |
+
+Not a source change:
+
+- `Workspace.Bank.TeleporterBankA.LinkedTeleporter.Value` and `Workspace.BankVault.TeleporterBankB.LinkedTeleporter.Value` re-linked to each other: the only two cross-root references in the 14 roots (found by a scan of ObjectValues, joints, constraints and PrimaryParts in the Robbery place), lost because each root is serialized on its own.
+
+The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place.
+
 NOT saved / NOT published
