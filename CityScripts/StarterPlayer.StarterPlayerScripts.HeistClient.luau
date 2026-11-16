@@ -82,9 +82,11 @@ end
 -- so when the redesign grew them to 76 and 92 they silently overlapped each
 -- other and the toast. Deriving the offsets means a future size change moves
 -- everything below it automatically instead of re-introducing the same bug.
-local HUD_TOP, HUD_GUTTER = 12, 8
+-- City (phase 3 Task 4): the city StaminaBar sits at screen y 78..88, top-centre. HUD_TOP 12 -> 2 ends
+-- the timer at 78, and the duffel gap below gets +2 so the duffel starts at 88.
+local HUD_TOP, HUD_GUTTER = 2, 8
 local TIMER_POSITION = UDim2.new(0.5, 0, 0, HUD_TOP)
-local DUFFEL_TOP = HUD_TOP + 76 + HUD_GUTTER          -- below the 76px timer
+local DUFFEL_TOP = HUD_TOP + 76 + HUD_GUTTER + 2      -- below the 76px timer (+2: city StaminaBar)
 local DUFFEL_POSITION = UDim2.new(0.5, 0, 0, DUFFEL_TOP)
 -- Moved 110 -> 128 (spec addendum, 2026-09-12): the duffel element grew from a
 -- 38px label to a 56px composite card (header + fill bar), so it now occupies

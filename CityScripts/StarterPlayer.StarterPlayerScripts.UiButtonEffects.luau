@@ -143,12 +143,16 @@ end)
 -- because several of them force-close from paths they did not initiate.
 local modalCount = 0
 local ambient: { ScreenGui } = {}
+-- City (phase 3 Task 4): the one cash readout is Custom Inventory.cashDisplay (G5), a frame inside
+-- city HUD chrome that UiTransitionBinder fades by Enabled, so only its Visible is flipped here.
+local cashFrame: GuiObject? = nil
 
 local function applyFocus()
 	local focused = modalCount > 0
 	for _, screen in ipairs(ambient) do
 		screen.Enabled = not focused
 	end
+	if cashFrame then cashFrame.Visible = not focused end
 end
 
 -- Disabling the whole ScreenGui (rather than each element's Visible) is deliberate: HeistClient's
@@ -158,9 +162,8 @@ end
 task.spawn(function()
 	local hud = get(playerGui, "HeistHUD", 20)
 	if hud then table.insert(ambient, hud) end
-	-- Built by CashClaimVFX, so it can appear later than this script.
-	local cash = get(playerGui, "CashDisplay", 20)
-	if cash then table.insert(ambient, cash) end
+	local inventory = get(playerGui, "Custom Inventory", 20)
+	cashFrame = inventory and get(inventory, "cashDisplay", 20) :: GuiObject?
 	local notifications = get(playerGui, "HeistNotificationGui", 20)
 	if notifications then table.insert(ambient, notifications) end
 	-- Bound so applyFocus's plain Enabled flip below CROSS-FADES instead of cutting. No callbacks:

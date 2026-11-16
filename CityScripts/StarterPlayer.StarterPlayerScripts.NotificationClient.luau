@@ -71,7 +71,9 @@ local INSET_X = 16
 -- That button is bottom-CENTRE (AnchorPoint 0.5,1 at Y = 1,-40, 160x40), so a
 -- right-anchored 300px stack misses it on a wide viewport but WOULD collide on
 -- a narrow one. Sitting above its top edge (1,-80) is resolution-independent.
-local INSET_Y = 90
+-- City (phase 3 Task 4): 90 -> 108, so the stack's bottom sits on the top edge of the city
+-- NotificationGui.Container (anchored 1,1 at 1,-24, 84 tall: top at 1,-108) at every screen size.
+local INSET_Y = 108
 
 -- Newest first: index 1 is the card closest to the corner, older cards are
 -- pushed upward as new ones arrive.

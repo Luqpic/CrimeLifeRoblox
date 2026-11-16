@@ -190,4 +190,19 @@ Not a source change:
 
 The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place.
 
+Phase 3 Task 4 (2026-11-16): first run, client load-order audit (`phase3/client-load-order-audit.md`), HUD step. Afterwards: 432 source containers, 242 BaseScripts, 166 enabled, Enabled checksum 3576485474 (unchanged), source checksum 2842082509 (only the three rows below changed); `Workspace` descendants 236,393 (unchanged); 1 enabled SpawnLocation (`Workspace.SpawnLocation`).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.UiButtonEffects` (LocalScript) | 9,675 / 3043343507 | 9,933 / 3916961254 | Task 2 carry: the focus mode waited 20 s for the Robbery `CashDisplay`, which G5 removed. It now finds `Custom Inventory.cashDisplay` and hides it by `Visible` while a heist modal is open (not by the ScreenGui's `Enabled`, which the city's `UiTransitionBinder` owns, and not through `Transitions.bindFrame`, whose transparency tracker would fight the city's fade of the same tree). `CityMergeDeviation` appended: "heist focus mode hides Custom Inventory.cashDisplay by Visible (phase 3 Task 4)". |
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.HeistClient` (LocalScript) | 65,736 / 525480268 | 65,942 / 574845500 | HUD: the timer (screen y 12..88) covered the city `StaminaBar` (y 78..88, top centre). `HUD_TOP` 12 -> 2 and `DUFFEL_TOP` gets `+ 2`: timer 2..78, duffel 88..180, getaway 188..264, toast 272..320 (all derived, as the file's own comment requires). `CityMergeDeviation` appended: "HUD_TOP 12 -> 2 and duffel gap +2, strip clear of city StaminaBar (phase 3 Task 4)". |
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.NotificationClient` (LocalScript) | 7,663 / 2079666609 | 7,855 / 368995753 | G6 / HUD: the stack's bottom (`1, -90`) sat 18 px inside the city `NotificationGui.Container` (`1, -24`, 84 tall, so its top is `1, -108`). `INSET_Y` 90 -> 108 at every screen size. `CityMergeDeviation` appended: "INSET_Y 90 -> 108, stack clear of city NotificationGui.Container (phase 3 Task 4)". |
+
+Not a source change (audit FIX rows, streaming):
+
+- `Workspace.HeistMarkers`, `SlowFoodsMarkers`, `Gas2GoMarkers`, `NewsStationMarkers`: Folder replaced by a `Model` of the same name with the same children and attributes, `ModelStreamingMode = Persistent`; `CityMergeDeviation` set on each. Paths (`workspace.<name>.StatusBillboardAnchor`, tags) unchanged; no script checks the class. So `StatusBillboardAnchor` and its `StatusBillboard` are on every client from any distance: `HeistClient`'s getaway distance and status badges, and server `Getaway` read the same Part.
+- `Workspace["Illegal Supplier"]` (already a Model): `ModelStreamingMode` Default -> `Persistent`; `CityMergeDeviation` set. `SupplierDialogueController` holds its `Interaction` prompt and rig by reference from script start.
+
+The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place.
+
 NOT saved / NOT published
