@@ -43,7 +43,7 @@ Replaces Roblox's default proximity prompt everywhere with the project's own fac
 - Prompts on NPCs whose prompt part sits inside the rig need `RequiresLineOfSight = false`.
 
 ## History
-- 2026-11-16 (city): the heist prompts (registers, terminals, C4, `Go to Vault`, `Vault Door`, `Return to Lobby`) run on this face; 2 of the city's old prompts left with the quarantined art buildings, 4 remain in `Workspace.Map` (casino, warehouse), all saved `Default` and forced to `Custom` at runtime. [[2026-11-16 Robbery Systems Into City]]
+- 2026-11-16 (city): the heist prompts (registers, terminals, C4, `Go to Vault`, `Vault Door`, `Return to Lobby`) run on this face; of the city's 26 old leftover prompts, 2 went with the quarantined art buildings and 4 are still in `Workspace.Map` (casino, warehouse), all saved `Default` and forced to `Custom` at runtime; where the other 20 are is not recorded (Open Item). [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-19: circle with `UIGradient` liquid and halo, settled after four failed outline fixes (confirmed by the developer). [[Prompt-Circle-Liquid-And-Glow]]
 - 2026-09-19: disabled prompts close their face. [[Prompt-Closes-When-Disabled]]
 - 2026-09-19: liquid takes the plate's shape; hover and hold lift. [[Prompt-Liquid-Shape-And-Hover-Lift]]

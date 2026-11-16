@@ -61,7 +61,7 @@ Claude's calls (the gate's G1 to G12 and the controller's rulings from the ledge
 
 ## Left open
 
-All in [[Open Items]]. New: the Bank escape ring has 5 of 32 clear points (`EscapeDistance` kept at 200); the checks that need a person; the removal toast says "You died before banking"; the duffel gamepass ids are still `0`; two gamepass systems (`GamepassManager`, `MonetizationService`); two notification styles on screen; the casino and warehouse are still art with no heist; the Task 2, 4 and 5 deferred minors; the three `Workspace.HQ` lines (two of them seen this run). Closed: the two cash systems, `CashClaimVFX` and the config specs, the robbery half of the remote audit, and the 26 leftover city prompts (see Open Items).
+All in [[Open Items]]. New: the Bank escape ring has 5 of 32 clear points (`EscapeDistance` kept at 200); the checks that need a person; the removal toast says "You died before banking"; the duffel gamepass ids are still `0`; two gamepass systems (`GamepassManager`, `MonetizationService`); two notification styles on screen; the casino and warehouse are still art with no heist; the Task 2, 4 and 5 deferred minors; the three `Workspace.HQ` lines (two of them seen this run). Closed: the two cash systems, `CashClaimVFX` and the config specs, the robbery half of the remote audit, (the 26 leftover city prompts stay open: 2 went with the quarantined buildings, 4 remain in `Workspace.Map`, the other 20 are not located).
 
 ## Links
 

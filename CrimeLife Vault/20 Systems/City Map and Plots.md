@@ -41,7 +41,7 @@ The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of Crim
 - **Entrances** (exit spawns): Bank (1142.9, 2.25, 2305.8), SlowFoods (96.8, 5.94, 1778.8), Gas2Go (-986.6, 1.50, 1967.6), NewsStation (-614.0, 7.00, 988.6). Nearest plot 362 studs (SlowFoods) to 710; spawn 782 to 1,585; no anchor within 200 studs of another.
 - **Bank vault underground:** 147.75 studs below its transformed spot, y -154 to -44, above `FallenPartsDestroyHeight` (-500); the Terrain under it (646 solid voxels) was cleared.
 - **New Workspace children:** the 14 imported roots plus `Illegal Supplier` (`ImportedFrom = "Robbery System"`; `Workspace` 29 direct children, 236,393 descendants). The four marker containers (`HeistMarkers`, `SlowFoodsMarkers`, `Gas2GoMarkers`, `NewsStationMarkers`) are Models, `Persistent`; `Illegal Supplier` is `Persistent`.
-- **Prompts:** the old "26 leftover prompts saved `Default`" are resolved: 2 left with the quarantined buildings and 4 remain in `Workspace.Map` (3 warehouse buttons, the casino button); `PromptUiController` forces `Custom` at runtime ([[Robbery Prompts]]).
+- **Prompts:** the old "26 leftover prompts saved `Default`" stay an Open Item: measured 2026-11-16, 2 went with the quarantined buildings and 4 are still in `Workspace.Map` (3 warehouse buttons, the casino button); where the other 20 are is not recorded; `PromptUiController` forces `Custom` at runtime ([[Robbery Prompts]]).
 
 ## How it works
 
