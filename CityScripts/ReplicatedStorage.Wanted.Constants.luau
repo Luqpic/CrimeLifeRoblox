@@ -35,6 +35,21 @@ return {
 	TOPUP_RING_MAX = 160,
 	TOPUP_INTERVAL = 5,
 	POLICE_CAP = 24,
+	-- Dispatcher (Task 2, the builder's numbers): a spawn point stands SPAWN_HEIGHT above road or footpath
+	-- ground found within GROUND_PROBE studs below it; ring samples are cast down from SAMPLE_TOP_Y for
+	-- SAMPLE_DEPTH studs, SPAWN_TRIES per officer. The path check uses the AI's own agent (EnemyAI:_computePath).
+	SPAWN_HEIGHT = 3,
+	GROUND_PROBE = 5,
+	SAMPLE_TOP_Y = 500,
+	SAMPLE_DEPTH = 700,
+	SIGHT_PROBE_HEIGHTS = { -2, 0, 2 }, -- officer's legs, root and head relative to its spawn point
+	SPAWN_TRIES = 40, -- measured near SlowFoods: about 1 in 20 ring samples passes every check
+	POLICE_AGENT = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true },
+	-- An officer whose player is cleared, dead or gone and who sees no other wanted player walks this far away
+	-- from the nearest player, and despawns once no player has line of sight to it, or after LEAVE_TIMEOUT.
+	LEAVE_DISTANCE = 200,
+	LEAVE_TIMEOUT = 30,
+	DISPATCH_TICK = 1, -- orphans and leavers are handled every tick; top-ups every TOPUP_INTERVAL
 
 	-- Security guards
 	NEWSSTATION_GUARDS = 3,

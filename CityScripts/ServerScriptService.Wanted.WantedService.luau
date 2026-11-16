@@ -42,19 +42,34 @@ local timerFrom = {} -- [player] = when the drain timer last restarted
 local lastPoliceHit = {} -- [player] = { [Humanoid] = time of the last credited hit }
 local lastSeenWarning = -math.huge
 
-local listeners = {}
+-- A minimal signal: :Connect(fn) returns { Disconnect }, fire(...) spawns every listener.
+local function newSignal()
+	local listeners = {}
+	local signal = {
+		Connect = function(_, fn)
+			table.insert(listeners, fn)
+			return {
+				Disconnect = function()
+					local i = table.find(listeners, fn)
+					if i then table.remove(listeners, i) end
+				end,
+			}
+		end,
+	}
+	local function fire(...)
+		for _, fn in table.clone(listeners) do
+			task.spawn(fn, ...)
+		end
+	end
+	return signal, fire
+end
+
+local fireChanged, fireAlarmed
 -- Changed(player, heat, stars), fired on every change of heat.
-WantedService.Changed = {
-	Connect = function(_, fn)
-		table.insert(listeners, fn)
-		return {
-			Disconnect = function()
-				local i = table.find(listeners, fn)
-				if i then table.remove(listeners, i) end
-			end,
-		}
-	end,
-}
+WantedService.Changed, fireChanged = newSignal()
+-- Alarmed(locationName, players), fired by every onAlarm with a level: the police dispatcher sends the first
+-- squad to that location (Task 2).
+WantedService.Alarmed, fireAlarmed = newSignal()
 
 local function set(player, heat: number)
 	local old = heatOf[player] or 0
@@ -69,9 +84,7 @@ local function set(player, heat: number)
 	player:SetAttribute("WantedHeat", heat)
 	player:SetAttribute("WantedStars", stars)
 	if heat ~= old then
-		for _, fn in table.clone(listeners) do
-			task.spawn(fn, player, heat, stars)
-		end
+		fireChanged(player, heat, stars)
 	end
 end
 
@@ -99,6 +112,7 @@ function WantedService.onAlarm(locationName: string, players: { Player })
 		set(player, HeatModel.atLeast(WantedService.getHeat(player), level))
 		timerFrom[player] = deps.now()
 	end
+	fireAlarmed(locationName, players)
 end
 
 function WantedService.clear(player)

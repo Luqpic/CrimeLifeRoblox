@@ -290,3 +290,16 @@ New sources changed (not deviations): `ServerScriptService.Wanted.WantedService`
 The four sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 2 (2026-11-17, police on the enemy AI and the dispatcher). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Enemy.Scripts.EnemyAI` (ModuleScript) | 38,235 / 760454415 | 39,701 / 1795397229 | `EnemyAI:_accepts(player)` (config `targetFilter`, absent for gangs = always true) consulted in `_findVisibleTarget`, `_targetHumanoid` (a refused target is dropped mid-fight) and `onDamagedBy`; `EnemyAI._players()` seam (= `Players:GetPlayers()`); public `EnemyAI:canSee(character): boolean` on the existing `ShotResolver.hasLineOfSight`; `EnemyAI.getLive()` over the existing `activeEnemies` registry. Attribute (new) "config.targetFilter in _findVisibleTarget/_targetHumanoid/onDamagedBy, canSee, getLive, _players seam (police and wanted Task 2)". |
+| 2026-11-17 | `ServerScriptService.Enemy.Scripts.EnemySpawner` (Script) | 18,321 / 4047349777 | 11,091 / 1886183207 | Rig building (`stripClientScripts`, `ensureCollisionGroup`, `prepareWeapon`, nameplate, tag, `EnemyTemplate`, pivot, equip, collision group, network owner, ragdoll prep) moved verbatim to the new `Enemy.Scripts.EnemyRig` (`build`, `place`), shared with the police dispatcher; `trySpawn` calls them in the same order. Attribute (new) "rig building moved verbatim to Enemy.Scripts.EnemyRig, shared with the police dispatcher (police and wanted Task 2)". |
+
+New: `ReplicatedStorage.Wanted.SquadPlan` 1,319 / 2600976218; `ServerScriptService.Enemy.Scripts.EnemyRig` 9,235 / 833191980; `ServerScriptService.Wanted.PoliceDispatcher` 17,115 / 2593411831; cases `SquadPlan_Test` 2,281 / 3198336116, `EnemyTargetFilter_Test` 3,298 / 1253920254, `PoliceSpawnPoint_Test` 1,917 / 442859324. Changed new sources (not deviations): `ReplicatedStorage.Wanted.Constants` 1,396 / 1865194749 -> 2,416 / 249291217 (dispatcher numbers); `ServerScriptService.Wanted.WantedService` 8,474 / 783838274 -> 8,982 / 2208437914 (signal helper; `Alarmed(locationName, players)` fired by `onAlarm`); `ServerScriptService.Wanted.WantedRunner` 556 / 847429352 -> 673 / 399239200 (starts `PoliceDispatcher`).
+
+The eleven sources exported to `CityScripts/`; on-disk Adler-32 equals the place (11 / 11). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
