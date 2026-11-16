@@ -5,8 +5,11 @@
 -- the shared EnemyAI, built by EnemyRig like any enemy, with config.targetFilter = "wanted" and
 -- config.faction = "Police". The first squad after an alarm spawns in a ring around the robbed location's
 -- StatusBillboardAnchor; later ones in a ring around the player; every point passes isValidSpawn. Officers
--- patrol around their player's current position. An officer whose player is cleared, dead or gone takes
--- another wanted player it can see, or walks away and despawns once no player sees it (LEAVE_TIMEOUT at most).
+-- head for where the police believe their player is (design section 9): the player's position during the
+-- search window or an active robbery (the robbery's entrance when the player is inside it), else the spot
+-- an officer last saw them; their own chase takes over on sight, and each prefers its squad's player. An
+-- officer whose player is cleared, dead or gone takes another wanted player it can see, or walks away and
+-- despawns once no player sees it (LEAVE_TIMEOUT at most); a leaving officer sees nobody for "seen".
 --
 -- Also installs WantedService's seen provider: a wanted player is seen while a live officer within
 -- SEEN_RANGE can see them (guards join in Task 3). start() is called by WantedRunner.
@@ -39,7 +42,7 @@ local ROBBERY_ZONE_FOLDERS = { "SlowFoodsZones", "Gas2GoZones", "NewsStationZone
 -- ===== where police may stand =====
 
 local boxes -- { plots = { {cframe, size} }, robbery = { {cframe, size} } }, measured once (static geometry)
-local groundRoots -- road and footpath containers and Workspace.Ground
+local groundRoots -- road and footpath containers (not Workspace.Ground: one baseplate under the whole city)
 
 local function partBox(part: BasePart)
 	return { part.CFrame, part.Size }
@@ -81,7 +84,7 @@ end
 local function isGround(instance: Instance): boolean
 	if not groundRoots then
 		local map = Workspace.Map
-		groundRoots = { map.City.Roads, map.Roads, map.City.FootPaths, Workspace:FindFirstChild("Ground") }
+		groundRoots = { map.City.Roads, map.Roads, map.City.FootPaths }
 	end
 	for _, root in groundRoots do
 		if instance:IsDescendantOf(root) then
@@ -127,6 +130,40 @@ local function worldParams(): RaycastParams
 	end
 	params.FilterDescendantsInstances = exclude
 	return params
+end
+
+-- Does anything that hides an officer lie between `from` and `to`? See-through parts (glass) do not: the
+-- ray is cast again with them filtered out.
+local function blocked(from: Vector3, to: Vector3, params: RaycastParams): boolean
+	for _ = 1, Constants.SIGHT_RECASTS do
+		local hit = Workspace:Raycast(from, to - from, params)
+		if not hit then
+			return false
+		end
+		if hit.Instance.Transparency < Constants.SEE_THROUGH_TRANSPARENCY then
+			return true
+		end
+		params:AddToFilter(hit.Instance)
+	end
+	return true -- ponytail: more panes than SIGHT_RECASTS counts as cover
+end
+
+-- Would an officer standing at `position` be in view from `eye`? Probed at its legs, root and head, and left
+-- and right of its root across the line of view, so a pole or a lamp post hides none of it.
+function PoliceDispatcher._inSight(eye: Vector3, position: Vector3): boolean
+	local params = worldParams()
+	local flat = Vector3.new(position.X - eye.X, 0, position.Z - eye.Z)
+	local side = if flat.Magnitude > 1e-3 then flat.Unit:Cross(Vector3.yAxis) * Constants.SIGHT_PROBE_SIDE else Vector3.zero
+	local points = { position + side, position - side }
+	for _, height in Constants.SIGHT_PROBE_HEIGHTS do
+		table.insert(points, position + Vector3.new(0, height, 0))
+	end
+	for _, point in points do
+		if not blocked(eye, point, params) then
+			return true
+		end
+	end
+	return false
 end
 
 local function reaches(from: Vector3, to: Vector3): boolean
@@ -183,12 +220,8 @@ function PoliceDispatcher.isValidSpawn(position: Vector3, player: Player?): (boo
 	if not head or not root then
 		return false, "no character"
 	end
-	-- Nothing solid between the player's eyes and the officer's legs, middle or head: it would appear in view.
-	for _, height in Constants.SIGHT_PROBE_HEIGHTS do
-		local point = position + Vector3.new(0, height, 0)
-		if not Workspace:Raycast(head.Position, point - head.Position, params) then
-			return false, "sight"
-		end
+	if PoliceDispatcher._inSight(head.Position, position) then
+		return false, "sight"
 	end
 	-- Reachable: a path to the player, or, when no path leads to the player (the robbery interiors are cut
 	-- off from the city's navmesh: measured at SlowFoods, door to inside NoPath), to the entrance of the
@@ -224,8 +257,13 @@ end
 local squads = {} -- [Player] = { [record] = true }; record = { ai, owner }
 local leaving = {} -- [record] = time it started leaving
 local alarmAnchor = {} -- [Player] = anchor position for that player's next spawn round
+local lastSeen = {} -- [Player] = where an officer last saw them
+local leavingAi = setmetatable({}, { __mode = "k" }) -- [EnemyAI] = true while leaving: sees nobody for "seen"
 local nextTopUp = 0
-PoliceDispatcher._spawnLog = {} -- the latest spawns, read in Play checks: { distance, seenAtSpawn, alarm }
+local toppingUp = false
+-- Play-check aid, off by default: when true, every spawn is logged in _spawnLog (last 40).
+PoliceDispatcher.debug = false
+PoliceDispatcher._spawnLog = {}
 
 local function isWanted(player): boolean
 	return (player:GetAttribute("WantedStars") or 0) >= 1
@@ -262,19 +300,25 @@ local function spawnOfficer(templateName: string, position: Vector3, owner: Play
 	if not character or not weapon then
 		return
 	end
+	local record = { owner = owner }
 	config.faction = FACTION
 	config.targetFilter = isWanted
+	config.preferTarget = function()
+		return record.owner
+	end
 	CollectionService:AddTag(character, "Witness")
 	EnemyRig.place(character, weapon, CFrame.new(position), policeFolder())
 
 	local root = rootOf(owner)
-	local record = { owner = owner }
 	record.ai = EnemyAI.new(character, weapon, root and root.Position or position, function()
 		forget(record)
 	end, config)
 	squads[owner] = squads[owner] or {}
 	squads[owner][record] = true
 
+	if not PoliceDispatcher.debug then
+		return
+	end
 	local ownerCharacter = owner.Character
 	table.insert(PoliceDispatcher._spawnLog, {
 		template = templateName,
@@ -383,6 +427,7 @@ local function startLeaving(record, now: number)
 	leaving[record] = now
 	record.owner = nil
 	local ai = record.ai
+	leavingAi[ai] = true
 	ai.config.targetFilter = function() return false end -- leaving: engage nobody
 	ai:_setState(EnemyAI.State.Patrol) -- not Search: that would walk it to the player's last known spot
 	-- Walk away from the nearest player: the patrol picks its next point around this.
@@ -405,8 +450,18 @@ local function startLeaving(record, now: number)
 	end
 end
 
--- Every DISPATCH_TICK: squads of players no longer wanted break up, squads follow their player, leavers
--- despawn out of sight.
+-- Where the police believe `player` is (design section 9), or nil when they have no idea.
+local function believedPosition(player: Player, root: BasePart): Vector3?
+	if WantedService.knowsWhere(player) then
+		-- Inside a robbery building the interior is off the navmesh: go to its entrance.
+		return entranceNear(root.Position) or root.Position
+	end
+	return lastSeen[player]
+end
+
+-- Every DISPATCH_TICK: squads of players no longer wanted break up, squads head for the believed position,
+-- leavers despawn out of sight; every TOPUP_INTERVAL a top-up runs on its own thread (one at a time, so the
+-- cap holds) and cannot stall this loop.
 local function tick(now: number)
 	local adopted = {} -- applied after the walk: no new keys in squads while iterating it
 	for player, squad in squads do
@@ -424,7 +479,11 @@ local function tick(now: number)
 					startLeaving(record, now)
 				end
 			else
-				record.ai.spawnPosition = root.Position -- patrol around the player, not the spawn point
+				local believed = believedPosition(player, root)
+				if believed then
+					record.ai.spawnPosition = believed -- a later patrol circles here, not the spawn point
+					record.ai:investigate(believed)
+				end
 			end
 		end
 		if next(squad) == nil then
@@ -443,13 +502,21 @@ local function tick(now: number)
 			record.ai:destroy()
 		end
 	end
-	if now >= nextTopUp then
+	if now >= nextTopUp and not toppingUp then
 		nextTopUp = now + Constants.TOPUP_INTERVAL
-		topUp()
+		toppingUp = true
+		task.spawn(function()
+			local ok, err = pcall(topUp)
+			toppingUp = false
+			if not ok then
+				warn("[PoliceDispatcher] top-up failed: " .. tostring(err))
+			end
+		end)
 	end
 end
 
--- Seen: a live officer within SEEN_RANGE has line of sight to the player. Strictly a boolean.
+-- Seen: a live officer, not leaving, within SEEN_RANGE has line of sight to the player; records where.
+-- Strictly a boolean.
 function PoliceDispatcher.isSeen(player: Player): boolean
 	local root = rootOf(player)
 	if not root then
@@ -457,9 +524,11 @@ function PoliceDispatcher.isSeen(player: Player): boolean
 	end
 	for _, ai in EnemyAI.getLive() do
 		if ai.config.faction == FACTION
+			and not leavingAi[ai]
 			and (ai.rootPart.Position - root.Position).Magnitude <= Constants.SEEN_RANGE
 			and ai:canSee(player.Character)
 		then
+			lastSeen[player] = root.Position
 			return true
 		end
 	end
@@ -468,6 +537,16 @@ end
 
 function PoliceDispatcher.start()
 	WantedService.setSeenProvider(PoliceDispatcher.isSeen)
+	local function forgetPlayer(player)
+		alarmAnchor[player] = nil
+		lastSeen[player] = nil
+	end
+	WantedService.Changed:Connect(function(player, heat)
+		if heat <= 0 then
+			forgetPlayer(player)
+		end
+	end)
+	Players.PlayerRemoving:Connect(forgetPlayer)
 	WantedService.Alarmed:Connect(function(locationName: string, players: { Player })
 		local markers = Workspace:FindFirstChild(MARKERS[locationName] or "")
 		local anchor = markers and markers:FindFirstChild("StatusBillboardAnchor")

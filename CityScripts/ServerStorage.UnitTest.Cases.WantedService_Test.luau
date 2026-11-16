@@ -28,6 +28,10 @@ return function(t)
 	local function testAttackerActive(player) return not inactive[player] end
 	deps.attackerActive = testAttackerActive
 	local function testSeen(player) return seen[player] == true end
+	-- The drain cases below pin the 8 s rule alone: no search window unless a case sets one (fix round 1).
+	deps.searchSeconds = 0
+	local robbing = {}
+	deps.activeRobbery = function(player) return robbing[player] == true end
 
 	-- Every test below runs inside this pcall, so the injected deps are restored even if building a case throws.
 	local ok, err = pcall(function()
@@ -312,7 +316,72 @@ return function(t)
 		WantedService.clear(p)
 	end)
 
+	t.test("unseen right after an alarm does not drain at 8 s; it drains at 28 s (search window 20 s)", function()
+		deps.searchSeconds = Constants.SEARCH_SECONDS
+		expect.equal(Constants.SEARCH_SECONDS, 20)
+		local p = standIn()
+		clock = 10000
+		WantedService.onAlarm("Bank", { p })
+		local at8, at27_5
+		for i = 1, 56 do -- 2 Hz, as WantedRunner steps
+			clock = 10000 + i * 0.5
+			WantedService._step()
+			if clock == 10008 then at8 = WantedService.getHeat(p) end
+			if clock == 10027.5 then at27_5 = WantedService.getHeat(p) end
+		end
+		deps.searchSeconds = 0
+		expect.equal(at8, 3)
+		expect.equal(at27_5, 3)
+		check(p, 2) -- at 10028
+		WantedService.clear(p)
+	end)
+
+	t.test("an active robbery keeps heat however long; after it the 8 s drain runs", function()
+		local p = standIn()
+		clock = 11000
+		robbing[p] = true
+		WantedService.onAlarm("SlowFoods", { p })
+		for i = 1, 600 do
+			clock = 11000 + i * 0.5
+			WantedService._step()
+		end
+		check(p, 1)
+		expect.truthy(WantedService.knowsWhere(p))
+		robbing[p] = nil
+		clock = 11307.9; WantedService._step()
+		check(p, 1)
+		clock = 11308; WantedService._step()
+		check(p, 0)
+	end)
+
+	t.test("knowsWhere: during the search window and an active robbery only", function()
+		deps.searchSeconds = Constants.SEARCH_SECONDS
+		local p = standIn()
+		clock = 12000
+		WantedService.addHeat(p, 1, "test")
+		clock = 12019; local inside = WantedService.knowsWhere(p)
+		clock = 12021; local after = WantedService.knowsWhere(p)
+		robbing[p] = true; local robbingNow = WantedService.knowsWhere(p); robbing[p] = nil
+		deps.searchSeconds = 0
+		WantedService.clear(p)
+		expect.equal(inside, true)
+		expect.equal(after, false)
+		expect.equal(robbingNow, true)
+	end)
+
+	t.test("addActiveRobbery: a registered robbery makes its participant active until disconnected", function()
+		local p, q = standIn(), standIn()
+		local conn = WantedService.addActiveRobbery(function(player) return player == p end)
+		local yes, no = saved.activeRobbery(p), saved.activeRobbery(q)
+		conn:Disconnect()
+		local after = saved.activeRobbery(p)
+		expect.equal(yes, true)
+		expect.equal(no, false)
+		expect.equal(after, false)
+	end)
+
 	end)
 	for key, value in saved do deps[key] = value end
+	deps.searchSeconds, deps.activeRobbery = saved.searchSeconds, saved.activeRobbery
 	if not ok then error(err, 0) end
 end

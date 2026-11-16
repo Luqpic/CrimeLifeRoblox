@@ -381,6 +381,11 @@ function LocationServer:Start()
 	local bank, zoneService, net = self.bank, self.zoneService, self.net
 	local conns = self._connections
 
+	-- Police and wanted (fix round 1): a participant of this location's Active session counts as seen.
+	table.insert(conns, require(ServerScriptService.Wanted.WantedService).addActiveRobbery(function(player)
+		return bank:GetState() == "Active" and bank:IsParticipant(player)
+	end))
+
 	table.insert(conns, bank.StateChanged:Connect(function(state)
 		net:BroadcastState(self.name, state, bank:GetEndsAt(), bank:GetCooldownEndsAt())
 		if state == "Active" then

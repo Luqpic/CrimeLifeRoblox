@@ -303,3 +303,17 @@ New: `ReplicatedStorage.Wanted.SquadPlan` 1,319 / 2600976218; `ServerScriptServi
 The eleven sources exported to `CityScripts/`; on-disk Adler-32 equals the place (11 / 11). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 2 fix round 1 (2026-11-17: design section 9 and the review). Same columns; old = the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Enemy.Scripts.EnemyAI` (ModuleScript) | 39,701 / 1795397229 | 40,610 / 2586628771 | `config.preferTarget` (police: its squad's player) taken in `_findVisibleTarget` whenever visible (gangs: none, unchanged); `EnemyAI:investigate(position)` (from Patrol or Search only, heads there as Search does); `EnemyAI._activeEnemies` exposed for the test. Attribute appended "; config.preferTarget and investigate(position) (police and wanted Task 2 fix round 1)". |
+| 2026-11-17 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 19,661 / 1203330187 | 19,943 / 2011283273 | `Start` registers `WantedService.addActiveRobbery(player -> Active and participant)`, disconnected by `Destroy`. Attribute appended "; Start registers WantedService.addActiveRobbery for its Active participants (police and wanted Task 2 fix round 1)". |
+| 2026-11-17 | `ServerScriptService.HeistServer` (Script) | 48,837 / 425282900 | 49,108 / 1930538091 | Registers `WantedService.addActiveRobbery` for the Bank's Active participants. Attribute appended "; registers WantedService.addActiveRobbery for the Bank's Active participants (police and wanted Task 2 fix round 1)". |
+
+New sources changed (not deviations): `ReplicatedStorage.Wanted.Constants` 2,416 / 249291217 -> 2,887 / 2748218085 (`SEARCH_SECONDS` 20, `LEAVE_TIMEOUT` 30 -> 60, sight probe side and see-through numbers); `ServerScriptService.Wanted.WantedService` 8,982 / 2208437914 -> 10,527 / 4033096710 (search window, `addActiveRobbery`, `knowsWhere`); `ServerScriptService.Wanted.PoliceDispatcher` 17,115 / 2593411831 -> 20,106 / 2732147937 (ground = roads and footpaths only, glass and pole-proof sight, believed position, preferTarget, leavers not "seen", anchor cleared, top-up on its own thread, spawn log behind `debug`); cases `WantedService_Test` 10,741 / 667327529 -> 13,189 / 1203546623, `EnemyTargetFilter_Test` 3,298 / 1253920254 -> 5,957 / 291556854, `PoliceSpawnPoint_Test` 1,917 / 442859324 -> 3,439 / 609772528.
+
+The nine sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (9 / 9). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

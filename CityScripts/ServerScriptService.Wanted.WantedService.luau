@@ -35,10 +35,34 @@ WantedService._deps = {
 		return humanoid ~= nil and humanoid.Health > 0
 	end,
 }
+-- Design section 9 (fix round 1): seconds after a rise in heat before the unseen timer may start.
+WantedService._deps.searchSeconds = Constants.SEARCH_SECONDS
+
+-- Robberies register a check "is this player a participant of my Active session?" (LocationServer:Start,
+-- HeistServer); a participant of any of them counts as seen.
+local robberies = {}
+function WantedService.addActiveRobbery(isActiveFor: (Player) -> boolean)
+	table.insert(robberies, isActiveFor)
+	return {
+		Disconnect = function()
+			local i = table.find(robberies, isActiveFor)
+			if i then table.remove(robberies, i) end
+		end,
+	}
+end
+WantedService._deps.activeRobbery = function(player): boolean
+	for _, isActiveFor in robberies do
+		local ok, active = pcall(isActiveFor, player)
+		if ok and active == true then return true end
+	end
+	return false
+end
+
 local deps = WantedService._deps
 
 local heatOf = {} -- [player] = heat, only while > 0
 local timerFrom = {} -- [player] = when the drain timer last restarted
+local raisedAt = {} -- [player] = when heat last rose (the search window runs from here)
 local lastPoliceHit = {} -- [player] = { [Humanoid] = time of the last credited hit }
 local lastSeenWarning = -math.huge
 
@@ -78,6 +102,7 @@ local function set(player, heat: number)
 	else
 		heatOf[player] = nil
 		timerFrom[player] = nil
+		raisedAt[player] = nil
 		lastPoliceHit[player] = nil
 	end
 	local stars = HeatModel.stars(heat)
@@ -101,6 +126,7 @@ function WantedService.addHeat(player, amount: number, _reason: string)
 	if amount <= 0 then return end
 	set(player, HeatModel.raise(WantedService.getHeat(player), amount))
 	timerFrom[player] = deps.now()
+	raisedAt[player] = deps.now()
 end
 
 -- A robbery's alarm: every participant's heat becomes at least the location's level. A location without a
@@ -111,6 +137,7 @@ function WantedService.onAlarm(locationName: string, players: { Player })
 	for _, player in players do
 		set(player, HeatModel.atLeast(WantedService.getHeat(player), level))
 		timerFrom[player] = deps.now()
+		raisedAt[player] = deps.now()
 	end
 	fireAlarmed(locationName, players)
 end
@@ -169,11 +196,20 @@ local function isSeen(player, t: number): boolean
 	return false
 end
 
--- One drain evaluation for every wanted player. now defaults to the injected clock.
+-- Do the police know where the player is? During the search window after a rise in heat, and while a
+-- robbery they are in is active. The dispatcher sends officers to the player's position then.
+function WantedService.knowsWhere(player, now: number?): boolean
+	local t = now or deps.now()
+	local raised = raisedAt[player]
+	return (raised ~= nil and t - raised <= deps.searchSeconds) or deps.activeRobbery(player) == true
+end
+
+-- One drain evaluation for every wanted player. now defaults to the injected clock. Seen, inside the
+-- search window or in an active robbery: the timer restarts.
 function WantedService._step(now: number?)
 	local t = now or deps.now()
 	for player, heat in heatOf do
-		if isSeen(player, t) then
+		if WantedService.knowsWhere(player, t) or isSeen(player, t) then
 			timerFrom[player] = t
 		elseif t - (timerFrom[player] or t) >= Constants.DRAIN_INTERVAL then
 			set(player, HeatModel.drainStep(heat))

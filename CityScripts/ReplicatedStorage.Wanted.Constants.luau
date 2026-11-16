@@ -17,6 +17,8 @@ return {
 	-- Being seen and the drain
 	SEEN_RANGE = 150,
 	DRAIN_INTERVAL = 8,
+	-- Design section 9: after any rise in heat the unseen timer may not start for this long.
+	SEARCH_SECONDS = 20,
 	SEEN_CHECK_HZ = 2,
 
 	-- Police dispatch
@@ -43,12 +45,15 @@ return {
 	SAMPLE_TOP_Y = 500,
 	SAMPLE_DEPTH = 700,
 	SIGHT_PROBE_HEIGHTS = { -2, 0, 2 }, -- officer's legs, root and head relative to its spawn point
+	SIGHT_PROBE_SIDE = 1.5, -- and left and right of the root, across the line of view (a pole hides none of it)
+	SEE_THROUGH_TRANSPARENCY = 0.3, -- a part at least this transparent (glass) does not hide an officer
+	SIGHT_RECASTS = 8, -- see-through parts passed per sight ray at most
 	SPAWN_TRIES = 40, -- measured near SlowFoods: about 1 in 20 ring samples passes every check
 	POLICE_AGENT = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true },
 	-- An officer whose player is cleared, dead or gone and who sees no other wanted player walks this far away
 	-- from the nearest player, and despawns once no player has line of sight to it, or after LEAVE_TIMEOUT.
 	LEAVE_DISTANCE = 200,
-	LEAVE_TIMEOUT = 30,
+	LEAVE_TIMEOUT = 60, -- review fix round 1: 30 s could remove an officer a player was looking at
 	DISPATCH_TICK = 1, -- orphans and leavers are handled every tick; top-ups every TOPUP_INTERVAL
 
 	-- Security guards

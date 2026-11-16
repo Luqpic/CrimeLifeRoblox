@@ -846,6 +846,11 @@ end
 -- updateZoneOccupancy and bankBag, because it captures isInsideBank (the
 -- shared three-role union) and bankBag: Getaway.new asserts on a nil
 -- onEscaped, so building it any earlier would fail at boot.
+-- Police and wanted (fix round 1): a participant of the Bank's Active session counts as seen.
+require(game:GetService("ServerScriptService").Wanted.WantedService).addActiveRobbery(function(player)
+	return bank:GetState() == "Active" and bank:IsParticipant(player)
+end)
+
 local heistMarkers = workspace:WaitForChild("HeistMarkers", 10)
 local bankAnchor = heistMarkers and heistMarkers:WaitForChild("StatusBillboardAnchor", 10)
 assert(bankAnchor, "[HeistServer] HeistMarkers has no StatusBillboardAnchor")

@@ -34,6 +34,44 @@ return function(t)
 		expect.equal(why, "robbery")
 	end)
 
+	t.test("a point on the city baseplate off the road is refused (Workspace.Ground is not road)", function()
+		-- (-800, 0, 900): Workspace.Ground.Baseplate's top, west of NewsStation, measured 2026-11-17
+		local ok, why = PoliceDispatcher.isValidSpawn(Vector3.new(-800, 0, 900) + up, nil)
+		expect.equal(ok, false)
+		expect.equal(why, "ground")
+	end)
+
+	t.test("sight: glass and a thin pole do not hide an officer; a wall does", function()
+		local folder = Instance.new("Folder")
+		folder.Name = "TmpPoliceSight"
+		folder.Parent = Workspace
+		local results = {}
+		local okRun, err = pcall(function()
+			local eye, spot = Vector3.new(0, 5000, 0), Vector3.new(0, 5000, 30)
+			local function block(size: Vector3, transparency: number)
+				folder:ClearAllChildren()
+				local part = Instance.new("Part")
+				part.Anchored, part.Size, part.Transparency = true, size, transparency
+				part.Position = Vector3.new(0, 5000, 15)
+				part.Parent = folder
+			end
+			folder:ClearAllChildren()
+			results.open = PoliceDispatcher._inSight(eye, spot)
+			block(Vector3.new(20, 20, 1), 0)
+			results.wall = PoliceDispatcher._inSight(eye, spot)
+			block(Vector3.new(20, 20, 1), 0.5)
+			results.glass = PoliceDispatcher._inSight(eye, spot)
+			block(Vector3.new(1, 20, 1), 0)
+			results.pole = PoliceDispatcher._inSight(eye, spot)
+		end)
+		folder:Destroy()
+		if not okRun then error(err, 0) end
+		expect.equal(results.open, true)
+		expect.equal(results.wall, false)
+		expect.equal(results.glass, true)
+		expect.equal(results.pole, true)
+	end)
+
 	t.test("a point in the air above the road is refused", function()
 		local ok, why = PoliceDispatcher.isValidSpawn(road + Vector3.new(0, 60, 0), nil)
 		expect.equal(ok, false)

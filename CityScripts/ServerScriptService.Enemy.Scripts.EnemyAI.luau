@@ -47,6 +47,7 @@ EnemyAI.State = STATE
 local activeEnemies: { [any]: boolean } = {}
 local enemiesByHumanoid: { [Humanoid]: any } = {}
 local schedulerConnection: RBXScriptConnection? = nil
+EnemyAI._activeEnemies = activeEnemies -- read by getLive; exposed for EnemyTargetFilter_Test only
 
 -- ============================================================================
 -- HELPERS
@@ -374,10 +375,12 @@ function EnemyAI._players(): { Player }
 end
 
 -- Nearest living player inside DETECTION_RADIUS with a clear line of sight, using the resolver's own
--- occlusion query so "can I see you" and "can I shoot you" cannot disagree.
+-- occlusion query so "can I see you" and "can I shoot you" cannot disagree. An enemy whose config has
+-- `preferTarget` (police: its squad's player) takes that player whenever it is visible.
 function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
 	local eyePosition = self:_eyePosition()
 	local bestPlayer, bestHumanoid, bestDistance = nil, nil, math.huge
+	local preferred = self.config.preferTarget and self.config.preferTarget()
 
 	for _, player in EnemyAI._players() do
 		if not self:_accepts(player) then
@@ -394,11 +397,14 @@ function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
 		end
 
 		local distance = (aimPosition - eyePosition).Magnitude
-		if distance > self.config.detectionRadius or distance >= bestDistance then
+		if distance > self.config.detectionRadius or (distance >= bestDistance and player ~= preferred) then
 			continue
 		end
 		if not ShotResolver.hasLineOfSight(self.character, eyePosition, humanoid) then
 			continue
+		end
+		if player == preferred then
+			return player, humanoid
 		end
 
 		bestPlayer, bestHumanoid, bestDistance = player, humanoid, distance
@@ -993,6 +999,18 @@ function EnemyAI:think(now: number)
 	end
 
 	self:_updateLocomotionAnimation()
+end
+
+-- Head for `position` the way Search heads for a last known position (police going where they believe the
+-- player is). Only from Patrol or Search: while chasing or attacking, the AI's own pursuit wins, and Search
+-- itself switches to Chase the moment a target is seen.
+function EnemyAI:investigate(position: Vector3)
+	if self.state ~= STATE.Patrol and self.state ~= STATE.Search then
+		return
+	end
+	self.lastKnownPosition = position
+	self:_setState(STATE.Search)
+	self.searchUntil = os.clock() + Constants.SEARCH_DURATION
 end
 
 -- Called when something damages this enemy. Being shot from outside the detection radius is itself a
