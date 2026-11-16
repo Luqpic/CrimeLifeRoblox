@@ -1,7 +1,7 @@
 ---
 type: trap
 tags: [trap, luau, scripting, signals]
-updated: 2026-11-15
+updated: 2026-11-16
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "70 Batches/Robbery System/Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-New-Guns-Missing-MuzzleAttachment-Fix.md", "70 Batches/FPS System/FPS-Enemy-Search-State-Spin-Fix.md", "70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "OBT Vault/50 Engine Traps/Luau and Scripting Traps.md (generic traps)"]
 ---
 
@@ -75,6 +75,16 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 
 ### A hard-coded instance path goes stale when someone moves the instance
 - Moving `DuffelBag` to `ReplicatedStorage.HeistShared` left a default template path pointing at nothing. Re-read live state after the developer changes things in Studio. [[Performance-Optimization-And-Unification]], [[Post-Move-Fixes-And-GUI-Polish]].
+
+### Importing root by root drops cross-root `ObjectValue` references
+- **Symptom:** after the four heist locations were imported one root at a time, both `LinkedTeleporter` ObjectValues (Bank lobby and vault) were nil and `Go to Vault` had no target.
+- **Cause:** each root is serialized on its own, so a reference from one root to an instance in another has nothing to point at. The same holds for joints, constraints and `PrimaryPart` links that cross roots.
+- **Fix:** before importing, scan every `ObjectValue`, joint, constraint and `PrimaryPart` for targets outside its own root (here exactly two, found in the source place), and re-link them by hand after. [[2026-11-16 Robbery Systems Into City]]
+
+### `UserOwnsGamePassAsync` can return a stale false right after a purchase
+- **Symptom (by reading, not seen live):** a player who buys a pass is told it is theirs by `PromptGamePassPurchaseFinished`, but a cached `false` from an earlier check keeps them without it for the session.
+- **Cause:** the ownership call may answer the old value for a short time after the purchase, and a cache that stores the first answer keeps it.
+- **Fix:** on `wasPurchased` clear the cached entry and confirm with up to 3 pcall'd calls 2 s apart; cache only a confirmed true. Never trust the client-reported flag alone. A read that starts before a confirm can still overwrite a `true` with a stale `false` for a few hundred ms. [[2026-11-16 Robbery Systems Into City]]
 
 ### A divide-by-zero guard can be an amplifier
 - `math.max(x, 0.01)` stops a crash but turns 0 into a 100x divisor. Floor at a sane reference value ([[Camera and Input Traps]]).

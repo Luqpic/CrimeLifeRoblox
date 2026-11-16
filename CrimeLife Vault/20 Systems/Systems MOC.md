@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [moc, system]
-updated: 2026-11-15
+updated: 2026-11-16
 sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md"]
 ---
 
@@ -47,10 +47,10 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 
 - [[City Map and Plots]]: the cleaned Crimelife City map, the eight plots, streaming, the quarantine folders.
 
-## Robbery place
+## Robbery heists (running in Crimelife City since 2026-11-16; the Robbery place is the frozen reference)
 
 - [[Robbery Prompts]]: the liquid-fill proximity prompt (shared with the FPS place).
-- [[Robbery Heists and Getaway]]: locations, duffel bag, getaway distance, supplier, location status.
+- [[Robbery Heists and Getaway]]: locations (now at the city's buildings, Bank vault underground), duffel bag, getaway distance, supplier, location status, the bridge onto `leaderstats.Cash`.
 - [[Robbery Puzzles]]: lockpicking, word-scramble hack, safe keypad, Bank gauntlet.
 
 Related: [[Decisions MOC]] · [[Open Items MOC]] · [[Batch Log]]

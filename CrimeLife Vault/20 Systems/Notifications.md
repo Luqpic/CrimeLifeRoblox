@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, ui, notifications]
-updated: 2026-11-14
+updated: 2026-11-16
 sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md"]
 ---
 
@@ -10,13 +10,13 @@ sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "Cr
 **Skills:** `roblox-ui` (load this for work here)
 
 ## What it does
-Toast cards for gains and events: quest completion, Spraypaint gains, and the kill toast ("KILLED SABOTEUR" / "+2 Spraypaint" / "+20 EXP"). Cards stack bottom-right like a pile (max 3 visible), and queue while a panel is open. The Robbery place has its own global notifications for location reopen / robbery triggered.
+Toast cards for gains and events: quest completion, Spraypaint gains, and the kill toast ("KILLED SABOTEUR" / "+2 Spraypaint" / "+20 EXP"). Cards stack bottom-right like a pile (max 3 visible), and queue while a panel is open. The heists have their own global notifications for location reopen / robbery triggered. In the city **two notification styles are on screen**: the city's bottom-right stack (`NotificationController`, [[Quests and Dialogue]]) and the heist cards (`HeistNotificationGui`); unifying them is open ([[Open Items]]).
 
 ## Where it lives
 - `ReplicatedStorage.Modules.NotificationController` (mirror: `CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau`).
 - `ReplicatedStorage.GuiTemplates.Notification` (`AccentEdge`, `TitleLabel`, `MessageLabel`).
 - Callers: `StarterPlayerScripts.QuestFeedbackController` ([[Quests and Dialogue]]), `StarterPlayerScripts.SpraypaintHud` ([[Spraypaint]]); kill name from `ReplicatedStorage.Blaster.Remotes.KillConfirmed`.
-- Robbery: `StarterGui.NotificationGui` (`NotificationTemplate` with `Header`/`Body`), `NotificationClient.lua`, remotes `LocationOpened` / `RobberyTriggered` in `Net.lua`.
+- Heists: `StarterGui.HeistNotificationGui` (renamed from the Robbery place's `NotificationGui` on 2026-11-16 because the city already has a `NotificationGui` container; `NotificationTemplate` with `Header`/`Body`), `StarterPlayerScripts.NotificationClient` (waits `HeistNotificationGui`; `INSET_Y` 108 so its stack's bottom sits on the top edge of the city container, measured card bottom 551 = container top 551), `UiButtonEffects` (its two panel references renamed), remotes `LocationOpened` / `RobberyTriggered` in `Net.lua`.
 
 ## How it works
 - API: `NotificationController.show(message, title?, detail?)`. `title` defaults to `"NOTICE"`; `message` is `string | Line`, `detail = { text, icon, iconColor? }` adds one icon-led line and grows the card 64 -> 84 px upward.
@@ -39,6 +39,7 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - Writing the same attribute from Server then Client `execute_luau` in one session threw `Unable to cast Font to Font` and ended Play.
 
 ## History
+- 2026-11-16 (city): Robbery's `NotificationGui` renamed `HeistNotificationGui`, its stack moved clear of the city's. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: kill toast titled "KILLED <Name>". [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-24: icons on both toast lines (`message` accepts `Line`). [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - 2026-09-24: XP detail line on the Spraypaint toast. [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]

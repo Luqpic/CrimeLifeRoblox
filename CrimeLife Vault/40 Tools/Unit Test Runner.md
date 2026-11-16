@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tool, testing, unit-tests]
-updated: 2026-11-15
+updated: 2026-11-16
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium; Running tests)", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "70 Batches/FPS System/FPS-Weapon-Skins-Phase-1.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", ".superpowers/sdd/skins-card-sticky-fix-report.md"]
 ---
 
@@ -31,7 +31,7 @@ local r = run("Profile")
 return string.format("run=%d passed=%d failed=%d", r.run, r.passed, r.failed)
 ```
 
-Recorded totals: 171 / 171 in 16 suites (2026-11-15, city, phase 2b closing run, temporary Script, [[2026-11-15 FPS Hardening In City]]); 146 / 146 tests (2026-09-24, skins card sticky fix, real server VM, temporary Script); the viewmodel motion suite 7,102 assertions over 28 rigs ([[Viewmodels and Weapon Animation]]).
+Recorded totals: 193 / 193 in 18 suites (2026-11-16, city, phase 3 closing run, from a server `execute_luau` in Play, no temporary Script; the heist suite `Heist.Tests.RunAll` 615 passed, 1 failed in the same Play: the `Zone` sweep timing case, [[2026-11-16 Robbery Systems Into City]]); 171 / 171 in 16 suites (2026-11-15, city, phase 2b closing run, temporary Script, [[2026-11-15 FPS Hardening In City]]); 146 / 146 tests (2026-09-24, skins card sticky fix, real server VM, temporary Script); the viewmodel motion suite 7,102 assertions over 28 rigs ([[Viewmodels and Weapon Animation]]).
 
 ## Traps
 

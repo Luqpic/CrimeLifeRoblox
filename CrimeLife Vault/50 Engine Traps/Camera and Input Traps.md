@@ -1,7 +1,7 @@
 ---
 type: trap
 tags: [trap, camera, input, prompts, mouse]
-updated: 2026-11-14
+updated: 2026-11-16
 sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "OBT Vault/50 Engine Traps/Camera and Input Traps.md (generic traps)"]
 ---
 
@@ -51,6 +51,11 @@ Engine behaviour of cameras, the mouse, keys, touch and ProximityPrompts. Harnes
 
 ### An off-screen prompt never shows (OBT)
 - Pressing its key does nothing. In tests hold the camera on it in the same call.
+
+### A prompt's `HoldDuration` is enforced on the client, so the server must pace attempts
+- **Symptom (by reading and a spec, not exploited live):** the NewsStation safe's 8 s hold did nothing against a client that fires the remote itself: each `SubmitSafeCode` was judged on its own, so codes could be tried about twice a second.
+- **Cause:** the hold timer runs in the player's `ProximityPromptService`; the server only sees `Triggered` (or the remote), never how long the key was held.
+- **Fix:** keep a per-player last-attempt time on the server and refuse an attempt closer than the prompt's own `HoldDuration` (`Safe` `enforceHold`, shared across a player's safes). Also: an automated hold works only while the prompt's part is on screen, so aim the camera first (the entry above). [[2026-11-16 Robbery Systems Into City]]
 
 ### Two prompts on one key: only one shows (OBT)
 - With `Exclusivity = OnePerButton`, the nearer prompt wins. Give a prop's prompt its own key.

@@ -1,8 +1,8 @@
 ---
 type: decision
 tags: [decision, tycoon, merge, crimelife-tycoon]
-updated: 2026-11-15
-sources: [".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
+updated: 2026-11-16
+sources: [".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
 ---
 
 # CrimeLife Tycoon Decisions
@@ -90,5 +90,35 @@ Claude's calls (the controller's rulings, from `.superpowers/sdd/2026-11-15-fps-
 - **26 empty files with leading-space names in `CityScripts/` are left alone.** A failed shell loop in Task 1 made them; the implementer's delete was blocked by a safety check, so the controller did not delete them on its behalf. They are hidden from git through `.git/info/exclude` and were reported to the developer. Cost if wrong: clutter only.
 - **`Workspace.HQ` is left untouched.** It (58,277 descendants, 24 enabled scripts) appeared in the place during the run, was not added by any task and was the selected object in Studio. The controller saved with it present, because removing it is the developer's call. Cost if wrong: a heavier saved place until it is removed (`ServerStorage.HQ` still holds the source).
 - **Work stays on `main`** (vault convention, the developer's standing consent for commits; not pushed).
+
+## 2026-11-16, phase 3 (the four heists in the city)
+
+The developer's words, quoted: "Plan phase 3" (the plan for this phase), "Run, save checkpoints" (run it; save `Crimelife city.rbxl` after each task whose review is clean; never publish; the Robbery and FPS places stay frozen) and "Both are open, go" (the city and the Robbery window were opened for the run). Claude saved at each clean checkpoint and never published ([[Save and Publish Rules]]).
+
+Claude's calls (the Task 1 gate G1 to G12 in `CityMerge/phase3/classification.md`, then the controller's rulings, from `.superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md`; the developer has not confirmed them, and the batch note asks for review: [[2026-11-16 Robbery Systems Into City]]):
+
+- **Ruling G1: the Bank vault goes underground** below its transformed spot, split from the lobby by containment (the top 40 studs below the lowest city geometry, reached only by the teleporter; the code calls it underground). Cost if wrong: the look differs; one `PivotTo` moves it.
+- **Ruling G2 and G3: registration yaws and translations for all four locations.** Cost if wrong: under 0.25 stud.
+- **Ruling G4: `CurrencySpec` retired** to `ServerStorage.CityQuarantine.RetiredSpecs`; the Robbery currency adapter and backends are left behind and a bridge writes `leaderstats.Cash` (one cash system). Cost if wrong: 11 cases out of the suite, and the Robbery save layer is not in the city.
+- **Ruling G5: one cash display**, the city's `Custom Inventory.cashDisplay`; `CashClaimVFX` stops building `CashDisplay` and flies coins there. Cost if wrong: visual only.
+- **Ruling G6: the Robbery `NotificationGui` is renamed `HeistNotificationGui`** and its stack moved clear of the city's. Cost if wrong: two notification styles remain on screen (they do: [[Open Items]]).
+- **Ruling G7: add `MenuFovBlur.acquire`** to the city's copy. Cost if wrong: none.
+- **Ruling G8: carry `UiButtonEffects`** (puzzle focus mode and button effects). Cost if wrong (Claude's estimate, not in the ledger): the puzzles lose focus mode; one script to remove.
+- **Ruling G9: tag every `ServerStorage.Weapons` Tool `Weapon`, with a city test guarding it.** Cost if wrong: melee can start a robbery.
+- **Ruling G10: `HeistClient` stops re-enabling the Backpack core GUI** (two `SetCoreGuiEnabled` arguments become `false`). Cost if wrong (Claude's estimate): the core backpack could reappear next to the city's hotbar; two lines to revert.
+- **Ruling G11: `Illegal Supplier` moves with SlowFoods.** Cost if wrong (Claude's estimate): the supplier stands in the wrong place; one `PivotTo`.
+- **Ruling G12: transform the three `openCFrame` literals in-script** (`SlowFoodsServer`, `Gas2GoServer`, `NewsStationServer`). Cost if wrong (Claude's estimate): a lockpicked door opens at the old coordinates; the Robbery value is kept in a comment on each line.
+- **Ruling: the unrequested `RunAll` edit is accepted** (`CurrencySpec` dropped from its list): the direct consequence of G4. Cost if wrong: none.
+- **Ruling: the Bank keeps `EscapeDistance` 200** although only 5 of its 32 ring points are clear ground (the rule's threshold is 8): the ring only needs one reachable road exit, and Task 4 walked the Bank escape along a road to prove it. Cost if wrong: the Bank is harder to bank; tuned in playtests.
+- **Ruling: the marker Folders became Models of the same name with `ModelStreamingMode = Persistent`:** no script path changed and both getaway readers read the same part. Cost if wrong: four small models always streamed.
+- **Ruling: the character-removed case is a FIX carried into Task 5** (void the bag on `CharacterRemoving`, with a spec), not fixed in Task 4: no client can reach `LoadCharacter` without dying today, but a removed character should bank nothing. Cost if wrong: one extra hook.
+- **FIX approved: `SubmitSupplierChoice` gets a reach check** (refuse unless the root is within 15 studs of `Illegal Supplier.Interaction`; the sale body moves into `Heist.Services.SupplierSale` with a spec): a client could sell 10,000 to 20,000 of supplies from 1,000 studs away. Cost if wrong: an honest seller just outside 15 studs is refused.
+- **Ruling: also clear `SuppliesServer`'s carry state on `CharacterRemoving`:** the same principle, a removed character keeps nothing. Cost if wrong: a carried barrel lost on a server-side respawn.
+- **Ruling: `GamepassManager` re-checks ownership with `pcall(UserOwnsGamePassAsync)` before caching** a purchase: a client-reported flag is not proof, and with the placeholder id `0` one accepted event grants the x4 duffel. Cost if wrong: one web call per purchase.
+- **Ruling: the NewsStation safe enforces a minimum interval between a player's attempts** equal to the prompt's `HoldDuration` (8 s), because a prompt's hold is enforced on the client; with a spec. Cost if wrong: none for honest players.
+- **Ruling: `LockpickStopRequested` is OK plus a note:** the client already holds every timing input. Cost if wrong: a cheating client picks any instant in the last second.
+- **Ruling, fix round 1: the purchase confirm clears the cached entry and retries** (up to 3 pcall'd `UserOwnsGamePassAsync` attempts 2 s apart; caches true on success, leaves nil otherwise so the next read re-queries; spec "cached false, then purchase confirmed -> owned"). The first ruling's premise was incomplete: a stale false right after a real purchase gave the buyer nothing for the session. Cost if wrong: one short retry loop per purchase.
+- **Ruling: the vault update belongs to Task 6,** as the plan orders: the batch note and its commit satisfy the review's "batch rule" finding. Cost if wrong: none.
+- **Ruling (plan): cooldowns follow the specs** (1200 and 600; "spec values win"); the developer reviewed the plan and said "Run, save checkpoints". Cost if wrong: SlowFoods and Gas2Go reopen after 20 and 10 minutes instead of 1.
 
 Related: [[Economy and Progression Decisions]], [[Robbery Decisions]], [[Decisions MOC]].

@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, city, plots, streaming]
-updated: 2026-11-15
+updated: 2026-11-16
 sources: ["70 Batches/2026-11-15 FPS Systems Into City.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/CityMerge/placement.md", "CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
 ---
 
@@ -35,6 +35,14 @@ The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of Crim
 - **The six quest givers** (`Quests`, `Level 1 Quest` to `Level 70 Quest`) stand on the sidewalk strip `Map.City.FootPaths.Part` at z 2477.5, pivot Y 2.0035, x from -44.89 to -114.89 (14 studs apart, 40 to 106 studs from the spawn), facing the spawn.
 - **Attributes that mark the work:** `ImportedFrom = "FPS System"` is on every root brought over from the FPS place (and on `Dev` and `TycoonPreview`): find all of it by that attribute. `PlacedBy = "CityMerge Task 5, provisional"` is on the twelve moved spawn points and givers (the positions are provisional; old CFrames are in `CityMerge/placement.md`). `CityMergeDeviation` is on the two scripts edited after the import (`Lean`, `WeaponaryShopController`): the only places where the city's code differs from the FPS place.
 
+## The heists in the city (2026-11-16)
+
+- **Four locations** replaced the city's art buildings: SlowFoods (with `Illegal Supplier`), Gas2Go, NewsStation and the Bank, each placed by one transform (`CityMerge/phase3/locations.md`). The art twins are in `ServerStorage.CityQuarantine.ReplacedByHeist` with `OriginalCFrame`, `OriginalParent`, `OriginalPath`. `CasinoMain` and `WareHouseRobbery(NotUnderGroundPart)` stay art in `Workspace.Map.Robbery`.
+- **Entrances** (exit spawns): Bank (1142.9, 2.25, 2305.8), SlowFoods (96.8, 5.94, 1778.8), Gas2Go (-986.6, 1.50, 1967.6), NewsStation (-614.0, 7.00, 988.6). Nearest plot 362 studs (SlowFoods) to 710; spawn 782 to 1,585; no anchor within 200 studs of another.
+- **Bank vault underground:** 147.75 studs below its transformed spot, y -154 to -44, above `FallenPartsDestroyHeight` (-500); the Terrain under it (646 solid voxels) was cleared.
+- **New Workspace children:** the 14 imported roots plus `Illegal Supplier` (`ImportedFrom = "Robbery System"`; `Workspace` 29 direct children, 236,393 descendants). The four marker containers (`HeistMarkers`, `SlowFoodsMarkers`, `Gas2GoMarkers`, `NewsStationMarkers`) are Models, `Persistent`; `Illegal Supplier` is `Persistent`.
+- **Prompts:** the old "26 leftover prompts saved `Default`" are resolved: 2 left with the quarantined buildings and 4 remain in `Workspace.Map` (3 warehouse buttons, the casino button); `PromptUiController` forces `Custom` at runtime ([[Robbery Prompts]]).
+
 ## How it works
 
 - **Plots.** `Plot1` to `Plot6` are the six plates inside the city; `Plot7` and `Plot8` were on the old staging slab and carry `Spare = true`. Each plate has the attribute `PlotIndex` (1 to 8). `Plots` is a Model and `Persistent`, so plates never stream out.
@@ -53,10 +61,11 @@ Not recorded: no system code exists yet. The plots feed the tycoon phase of the 
 - Since 2026-11-15 the place holds the CrimeLife scripts ported from the FPS place; the free-model scripts are gone on purpose: see [[Luau and Scripting Traps]], "Free-model backdoors". Do not copy parts or models back from an old place file without scanning them.
 - `Map.Loose` is unsorted (138 unnamed Models); `Plot7`, `Plot8` and the origin Baseplate remain from the slab.
 - `Robbery` buildings are about 83,419 instances in total; the warehouse alone is about 56,000.
-- Saved by Claude at checkpoints on 2026-11-15 (last after Task 5), never published ([[Save and Publish Rules]]). Anything done after that checkpoint exists only in the open session.
-- The city map has 26 `ProximityPrompt`s saved `Default`; the imported `PromptUiController` forces every prompt to the FPS `Custom` face as it streams in ([[Open Items]]).
+- Saved by Claude at checkpoints on 2026-11-15 and 2026-11-16 (last after phase 3 Task 5), never published ([[Save and Publish Rules]]). Anything done after that checkpoint exists only in the open session.
+- The city map's `ProximityPrompt`s are saved `Default` (4 left in `Workspace.Map` since the heist buildings replaced the art); the imported `PromptUiController` forces every prompt to the FPS `Custom` face as it streams in ([[Open Items]]).
 - East arm of the city's road crossing: valid road only 180 to 220 studs from the spawn (`Building_15` across its end); one Thug stood stuck there at about (215, 5, 2485).
 
 ## History
+- 2026-11-16: the four heists placed on the city's Robbery buildings, vault underground, art quarantined ([[2026-11-16 Robbery Systems Into City]]).
 
 See [[Batch Log]]. Created by [[2026-11-14 City Baseline and Cleanup]]. 2026-11-15: FPS systems, `Dev`, placed enemies and givers, `TycoonPreview` ([[2026-11-15 FPS Systems Into City]]).

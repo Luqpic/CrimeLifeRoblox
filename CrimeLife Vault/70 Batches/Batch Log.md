@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [batch, moc]
-updated: 2026-11-15
+updated: 2026-11-16
 sources: ["git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-16 | City | [[2026-11-16 Robbery Systems Into City]] | The four heists (Bank, SlowFoods, Gas2Go, NewsStation) imported and placed at the city's buildings (Bank vault 147.75 studs underground, art quarantined), Robbery cash bridged onto `leaderstats.Cash`, load-order and remote audits (supplier reach, removed character forfeits the bag, purchase confirmed with retries, safe pacing), cooldowns 1200 / 600; city 193 / 193 tests, heist 615 / 1 (`Zone` timing), five clean Plays, SlowFoods banked once |
 | 2026-11-15 | City | [[2026-11-15 FPS Hardening In City]] | Remote ownership audit (14 handlers, 4 fixes: quest reach, canonical hit keys, server rate of fire, NaN level), quest progress saved, 4 ScreenGuis to Sibling and 6 left Global, `Lean` line 41, `workspace.FX`, preview script off; 171 / 171 tests, five clean Plays |
 | 2026-11-15 | City | [[2026-11-15 FPS Systems Into City]] | FPS systems ported into the city as an exact copy (199 script hashes equal, 147 / 147 tests in both places), two deviations, enemies and quest givers placed; tycoon building brought forward as a static preview on Plot3; Crimelife City becomes the primary place |
 | 2026-11-14 | City | [[2026-11-14 City Baseline and Cleanup]] | City cleanup: backdoor scripts and duplicate buildings removed, slab quarantined, plots named, streaming on (264,072 to 118,679 Workspace instances) |

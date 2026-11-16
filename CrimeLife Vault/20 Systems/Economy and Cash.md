@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, economy, cash, fps, robbery]
-updated: 2026-11-14
+updated: 2026-11-16
 sources: ["CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau", "CrimeLifeRoblox/FPSSystem/UI/CashBurst.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Cash-Spend-Burst-Replaces-Price-Label.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-4.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Cash-Burst-Emitter-Icon.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CLAUDE.md (Systems: Economy)"]
 ---
 
@@ -10,7 +10,7 @@ sources: ["CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau", "CrimeLifeRoblox
 **Skills:** `roblox-game-systems`, `roblox-data-stores`, `roblox-security` (load these for work here)
 
 ## What it does
-Cash is the combat currency in the FPS place: earned from enemy cash drops, level-ups, quest rewards and Robux products, spent on weapons and damage upgrades ([[Weapon Shop and Upgrades]]). It shows on the leaderboard. Earning and spending have matching coin animations. In the Robbery place cash is banked by robberies ([[Robbery Heists and Getaway]]) and shares the same coin art. Cosmetics use a separate currency, [[Spraypaint]].
+Cash is the combat currency in the FPS place: earned from enemy cash drops, level-ups, quest rewards and Robux products, spent on weapons and damage upgrades ([[Weapon Shop and Upgrades]]). It shows on the leaderboard. Earning and spending have matching coin animations. Robberies bank into the same cash since 2026-11-16 ([[Robbery Heists and Getaway]]): one cash system in the city, `leaderstats.Cash`, shown on one display (the city's `Custom Inventory.cashDisplay`). The Robbery place had its own cash save layer; that stayed behind. Cosmetics use a separate currency, [[Spraypaint]].
 
 ## Where it lives
 - `ServerScriptService.Weapons.Scripts.CashService` (leaderstats, starting cash, drops, pickup, persistence mirror). Repo: `CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau`.
@@ -19,7 +19,8 @@ Cash is the combat currency in the FPS place: earned from enemy cash drops, leve
 - `ReplicatedStorage.UI.CashBurst` — `burstFrom(origin, amount, style?)`. Repo: `CrimeLifeRoblox/FPSSystem/UI/CashBurst.luau`.
 - Cash readouts: HUD, Cash Shop balance pill (`CashShopController.bindBalance`), Weaponary `TitleBar.CashChip`, Player Card `CashRow` ([[Player Card]]).
 - Cash Shop: `CashShop` panel, `CashShopController`, products in `ReplicatedStorage.Monetization` ([[Gamepasses]]).
-- Robbery place: `SharedSystems.CashClaimVFX` (screen-space inbound coins), `SharedSystems.RobbableObject:_playCashBurst` (world-space `CashBurstEmitter` per robbable object), coin art `UITheme.Assets.Coin`.
+- **Heists in the city:** `ServerScriptService.PlayerData.CurrencyService` is a bridge exposing the Robbery `CurrencyAdapter` API (`Load`, `Get`, `Add`, `PendingCount`, `Save`, `FlushAll`, `Release`) and writing only `player.leaderstats.Cash`; `Add` floors, refuses non-numbers, NaN and infinity. The city's `CashService` listener mirrors every change into the profile, so a bank-in persists with no heist-side save (`CityMerge/phase3/currency-api.md`, `CurrencyBridge_Test`). The Robbery `CurrencyAdapter`, its backends and `CurrencySpec` (now in `ServerStorage.CityQuarantine.RetiredSpecs`) were not carried.
+- Robbery: `SharedSystems.CashClaimVFX` (screen-space inbound coins), `SharedSystems.RobbableObject:_playCashBurst` (world-space `CashBurstEmitter` per robbable object), coin art `UITheme.Assets.Coin`.
 
 ## How it works
 - **Start.** New players get `STARTING_CASH`, read from `Schema.template.cash` (500), so the two cannot drift. A returning player is restored from the profile instead (persisted since 2026-09-23, [[Persistence and Saves]]).
@@ -41,10 +42,12 @@ Cash is the combat currency in the FPS place: earned from enemy cash drops, leve
 - `AbsolutePosition` sits below the top-bar inset while the burst overlay ignores it; `CashBurst` adds the inset back (otherwise ~36 px high).
 - TweenService is render-driven; with the Studio viewport collapsed the burst does not animate (environmental, not a bug).
 - Robbery had two independent cash bursts; updating the module did not update the 19 pre-placed `CashBurstEmitter` textures. Anything authored per object needs its own sweep.
-- Robbery's `CashClaimVFX` unit tests fail (a lazy `require` inside `_buildPersistentGui` after the test runner destroys its clone); the live game is unaffected. Recorded on 2026-09-20, not fixed.
+- Robbery's `CashClaimVFX` unit tests failed (a lazy `require` after the test runner destroys its clone). Fixed in the city on 2026-11-16: `UITheme` is required at module scope, and the module no longer builds its own `CashDisplay` (G5); its spec was rewritten for that.
+- `CurrencyService.Add` has no upper bound (an absurd amount reaches an `IntValue`); no caller can send one today.
 - Leaderstats setup once depended on service init order; `CashService` is now robust to either order.
 
 ## History
+- 2026-11-16 (city): Robbery cash bridged onto `leaderstats.Cash`; one cash display. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: `CashBurst` takes an optional style (spray-can burst for skins). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
 - 2026-09-23: cash persists through `ProfileGateway`; starting cash read from the schema (500). [[FPS-Persistence-Phase-3]]
 - 2026-09-22: existing Cash-for-Robux products found and kept. [[FPS-Monetization-Cosmetics-Spec]]
