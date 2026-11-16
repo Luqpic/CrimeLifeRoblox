@@ -140,43 +140,95 @@ return function()
 		expect.equal(GamepassManager:GetAccrualRateMultiplier(player), config.DuffelSpeedBoost.Multiplier, "speed boost independent")
 	end)
 
-	-- City (phase 3 Task 5): PromptGamePassPurchaseFinished is reported by the client, so a
-	-- "purchased" event is confirmed with the ownership check before anything is cached.
+	-- City (phase 3 Task 5, fix round 1): PromptGamePassPurchaseFinished is reported by the
+	-- client, so a "purchased" event is confirmed with the ownership check before anything is
+	-- cached. UserOwnsGamePassAsync may answer a stale false right after a purchase, so the event
+	-- first clears the entry and confirms off the event thread, up to 3 attempts. The retry delay
+	-- is injected as 0 here so the spec does not wait 4 s.
+	GamepassManager._confirmRetryDelay = 0
+
+	-- Ownership stub answering from a list, one answer per call (the last one repeats).
+	local function stubSequence(answers)
+		local calls = {}
+		GamepassManager._ownershipCheck = function(userId, gamepassId)
+			table.insert(calls, { userId = userId, gamepassId = gamepassId })
+			local answer = answers[math.min(#calls, #answers)]
+			if answer == "error" then error("network error") end
+			return answer
+		end
+		return calls
+	end
+
+	local function settle() task.wait(0.1) end -- the confirm runs in its own thread
+
 	suite:test("a purchase confirmed by the ownership check is cached", function(expect)
-		local calls = stubOwnership({ [301] = true })
+		local calls = stubSequence({ true })
 		local player = fakePlayer()
 		GamepassManager:_onPurchaseFinished(player, 301, true)
+		settle()
 		local callsAfterEvent = #calls
 		local owns = GamepassManager:PlayerOwnsGamepass(player, 301)
-		expect.equal(callsAfterEvent, 1, "the event asked the ownership check once")
+		expect.equal(callsAfterEvent, 1, "confirmed on the first attempt")
 		expect.truthy(owns, "owned")
 		expect.equal(#calls, 1, "and the answer was cached")
 	end)
 
+	suite:test("cached false, then a purchase confirmed on the 2nd attempt -> owned", function(expect)
+		local player = fakePlayer()
+		local calls = stubSequence({ false, false, true }) -- read before buying, stale, then true
+		local before = GamepassManager:PlayerOwnsGamepass(player, 305) -- caches false mid-heist
+		GamepassManager:_onPurchaseFinished(player, 305, true)
+		settle()
+		local owns = GamepassManager:PlayerOwnsGamepass(player, 305)
+		expect.falsy(before, "not owned before the purchase")
+		expect.truthy(owns, "owned after the purchase, this session")
+		expect.equal(#calls, 3, "one read, then two confirm attempts; the second confirmed")
+	end)
+
+	suite:test("a purchase reported but never confirmed leaves the entry empty, so the next read re-queries", function(expect)
+		local player = fakePlayer()
+		local calls = stubSequence({ false })
+		GamepassManager:PlayerOwnsGamepass(player, 306) -- cached false
+		GamepassManager:_onPurchaseFinished(player, 306, true)
+		settle()
+		local callsAfterConfirm = #calls
+		GamepassManager:PlayerOwnsGamepass(player, 306)
+		expect.equal(callsAfterConfirm, 4, "one read plus 3 confirm attempts")
+		expect.equal(#calls, 5, "the cached false was cleared: the next read asked again")
+	end)
+
 	suite:test("a purchase the ownership check denies caches nothing", function(expect)
-		local calls = stubOwnership({})
+		local calls = stubSequence({ false })
 		local player = fakePlayer()
 		GamepassManager:_onPurchaseFinished(player, 302, true)
+		settle()
 		local owns = GamepassManager:PlayerOwnsGamepass(player, 302)
 		expect.falsy(owns, "not owned")
-		expect.equal(#calls, 2, "nothing cached by the event: the later query asked again")
+		expect.equal(#calls, 4, "3 confirm attempts, then the later query asked again")
 	end)
 
 	suite:test("a purchase whose ownership check errors caches nothing and does not throw", function(expect)
-		GamepassManager._ownershipCheck = function() error("network error") end
+		local calls = stubSequence({ "error" })
 		local player = fakePlayer()
 		local ok = pcall(function() GamepassManager:_onPurchaseFinished(player, 303, true) end)
-		local calls = stubOwnership({})
+		settle()
+		local errorCalls = #calls
+		local after = stubOwnership({})
 		local owns = GamepassManager:PlayerOwnsGamepass(player, 303)
 		expect.truthy(ok, "no throw")
+		expect.equal(errorCalls, 3, "3 attempts")
 		expect.falsy(owns, "not owned")
-		expect.equal(#calls, 1, "nothing cached by the event")
+		expect.equal(#after, 1, "nothing cached by the event")
 	end)
 
-	suite:test("a closed prompt without a purchase asks nothing and caches nothing", function(expect)
-		local calls = stubOwnership({ [304] = true })
-		GamepassManager:_onPurchaseFinished(fakePlayer(), 304, false)
-		expect.equal(#calls, 0, "no ownership check")
+	suite:test("a closed prompt without a purchase asks nothing and changes nothing", function(expect)
+		local player = fakePlayer()
+		local calls = stubSequence({ false })
+		GamepassManager:PlayerOwnsGamepass(player, 304) -- cached false
+		GamepassManager:_onPurchaseFinished(player, 304, false)
+		settle()
+		GamepassManager:PlayerOwnsGamepass(player, 304)
+		expect.equal(#calls, 1, "no confirm attempt, and the cached entry was kept")
 	end)
 
 	return suite:run()

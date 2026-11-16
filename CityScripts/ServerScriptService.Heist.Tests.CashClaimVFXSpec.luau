@@ -111,6 +111,8 @@ return function()
 				-- City (phase 3 Task 5): the coin comes from UITheme.Assets.Coin, which moved to a new
 				-- slice after this spec pinned 18885492705; read the theme instead of a literal.
 				expect.equal(icon.Image, require(game.ReplicatedStorage.SharedSystems.UITheme).Assets.Coin, "uses the theme's cash decal")
+				expect.truthy(icon.Image ~= "", "the decal is set")
+				expect.truthy(string.match(icon.Image, "^rbxassetid://%d+$") ~= nil, "a real asset id, not a placeholder")
 			end
 		end
 		task.wait(0.6)

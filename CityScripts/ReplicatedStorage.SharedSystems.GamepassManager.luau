@@ -89,16 +89,32 @@ function GamepassManager:GetAccrualRateMultiplier(player): number
 	return 1
 end
 
--- City (phase 3 Task 5): PromptGamePassPurchaseFinished is reported by the client, so a
--- "purchased" event is never taken as ownership on its own. It is confirmed through the same
--- ownership check (pcall'd); only a confirmed true is cached. On false or an error nothing is
--- cached, and the next real query asks again. With the placeholder Id 0 nothing is ever owned.
+-- City (phase 3 Task 5, fix round 1): PromptGamePassPurchaseFinished is reported by the client,
+-- so a "purchased" event is never taken as ownership on its own; it is confirmed through the same
+-- ownership check (UserOwnsGamePassAsync, pcall'd). That call caches on Roblox's side and may still
+-- answer false right after an in-game purchase, and a heist has usually cached false here already
+-- (TryAddDuffel and accrual read PlayerOwnsGamepass). So the event first clears this user's entry
+-- for the pass, then confirms off the event thread: up to CONFIRM_ATTEMPTS tries,
+-- _confirmRetryDelay seconds apart, caching true on the first confirmed true. If none confirms the
+-- entry stays empty and the next PlayerOwnsGamepass asks again. With the placeholder Id 0 nothing
+-- is ever owned. A closed prompt without a purchase changes nothing.
+local CONFIRM_ATTEMPTS = 3
+GamepassManager._confirmRetryDelay = 2 -- seconds; a spec sets 0
+
 function GamepassManager:_onPurchaseFinished(player, gamepassId: number, wasPurchased: boolean)
 	if not wasPurchased then return end
-	local ok, owns = pcall(GamepassManager._ownershipCheck, player.UserId, gamepassId)
-	if ok and owns == true then
-		GamepassManager:_setCached(player.UserId, gamepassId, true)
-	end
+	local userId = player.UserId
+	cacheFor(userId)[gamepassId] = nil
+	task.spawn(function()
+		for attempt = 1, CONFIRM_ATTEMPTS do
+			if attempt > 1 then task.wait(GamepassManager._confirmRetryDelay) end
+			local ok, owns = pcall(GamepassManager._ownershipCheck, userId, gamepassId)
+			if ok and owns == true then
+				GamepassManager:_setCached(userId, gamepassId, true)
+				return
+			end
+		end
+	end)
 end
 
 -- Wires the real Players/MarketplaceService listeners exactly once, no

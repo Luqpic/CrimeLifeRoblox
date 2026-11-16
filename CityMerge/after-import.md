@@ -231,3 +231,16 @@ Phase 3 Task 5 (2026-11-16): Robbery remote audit (`phase3/remote-audit.md`) and
 All sixteen sources exported to `CityScripts/` with `transfer/export-source.luau`; on-disk Adler-32 equals the place (16 / 16).
 
 NOT saved / NOT published
+
+Fix round 1 (2026-11-16, review of Task 5): a real in-game purchase could stay unrecognised for the session, because a heist had usually cached `false` already and `UserOwnsGamePassAsync` may answer a stale false right after a purchase. Same columns; "old" is the Task 5 value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-16 | `ReplicatedStorage.SharedSystems.GamepassManager` (ModuleScript) | 5,580 / 1466278867 | 6,364 / 1846783466 | `_onPurchaseFinished`: on `wasPurchased` clears this user's cached entry for the pass, then confirms in `task.spawn` with up to 3 `pcall(_ownershipCheck)` attempts, `_confirmRetryDelay` (2 s, injectable) apart; caches true on the first confirmed true, else leaves the entry nil so the next read re-queries. `wasPurchased` false changes nothing. Attribute appended "; purchase clears a stale cached entry and confirms up to 3 times, 2 s apart (phase 3 Task 5 fix round 1)". |
+| 2026-11-16 | `ServerScriptService.Heist.Tests.GamepassManagerSpec` (ModuleScript) | 9,094 / 1349270393 | 11,371 / 2397584779 | The purchase cases rewritten for the async confirm (delay 0): confirmed first try; cached false then confirmed on the 2nd attempt -> owned; never confirmed -> next read re-queries; denied caches nothing (3 attempts); error x3 no throw; not purchased keeps the cached entry. Attribute appended "; stale-cache purchase cases (phase 3 Task 5 fix round 1)". |
+| 2026-11-16 | `ServerScriptService.Heist.Tests.CashClaimVFXSpec` (ModuleScript) | 11,323 / 3039798395 | 11,490 / 3531921895 | Decal case also asserts `icon.Image ~= ""` and `^rbxassetid://%d+$`. Attribute appended "; decal must be a non-empty rbxassetid (fix round 1)". |
+| 2026-11-16 | `ServerScriptService.Heist.Tests.SupplierSaleSpec` (ModuleScript) | 3,478 / 4114906781 | 4,191 / 113863477 | Dead-seller case: Health 0 at 3 studs from the supplier is refused, carry kept. Attribute appended "; dead-seller case (fix round 1)". |
+
+The four sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4).
+
+NOT saved / NOT published

@@ -61,6 +61,23 @@ return function()
 		expect.truthy(state.carrying, "carry kept on refusal")
 	end)
 
+	suite:test("a dead seller standing at the supplier is refused and keeps the carry", function(expect)
+		local character = Instance.new("Model")
+		local humanoid = Instance.new("Humanoid")
+		humanoid.Parent = character
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Position = Vector3.new(3, 0, 0)
+		root.Parent = character
+		humanoid.Health = 0
+		local deps, state = makeDeps(true, nil) -- default getRoot reads the character
+		local paid, outcome = SupplierSale.try({ UserId = 7, Character = character }, deps)
+		character:Destroy()
+		expect.equal(outcome, "too_far", "outcome")
+		expect.equal(paid, 0, "nothing paid")
+		expect.truthy(state.carrying, "carry kept on refusal")
+	end)
+
 	suite:test("the reach limit is 15 studs: 15 sells, 15.5 does not", function(expect)
 		local depsIn = makeDeps(true, Vector3.new(15, 0, 0))
 		local _, inside = SupplierSale.try({ UserId = 1 }, depsIn)
