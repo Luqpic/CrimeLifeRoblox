@@ -151,3 +151,29 @@ Not a source change, same deviation record:
 - `Workspace.FX`: new empty `Folder` (attribute `PlacedBy = "phase 2b"`). `StarterCharacterScripts.Crouching` parents its dust there; the script is not edited.
 
 NOT saved / NOT published
+
+# Phase 3 deviations from the Robbery place
+
+Phase 3 Task 2 (2026-11-16): every `carry` root outside `Workspace` imported from the transfer store with `ImportedFrom = "Robbery System"`: 25 roots, 1,378 instances incl. roots, 94 scripts. All 94 imported scripts' Adler-32 equal `phase3/robbery-manifest.tsv` (diffed by program, 94 / 94). The 13 imported `Script` / `LocalScript`s have `Enabled = false` and `ImportEnabled = true` (their source value); Task 3 restores them. Afterwards: 423 source containers, 233 BaseScripts, 144 enabled (unchanged), Enabled checksum 4096731555, source checksum 3379933426; `Workspace` descendants 226,903 (unchanged); 1 enabled SpawnLocation (`Workspace.SpawnLocation`).
+
+Edits after the import, same columns ("old" for an imported script is the Robbery value, equal to the manifest):
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-16 | `ServerScriptService.PlayerData.CurrencyService` (ModuleScript, NEW in the city) | (Robbery original not imported) | 2,062 / 3995652172 | Bridge (G4, `phase3/currency-api.md`): the Robbery `CurrencyAdapter` API (`Load`, `Get`, `Add`, `PendingCount`, `Save`, `FlushAll`, `Release`) as a singleton writing only `player.leaderstats.Cash` (`Add` floors, refuses non-numbers, NaN, infinite and <= 0 and returns the unchanged balance; no `leaderstats` or no player returns 0). Never creates `leaderstats`, never yields, no DataStore; `CashService`'s Value listener persists. Test seam `_playerFor` (default `Players:GetPlayerByUserId`). Its `PlayerData` Folder holds nothing else. `CityMergeDeviation = "bridge onto leaderstats.Cash; the Robbery save layer stays behind"`. Test `CurrencyBridge_Test`. |
+| 2026-11-16 | `ReplicatedStorage.Modules.MenuFovBlur` (ModuleScript, city copy) | 1,831 / 3514199789 | 2,220 / 2299064013 | G7: `acquire()` added (the Robbery copy's lines, own comment); `open` / `close` unchanged. `CityMergeDeviation = "2026-11-16 acquire() added from the Robbery copy (phase 3 G7)"`. |
+| 2026-11-16 | `ReplicatedStorage.SharedSystems.CashClaimVFX` (ModuleScript) | 13,210 / 4113373555 | 12,437 / 1758279696 | G5: no own `CashDisplay` ScreenGui. `_buildPersistentGui` now spawns a lookup of `PlayerGui["Custom Inventory"].cashDisplay` (`WaitForChild`, 10 s each, constructor does not block); `_render` is empty (the city's `CashHud` owns the readout); `_targetPosition(space)` returns the frame centre `AbsolutePosition + AbsoluteSize / 2` as an offset inside the burst ScreenGui, or nil when absent, in which case coins fade where they scattered (no fly-to). Rest unchanged (unused frame constants left). `CityMergeDeviation = "one cash display: no own CashDisplay, coins fly to Custom Inventory.cashDisplay (phase 3 G5)"`. |
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.HeistClient` (LocalScript) | 65,609 / 2648115454 | 65,736 / 525480268 | G10: line 815 `SetCoreGuiEnabled(Backpack, not carrying)` and line 827 `SetCoreGuiEnabled(Backpack, true)` now pass `false`; no other Backpack call in Robbery client code. `CityMergeDeviation = "Backpack core GUI never re-enabled (phase 3 G10)"`. |
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.NotificationClient` (LocalScript) | 7,576 / 3587576695 | 7,663 / 2079666609 | G6: waits `HeistNotificationGui` (line 26) and the header comment names it. `CityMergeDeviation = "waits HeistNotificationGui (phase 3 G6)"`. |
+| 2026-11-16 | `StarterPlayer.StarterPlayerScripts.UiButtonEffects` (LocalScript) | 9,629 / 1935977856 | 9,675 / 3043343507 | G6: the two `NotificationGui` references (PANELS line 125, ambient line 164) now `HeistNotificationGui`. `CityMergeDeviation = "HeistNotificationGui (phase 3 G6)"`. |
+| 2026-11-16 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,491 / 2641049495 | 2,569 / 2672186133 | G4: `"CurrencySpec"` commented out of `SPECS` (else it reports "module missing"). `CityMergeDeviation = "CurrencySpec left out of SPECS (retired, phase 3 G4)"`. |
+
+Not a source change:
+
+- `StarterGui.NotificationGui` (Robbery ScreenGui) renamed `HeistNotificationGui` (G6); no scripts inside. `CityMergeDeviation` set.
+- `ServerScriptService.Heist.Tests.CurrencySpec` moved to `ServerStorage.CityQuarantine.RetiredSpecs` (new Folder), source unchanged (3,999 / 1781011967 = manifest). G4.
+- G9: all 38 Tools under `ServerStorage.Weapons` tagged `Weapon` (CollectionService); 38 `Weapon`-tagged instances in the place. Guard test `WeaponTag_Test`.
+
+New test case modules (city only, exported to `CityScripts/`): `ServerStorage.UnitTest.Cases.CurrencyBridge_Test` (4,519 / 1400801589, 21 cases), `WeaponTag_Test` (685 / 3125862015, 1 case). All nine sources above exported; on-disk Adler-32 equals the place.
+
+NOT saved / NOT published
