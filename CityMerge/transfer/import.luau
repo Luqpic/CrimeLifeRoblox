@@ -1,6 +1,8 @@
 -- Run in the TARGET window (Crimelife city.rbxl) via execute_luau (Edit). Paste the whole file; edit only the CALL SITE.
 -- import(key, parent, newName?) -> Instance: fetches the key, deserializes, stamps ImportedFrom, parents.
 -- Errors if parent already has a child with the final name. parent == nil returns the UNPARENTED copy (dry run).
+-- Set to the place the keys were exported from ("FPS System" in phase 2a, "Robbery System" in phase 3).
+local SOURCE_PLACE = "Robbery System"
 local HttpService = game:GetService("HttpService")
 local SerializationService = game:GetService("SerializationService")
 local EncodingService = game:GetService("EncodingService")
@@ -29,7 +31,7 @@ local function import(key: string, parent: Instance?, newName: string?): Instanc
 		root:Destroy()
 		error(parent:GetFullName() .. " already has a child named " .. root.Name)
 	end
-	root:SetAttribute("ImportedFrom", "FPS System")
+	root:SetAttribute("ImportedFrom", SOURCE_PLACE)
 	if parent then root.Parent = parent end
 	return root
 end
