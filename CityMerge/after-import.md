@@ -500,3 +500,31 @@ Fix wave after the whole-branch review (`Batch: known issues pass fixes`). Same 
 Exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4). City suite 262 / 262 / 0. After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+## Heist layers 2026-11-17
+
+Task 1 (shared bonus loot and heavy-loot carry, `Batch: heist layers shared carry and bonus loot`). Same columns; old = the place before this task (none = new script).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Heist.BankInstance` (ModuleScript) | 11,944 / 2753960156 | 12,615 / 1455160887 | `AddBonus(player, amount)`: TryAddDuffel's guards (`inactive`, `not_participant`, `invalid_amount`) with no cap check; fires `DuffelChanged(..., "add")`. Attribute set. First export. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.CarryState` (ModuleScript) | 4,750 / 3260318798 | 5,687 / 3427714956 | `PickUp` sets the character attribute `CarrySpeedCap` from a numeric `supplyObject.speedCap`; `Drop`/`Consume`/`Forget` clear it on the current character (none: no error). New `GetCarried(player)`. Attribute set. First export. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.SupplyObject` (ModuleScript) | 21,402 / 4234262248 | 23,058 / 517730419 | Deps `bankOnly`, `speedCap` (fields), `startHidden` (OnSessionStart leaves it hidden, no prompt); `GiveTo(player)` (prompt path via `_take`, isBlocked/hasDuffel included, only when hidden and available); `Close()` (prompt, highlight and GiveTo off until OnSessionStart). Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Services.SupplierSale` (ModuleScript) | 1,845 / 159481646 | 2,222 / 4116315993 | Refuses a carry whose object has `bankOnly == true` with `0, "bank_only"` (after the reach check, nothing consumed); `BANK_ONLY_TOAST`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.Movement.Constants` (ModuleScript) | 4,387 / 169647085 | 4,805 / 3711248031 | `CARRY_SPEED_CAP_ATTRIBUTE = "CarrySpeedCap"`, `CARRY_SPEED_CAP = 12`. Attribute set. First export. |
+| 2026-11-17 | `StarterPlayer.StarterCharacterScripts.Animate2` (LocalScript) | 24,681 / 4181753046 | 25,120 / 2723549544 | `resolveMovementTargets`: while `CarrySpeedCap` is set the target is `min(20, cap)` (no sprint boost) and WalkSpeed is clamped to the cap at once. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Movement.Scripts.SprintAuthority` (ModuleScript) | 10,951 / 294162375 | 11,627 / 4057754890 | `tick`: `CarrySpeedCap` forces `granted = false`, clamps WalkSpeed down to the cap (after the landing ramp, before stun) and joins the below-baseline release. Attribute set. First export. |
+| 2026-11-17 | `StarterPlayer.StarterCharacterScripts.Crouching` (LocalScript) | 11,560 / 3591834587 | 11,931 / 1491634994 | Crouch speed `min(config.Speed, CarrySpeedCap)`. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.SuppliesServer` (Script) | 7,909 / 1266664936 | 8,169 / 1008868426 | `bank_only` sale outcome: `net:Toast` with `BANK_ONLY_TOAST`, then `SupplierResult(player, "bank_only")`. Attribute appended. |
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.SupplierDialogueController` (LocalScript) | 5,684 / 994812562 | 5,826 / 3068383468 | `bank_only` result closes the plate (no quip; the toast says why). Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Services.CarryGetaway` (ModuleScript) | none | 2,612 / 1555401882 | New: banks a matching carried object for `value` Cash at the getaway; wraps `Heist.Services.Getaway` (`getDuffel` = carrying a matching object and 1 or 0); optional `addActiveRobbery`. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.BankInstanceSpec` (ModuleScript) | 18,856 / 3141173296 | 20,711 / 2909984286 | 2 AddBonus cases. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.CarryStateSpec` (ModuleScript) | 8,455 / 2856210109 | 10,726 / 82790989 | 6 cases: CarrySpeedCap set/cleared by Drop, Consume, Forget; none without speedCap; no character; GetCarried. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.SupplyObjectSpec` (ModuleScript) | 24,283 / 3956730909 | 27,619 / 1485979581 | 5 cases: fields, startHidden, GiveTo once, GiveTo refusals, Close. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.SupplierSaleSpec` (ModuleScript) | 4,191 / 113863477 | 4,963 / 2622975094 | Stub gains `GetCarried`; bank_only case. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.CarryGetawaySpec` (ModuleScript) | none | 4,621 / 1058397731 | New: 6 cases (199 / 200 / inside at 300 / non-matching / no carry / addActiveRobbery + Destroy). Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,614 / 3188154631 | 2,662 / 4031934301 | `CarryGetawaySpec` registered. Attribute appended. |
+
+The 17 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (17 / 17). City suites 262 / 262 / 0; heist 641 passed / 0 failed (21 new; the Zone sweep passed this run). Play: `CarrySpeedCap = 12` with sprint held, client WalkSpeed max 12 over 3 s and IsSprinting never granted; cleared, walk 20 and sprint 38; server WalkSpeed 12 then 20. After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

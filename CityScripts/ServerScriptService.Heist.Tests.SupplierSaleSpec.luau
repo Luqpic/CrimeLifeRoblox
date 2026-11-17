@@ -10,17 +10,19 @@ return function()
 
 	local SUPPLIER = Vector3.new(0, 0, 0)
 
-	local function makeDeps(carrying, rootPosition)
+	local function makeDeps(carrying, rootPosition, bankOnly)
 		local state = { carrying = carrying, consumed = 0, credited = {} }
+		local object = { cashOutAmount = 10000, bankOnly = bankOnly }
 		local deps = {
 			supplierPosition = SUPPLIER,
 			carryState = {
 				IsCarrying = function() return state.carrying end,
+				GetCarried = function() return if state.carrying then object else nil end,
 				Consume = function()
 					if not state.carrying then return false, nil end
 					state.carrying = false
 					state.consumed += 1
-					return true, { cashOutAmount = 10000 }
+					return true, object
 				end,
 			},
 			currency = {
@@ -85,6 +87,17 @@ return function()
 		local _, outside = SupplierSale.try({ UserId = 1 }, depsOut)
 		expect.equal(inside, "sold", "at the limit")
 		expect.equal(outside, "too_far", "past the limit")
+	end)
+
+	suite:test("a bank-only carry is refused at the supplier and kept (heist layers 2026-11-17)", function(expect)
+		local deps, state = makeDeps(true, Vector3.new(3, 0, 0), true)
+		local paid, outcome = SupplierSale.try({ UserId = 7 }, deps)
+		expect.equal(outcome, "bank_only", "outcome")
+		expect.equal(paid, 0, "nothing paid")
+		expect.equal(#state.credited, 0, "currency:Add never called")
+		expect.equal(state.consumed, 0, "Consume never called")
+		expect.truthy(state.carrying, "still carrying")
+		expect.equal(SupplierSale.BANK_ONLY_TOAST, "The supplier won't touch that. Get it clear of the building instead.", "toast text")
 	end)
 
 	suite:test("nothing carried answers no_supplies whatever the distance", function(expect)

@@ -12,6 +12,9 @@ local SupplierSale = {}
 
 SupplierSale.MAX_DISTANCE = 15
 
+-- Heist layers 2026-11-17: heavy loot flagged bankOnly banks only through its getaway.
+SupplierSale.BANK_ONLY_TOAST = "The supplier won't touch that. Get it clear of the building instead."
+
 -- The root of a living character, or nil.
 local function defaultGetRoot(player): BasePart?
 	local character = player.Character
@@ -22,7 +25,7 @@ end
 
 -- deps: carryState (IsCarrying, Consume), currency (Add), supplierPosition (Vector3),
 -- getRoot (optional, test seam). Returns the amount paid (0 when refused) and the outcome:
--- "sold", "no_supplies" or "too_far".
+-- "sold", "no_supplies", "too_far" or "bank_only" (carry kept; the caller toasts BANK_ONLY_TOAST).
 function SupplierSale.try(player, deps): (number, string)
 	if not deps.carryState:IsCarrying(player) then return 0, "no_supplies" end
 
@@ -30,6 +33,9 @@ function SupplierSale.try(player, deps): (number, string)
 	if not root or (root.Position - deps.supplierPosition).Magnitude > SupplierSale.MAX_DISTANCE then
 		return 0, "too_far"
 	end
+
+	local carried = deps.carryState:GetCarried(player)
+	if carried and carried.bankOnly == true then return 0, "bank_only" end
 
 	local consumed, supplyObject = deps.carryState:Consume(player)
 	if not consumed then return 0, "no_supplies" end

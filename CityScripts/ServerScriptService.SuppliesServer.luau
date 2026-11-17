@@ -97,6 +97,13 @@ net:OnSupplierChoiceSubmitted(function(player)
 		supplierPosition = illegalSupplier.Interaction.Position,
 	})
 	if outcome == "too_far" then return end
+	-- Heist layers 2026-11-17: bank-only heavy loot is kept; the toast says why and the result
+	-- closes the conversation.
+	if outcome == "bank_only" then
+		net:Toast(player, SupplierSale.BANK_ONLY_TOAST)
+		net:SupplierResult(player, "bank_only")
+		return
+	end
 	if paid > 0 then
 		-- Reuses the EXACT confirmed Claim-zone cash-out pattern verbatim --
 		-- the existing client-side CashClaimVFX needs zero changes.

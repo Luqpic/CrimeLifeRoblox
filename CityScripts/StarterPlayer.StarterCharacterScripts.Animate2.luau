@@ -433,6 +433,14 @@ local function resolveMovementTargets()
 	else
 		targetWalkSpeed = originalWalkSpeed
 	end
+
+	-- Heavy-loot carry (heist layers 2026-11-17): no sprint boost, and the target never above the
+	-- cap. Clamped at once rather than ramped down, so a carrier picking up mid-sprint is slow now.
+	local carryCap = Figure:GetAttribute(MovementConstants.CARRY_SPEED_CAP_ATTRIBUTE)
+	if type(carryCap) == "number" then
+		targetWalkSpeed = math.min(originalWalkSpeed, carryCap)
+		Humanoid.WalkSpeed = math.min(Humanoid.WalkSpeed, carryCap)
+	end
 end
 
 local function resolveLocomotion()
