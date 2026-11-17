@@ -474,3 +474,16 @@ Instances (not scripts): `Description` on all 38 `ServerStorage.Weapons` Tools; 
 The five sources exported to `CityScripts/`; on-disk Adler-32 equals the place (5 / 5). City suites 262 / 262 / 0; heist 620 passed / 1 failed (Zone sweep only). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 4 (walk speed, level-up popup, nameplates). Same columns; old = the place before this task (first export: none on disk).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `StarterPlayer.StarterCharacterScripts.Animate2` (LocalScript) | 24,177 / 3211711448 | 24,681 / 4181753046 | The backward WalkSpeed clamp keys on input (`isInputBackwards`, `Humanoid.MoveDirection`), not velocity: pressed against a wall, collision bounce read as walking backwards and swung WalkSpeed 20 / 25.83. Backward walking still clamps to 20; the reversed walk animation is unchanged. Attribute set. First export. |
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.LevelingHud` (LocalScript) | 9,375 / 3990833154 | 11,920 / 4084567681 | `placePopup()` at each level-up, from the live heist HUD boxes: desktop, the popup's top on the toast's bottom (centred, full size); smaller side under `UI_SMALL_SCREEN_THRESHOLD`, scaled to the gap left of the duffel (0.71 at 844 x 390) and centred on the duffel vertically; no heist HUD, the template's place. Attribute set. First export. |
+
+Step 3 (two names over a player): no change. `IndicatorClient` draws only damage numbers for the shooter; nothing clones `Workspace.Dev.UI.OverheadGui`.
+
+The two sources exported to `CityScripts/`; on-disk Adler-32 equals the place (2 / 2). City suites 262 / 262 / 0; heist 621 passed / 0 failed (the Zone sweep passed this run). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
