@@ -48,7 +48,8 @@ nav a b{color:var(--muted);font-weight:500;margin-right:4px}
 @media (max-width:760px){.tb{grid-template-columns:1fr}.tb .meta{border-left:0;border-top:2px solid var(--ink)}}
 .panel{background:var(--sheet);border:1px solid var(--rule);padding:20px;display:grid;gap:12px;min-width:0;align-content:start}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
-ul.rules{margin:0;padding-left:18px;display:grid;gap:6px}
+.rules{margin:0;padding-left:20px;display:grid;gap:6px}
+code{font:500 .84em var(--f-mono);background:var(--bg);padding:1px 4px;border-radius:2px}
 .legend{display:flex;flex-wrap:wrap;gap:8px 16px}
 .chip{display:inline-flex;align-items:center;gap:6px;font-size:.84rem}
 .sw{width:18px;height:12px;border:1px solid var(--ink);display:inline-block}
@@ -169,13 +170,22 @@ html{scroll-behavior:smooth}
  <div class="stages" id="stages"></div>
  <div class="grid2">
   <div class="panel">
-   <h3>How it gets bought</h3>
-   <p>CrimeLife reuses Outbreak Tycoon's build mechanics. There are <b>no buttons or button pads</b> on the plot. Players buy everything from the BUILD menu, and each purchase drops into place.</p>
+   <h3>How players buy the base</h3>
+   <p>Most tycoons have buttons on the floor that players step on to buy the next piece. <b>This one doesn't.</b> We're reusing the build system from Outbreak Tycoon, another game by the same developer. It's already scripted, so you only build. In-game it works like this:</p>
+   <ol class="rules">
+    <li>The player opens a <b>BUILD menu</b> on their screen. It lists every purchase as a card, grouped by floor (Ground, Upper, Roof, Bunker, Outside) and by section (Economy, Structure, Interior, Weapons, Decoration, Facilities).</li>
+    <li>Picking a card moves the camera to that spot in the base. A blue see-through <b>hologram</b> shows what will be built there.</li>
+    <li>The player presses <b>BUY</b>. The pieces of that purchase drop in from a few studs above and land in place, one layer after another.</li>
+   </ol>
+  </div>
+  <div class="panel">
+   <h3>What that means for your build</h3>
    <ul class="rules">
-    <li><b>One model per purchase,</b> named after what it is (Scrap Foundry Structure, Foundry Droppers, Bar Furniture). Sort them by floor (Ground, Upper, Roof, Bunker, Outside) and section (Economy, Structure, Interior, Weapons, Decoration, Facilities).</li>
-    <li><b>Split each purchase into a few sub-models,</b> such as floor, walls and fit-out. The drop-in animation lowers them in layer by layer.</li>
-    <li><b>Mark a camera spot per purchase</b> with an invisible anchored part where the menu camera should frame it from.</li>
-    <li><b>Nothing extra on the plot:</b> no pads, signs or price boards for purchases.</li>
+    <li><b>Build the whole base finished, in place.</b> The scripts hide anything a player hasn't bought yet, so you never build "before" and "after" versions.</li>
+    <li><b>One Model per purchase.</b> Every room's structure, each machine and each furniture set is its own Model with a plain name, like <code>Scrap Foundry</code>, <code>Foundry Droppers</code> or <code>Bar Furniture</code>. Group the Models in folders by floor. Split each room from the schedules below into its structure (floor, walls, ceiling, lights) plus a separate Model for its machines and one for its furniture.</li>
+    <li><b>A few layers inside each Model.</b> Put the floor, walls and ceiling, and the props in separate sub-models. Those are the layers the drop-in animation lands one after another, so a single Model of 400 loose parts looks bad.</li>
+    <li><b>A camera spot for each purchase.</b> Add one invisible, anchored, non-colliding part named <code>CameraPoint</code> where the menu camera should look from. Put it a little outside and above the purchase, with a clear view of it.</li>
+    <li><b>Nothing on the floor for buying.</b> No pads, buttons, price signs or boards.</li>
    </ul>
   </div>
   <div class="panel">

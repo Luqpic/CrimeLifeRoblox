@@ -16,6 +16,7 @@ The developer is hiring a builder for the tycoon place and asked for a new floor
 - New drawing set `CrimeLifeRoblox/docs/crimelife-compound-plan.html`, published as the private artifact https://claude.ai/artifact/Q9v2zXssGBmYU81wWsfmQ3 (version 3). It has five plan sheets with room schedules, a section, the 0–8 unlock order and a three.js block model. The model is built from the same room data as the 2D sheets, so the two cannot drift apart.
 - New reference note [[Compound Floor Plan]]. Decisions added to [[CrimeLife Tycoon Decisions]]. Prompt filed under [[Original Prompts]].
 - Follow-up (version 4): room labels no longer overlap. The size line had sat on the room name on every sheet, and 8 names sat on fixture labels. Labels now get more line spacing and move to a clear spot inside their room. Fixtures were moved in the Chop Shop, Meeting Office and Cells. Button pads, temporary roof caps and the early fence were removed from the page in favour of OBT's BUILD menu and a build-in-order rule.
+- Follow-up (version 5): the developer noted that the builder is new and does not know Outbreak Tycoon. The page now explains the build system from scratch: what the player sees, and what it means for the build (finished in place, one Model per purchase, layered sub-models, a `CameraPoint` part, nothing on the floor).
 - No Studio or game change.
 
 ## Decisions

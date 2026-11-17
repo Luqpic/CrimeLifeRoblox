@@ -26,7 +26,7 @@ The drawing set the developer's hired builder works from for the CrimeLife tycoo
 
 ## How it gets bought and built (2026-11-17)
 
-- **No buttons.** CrimeLife reuses Outbreak Tycoon's build mechanics: everything is bought from the BUILD menu and drops into place. The plot has no button pads or price boards. The builder makes one model per purchase, sorted by floor (Ground, Upper, Roof, Bunker, Outside) and section, splits each into a few sub-models for the drop-in, and marks a camera spot per purchase.
+- **No buttons.** CrimeLife reuses Outbreak Tycoon's build mechanics: everything is bought from the BUILD menu and drops into place. The plot has no button pads or price boards. The builder makes one model per purchase, sorted by floor (Ground, Upper, Roof, Bunker, Outside) and section, splits each into a few sub-models for the drop-in, and adds a `CameraPoint` part per purchase. The builder is new and does not know Outbreak Tycoon, so the page explains the BUILD menu from the player's side (cards, camera, hologram, BUY, drop-in) and builds the whole base finished in place, because the scripts hide unbought purchases.
 - **Build in order, never remove.** No temporary roof caps and no early fence. Each floor's structure includes its ceiling slab, which is the next floor's floor. Upper-floor walls stand on the slab edge. The base plate edge marks the plot until the perimeter wall is bought.
 
 ## Changes from the HQ blueprint
