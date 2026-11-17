@@ -28,7 +28,8 @@ Claude's rulings (the controller's, each with its cost if wrong):
 - **Ruling: the level-up popup overlap fix is Option A plus B1.** Desktop: the popup's top sits at the toast's bottom. Where the smaller viewport side is under 500: scaled about 0.71 into the gap left of the duffel. The plan required every pair clear at both sizes and B1 is the only phone option that keeps the level-up visible. Cost if wrong: an off-centre, smaller popup on phones.
 - **Ruling: Task 4 includes the `WantedHud` star meter in the overlap pairs** (a HUD element on screen since police). Cost if wrong: a little more measuring.
 - **Ruling: every NPC overhead stays**, the six crooked-cop quest givers' names included. Cost if wrong: none.
-- **Ruling: no save this run;** every Studio-only change lives in the open session until the developer saves. Cost if wrong: work lost if Studio closes.
+- **Ruling: no save by Claude this run;** the work lives in the open session until the developer saves (they saved once mid-run: see [[2026-11-17 Known Issues Pass]]). Cost if wrong: work lost if Studio closes.
+- **Ruling: task reviews on Sonnet; the final whole-branch review was planned on Fable and ran on Opus** because Fable was out of usage credits. Cost if wrong: review depth.
 
 ## 2026-11-17: police and the wanted level
 

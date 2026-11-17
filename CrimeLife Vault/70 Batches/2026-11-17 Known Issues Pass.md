@@ -82,7 +82,7 @@ The exports in `CityScripts/` match Studio by Adler-32 (checked task by task; th
 - "The `WalkSpeed` swing is a sprint ramp": it is the backward clamp reacting to collision velocity.
 
 ## Left open
-Closed here and removed from [[Open Items]]: `Workspace.HQ`; the 26 leftover prompts; the removal toast; the HUD overlaps (the level-up popup against the getaway widget, the toast and the duffel and card); the CashClaimVFX dead leftovers; NewsStation workers damageable for city XP; police squads fill slowly (closed by [[2026-11-17 Police Slow Fill]], removed now); the re-slot copy; the unowned skin choice; the third-person muzzles; the RPG bang and GAMEPASS card; "no shot denied feedback"; the static "reloading" readout; the double name; the empty `Description`; the Spraypaint join toast; the `WalkSpeed` swing.
+Closed here and removed from [[Open Items]]: the fix wave `Batch: known issues pass fixes` (`placePopup` no longer needs the duffel on desktop, `restoreEquippedWeapons` uses `findLiveTool`, the stale `handleBuySkinRequest` comment and its unreachable type check, the `CashClaimVFX` orphaned comment); `Workspace.HQ`; the 26 leftover prompts; the removal toast; the HUD overlaps (the level-up popup against the getaway widget, the toast and the duffel and card); the CashClaimVFX dead leftovers; NewsStation workers damageable for city XP; police squads fill slowly (closed by [[2026-11-17 Police Slow Fill]], removed now); the re-slot copy; the unowned skin choice; the third-person muzzles; the RPG bang and GAMEPASS card; "no shot denied feedback"; the static "reloading" readout; the double name; the empty `Description`; the Spraypaint join toast; the `WalkSpeed` swing.
 
 New or kept open (in [[Open Items]]):
 - Pump fore-ends need a mesh split and an upload (the developer).
@@ -90,11 +90,12 @@ New or kept open (in [[Open Items]]):
 - The Thug that did not reproduce (kept, with the 185 s measurement).
 - Unused `Workspace.Dev.UI.OverheadGui`.
 - Landing-window speed jitter and the 180-degree `AutoRotate` clamp.
-- The phone popup layout, computed only; `placePopup` needs the duffel, does not re-lay out on resize, and was not measured on a very wide viewport.
-- Small leftovers: `restoreEquippedWeapons` Backpack-only check, a stale comment in `handleBuySkinRequest`, the Burst re-press cue, `RPGBlast` inline numbers, `WeaponShopService` touched for one word, the `GamepassOwned_RPG` flicker, the CashClaimVFX orphaned comment, Humanoids without `Invulnerable`, no automated test for six of the fixes.
-- NOT saved (no word to save this run): the place on disk lacks every Studio-only change above and the police work.
-
-NOT saved / NOT published
+- The phone popup layout, computed only; `placePopup` does not re-lay out on resize and was not measured on a very wide viewport.
+- Small leftovers: the Burst re-press cue, `RPGBlast` inline numbers, `WeaponShopService` touched for one word, the `GamepassOwned_RPG` flicker, Humanoids without `Invulnerable`, no automated test for six of the fixes.
+- Save state: the place file was last written Nov 17 15:04 (`stat`), after Task 2's commit and before Task 3's, and after the Studio restart a read-back found police, the slow-fill fix and Tasks 1 and 2 present, so they are on disk; only Task 3 (38 `Description`s, three muzzles, `GuiController.DryFire`, `Blaster.Objects.RPGBlast`, the edited Blaster and shop scripts), Task 4 (`Animate2`, `LevelingHud`) and the fix wave are unsaved. Nothing was saved by Claude in this run (no word to save).
+- The HQ client-descendant counts (100,256 before, 73,236 after) are not like for like: they were read at about 60 s and 25 s of client time.
 
 ## Links
 [[Open Items]] [[CrimeLife Tycoon Decisions]] [[Weapons and Blaster]] [[Weapon Shop and Upgrades]] [[HUD and UI Shell]] [[Police and Wanted]] [[City Map and Plots]] [[Movement and Stamina]] [[2026-11-17 Police Slow Fill]]
+
+NOT saved / NOT published

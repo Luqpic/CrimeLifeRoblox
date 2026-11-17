@@ -203,11 +203,8 @@ function SpraypaintService.handleBuySkinRequest(player: Player, paletteKey: unkn
 	end
 	-- Equipped by the SERVER in the same call rather than by a second client remote. The
 	-- PURCHASE is what is atomic -- handleBuyRequest above either fully succeeds or changes
-	-- nothing (it now also validates weaponName itself, since it is what gets charged). Re-derived
-	-- rather than trusted from that success: this half stays independently correct on its own terms.
-	if typeof(weaponName) ~= "string" then
-		return
-	end
+	-- nothing. weaponName is already an owned string from the guard above (the type check that
+	-- repeated here was unreachable); only the template lookup is re-derived.
 	local template = ServerStorage.Weapons:FindFirstChild(weaponName)
 	if not (template and template:IsA("Tool")) then
 		return

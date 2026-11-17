@@ -487,3 +487,16 @@ Step 3 (two names over a player): no change. `IndicatorClient` draws only damage
 The two sources exported to `CityScripts/`; on-disk Adler-32 equals the place (2 / 2). City suites 262 / 262 / 0; heist 621 passed / 0 failed (the Zone sweep passed this run). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Fix wave after the whole-branch review (`Batch: known issues pass fixes`). Same columns; old = the place before the wave.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.LevelingHud` (LocalScript) | 11,920 / 4084567681 | 12,131 / 4111193995 | `placePopup` needs only the camera and the toast on desktop; the duffel widget is required only in the small-screen branch (missing there: the template's place). Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Weapons.Scripts.WeaponShopService` (Script) | 19,057 / 135750645 | 19,054 / 1661690566 | `restoreEquippedWeapons` asks `findLiveTool` (Backpack and character) before granting, so a held Tool is not duplicated. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Spraypaint.Scripts.SpraypaintService` (ModuleScript) | 14,939 / 478840120 | 14,858 / 524183879 | Stale comment ("handleBuyRequest validates weaponName") dropped with the type check after it, unreachable behind the guard above. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.CashClaimVFX` (ModuleScript) | 11,096 / 1118537320 | 11,096 / 4226909799 | Orphaned CashHud comment moved to where `_displayedValue` is set in `new`. Attribute appended. |
+
+Exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4). City suite 262 / 262 / 0. After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

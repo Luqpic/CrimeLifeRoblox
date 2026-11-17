@@ -150,8 +150,7 @@ local function placePopup()
 	local camera = workspace.CurrentCamera
 	local heistHud = playerGui:FindFirstChild("HeistHUD")
 	local toast = heistHud and heistHud:FindFirstChild("Toast")
-	local duffel = heistHud and findDuffel(heistHud)
-	if not (camera and toast and duffel) then
+	if not (camera and toast) then
 		popup.AnchorPoint, popup.Position, popupScale.Scale = templateAnchor, templatePosition, 1
 		return
 	end
@@ -161,7 +160,12 @@ local function placePopup()
 	local unscale = if guiScale and guiScale.Scale > 0 then 1 / guiScale.Scale else 1
 	local origin = gui.AbsolutePosition
 	local viewport = camera.ViewportSize
-	if math.min(viewport.X, viewport.Y) < SMALL_SCREEN then
+	local small = math.min(viewport.X, viewport.Y) < SMALL_SCREEN
+	local duffel = small and findDuffel(heistHud)
+	if small and not duffel then
+		-- Small screen, no duffel widget: no gap to measure, the template's place.
+		popup.AnchorPoint, popup.Position, popupScale.Scale = templateAnchor, templatePosition, 1
+	elseif small then
 		local gapWidth = duffel.AbsolutePosition.X - origin.X - 2 * POPUP_GAP_MARGIN
 		popupScale.Scale = math.clamp(gapWidth * unscale / popup.Size.X.Offset, 0.1, 1)
 		popup.AnchorPoint = Vector2.new(0, 0.5)

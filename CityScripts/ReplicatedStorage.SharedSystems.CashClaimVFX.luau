@@ -109,6 +109,7 @@ function CashClaimVFX.new(deps)
 	}, CashClaimVFX)
 
 	self:_buildPersistentGui()
+	-- The readout belongs to the city's CashHud; _displayedValue only paces the claim sequence.
 	self._displayedValue = getCash()
 
 	if player then
@@ -148,8 +149,6 @@ function CashClaimVFX:_buildPersistentGui()
 		self._cashTarget = inventory and inventory:WaitForChild("cashDisplay", 10) :: GuiObject?
 	end)
 end
-
--- The readout belongs to the city's CashHud; _displayedValue only paces the claim sequence.
 
 -- Centre of the city cash frame (AbsolutePosition + AbsoluteSize / 2), as an offset inside
 -- `space` (the burst ScreenGui), so inset settings of either ScreenGui cancel out.

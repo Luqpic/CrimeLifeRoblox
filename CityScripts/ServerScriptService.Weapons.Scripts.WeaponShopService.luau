@@ -157,7 +157,7 @@ local function restoreEquippedWeapons(player: Player)
 		-- Idempotent: this can legitimately run more than once for the same character (the
 		-- already-present-character path plus CharacterAdded), and a second pass must not hand out
 		-- a duplicate.
-		if not backpack:FindFirstChild(weaponName) then
+		if not findLiveTool(player, weaponName) then
 			grantWeapon(player, weaponName, backpack)
 		end
 	end
