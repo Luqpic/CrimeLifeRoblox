@@ -439,6 +439,51 @@ return function(t)
 		check(p, 0) -- at 13028
 	end)
 
+	-- Task 4: the star meter reads WantedSeen (pulse) and WantedDraining (blink), both set at each step.
+	t.test("WantedSeen follows the seen provider and the active-robbery bypass; cleared at 0", function()
+		local p = standIn()
+		clock = 14000
+		WantedService.addHeat(p, 2, "test")
+		seen[p] = true; clock = 14001; WantedService._step()
+		local whileSeen = p:GetAttribute("WantedSeen")
+		seen[p] = nil; clock = 14002; WantedService._step()
+		local unseen = p:GetAttribute("WantedSeen")
+		robbing[p] = true; clock = 14003; WantedService._step()
+		local inRobbery = p:GetAttribute("WantedSeen")
+		WantedService.clear(p)
+		robbing[p] = nil
+		expect.equal(whileSeen, true)
+		expect.equal(unseen, false)
+		expect.equal(inRobbery, true)
+		expect.equal(p:GetAttribute("WantedSeen"), false)
+	end)
+
+	t.test("WantedDraining: false in the search window and while seen, true once the unseen timer runs; false at 0", function()
+		deps.searchSeconds = Constants.SEARCH_SECONDS
+		local p = standIn()
+		clock = 15000
+		WantedService.addHeat(p, 1.5, "test")
+		clock = 15020; WantedService._step() -- the window's last step (20 s): the timer restarts here
+		local inWindow = p:GetAttribute("WantedDraining")
+		clock = 15021; WantedService._step()
+		local after = p:GetAttribute("WantedDraining")
+		seen[p] = true; clock = 15022; WantedService._step(); seen[p] = nil
+		local whileSeen = p:GetAttribute("WantedDraining")
+		clock = 15030; WantedService._step() -- 1.5 -> 1, still draining
+		local stepped = p:GetAttribute("WantedDraining")
+		local heatAt30 = WantedService.getHeat(p)
+		clock = 15038; WantedService._step() -- 1 -> 0
+		deps.searchSeconds = 0
+		expect.equal(inWindow, false)
+		expect.equal(after, true)
+		expect.equal(whileSeen, false)
+		expect.equal(stepped, true)
+		expect.equal(heatAt30, 1)
+		check(p, 0)
+		expect.equal(p:GetAttribute("WantedDraining"), false)
+		expect.equal(p:GetAttribute("WantedSeen"), false)
+	end)
+
 	end)
 	for key, value in saved do deps[key] = value end
 	deps.searchSeconds, deps.activeRobbery = saved.searchSeconds, saved.activeRobbery

@@ -373,3 +373,13 @@ Task 3 fix round 2 (2026-11-17, guard damage tuned for the Bank). Same columns; 
 The two sources exported to `CityScripts/`; on-disk Adler-32 equals the place (2 / 2). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 4 (2026-11-17, the wanted star meter). No existing script edited, so no `CityMergeDeviation` row.
+
+New: `StarterPlayer.StarterPlayerScripts.WantedHud` (LocalScript) 5,291 / 1430248998: builds the `WantedHud` ScreenGui in code (`ZIndexBehavior = Sibling`, `ResetOnSpawn = false`, `CoreUISafeInsets`, its own `UIScale` 1); five star glyphs on a `UITheme` plate (`Color.panel`, `UICorner` 8, `UIStroke`), fill by a left-to-right clip, stroke pulse while `WantedSeen`, blink on the next star while `WantedDraining`, hidden at 0 and while a `UI.Panels` panel is open. Top centre: offset +160 right of centre, or -160 left of centre when `min(viewport) < Blaster.Constants.UI_SMALL_SCREEN_THRESHOLD` (500).
+
+Changed new sources (not deviations): `WantedService` 10,729 / 1711108376 -> 11,318 / 1789475611 (each `_step` publishes `WantedSeen` = active-robbery bypass or the seen provider, and `WantedDraining` = neither seen nor in the search window; both false at join and when heat reaches 0; the seen provider is now asked on every step, not only outside the search window); case `WantedService_Test` 15,457 / 1908116138 -> 17,374 / 2745169990 (two cases).
+
+The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

@@ -4,7 +4,8 @@
 -- the client only reads those. Raised by robbery alarms (onAlarm, called where each robbery path announces
 -- NotifyRobberyTriggered), by hits and kills on police, and by witnessed crimes on other NPCs (onDamaged /
 -- onEliminated, fed by Blaster.Events.Damaged and Eliminated). Unseen for DRAIN_INTERVAL seconds, heat drops
--- one step; seen, the timer restarts. Death and leaving clear it.
+-- one step; seen, the timer restarts. Death and leaving clear it. Each step also publishes WantedSeen (seen, or
+-- the active-robbery bypass) and WantedDraining (the unseen timer is running) for the star meter (Task 4).
 --
 -- Requiring this connects nothing: WantedRunner calls start() and steps the drain at SEEN_CHECK_HZ.
 -- _deps holds the clock, the seen provider, the witness check and the character-to-player lookup, so the
@@ -109,6 +110,8 @@ local function set(player, heat: number)
 		timerFrom[player] = nil
 		raisedAt[player] = nil
 		lastPoliceHit[player] = nil
+		player:SetAttribute("WantedSeen", false)
+		player:SetAttribute("WantedDraining", false)
 	end
 	local stars = HeatModel.stars(heat)
 	player:SetAttribute("WantedHeat", heat)
@@ -210,15 +213,21 @@ function WantedService.knowsWhere(player, now: number?): boolean
 end
 
 -- One drain evaluation for every wanted player. now defaults to the injected clock. Seen, inside the
--- search window or in an active robbery: the timer restarts.
+-- search window or in an active robbery: the timer restarts. Otherwise the player is draining.
 function WantedService._step(now: number?)
 	local t = now or deps.now()
 	for player, heat in heatOf do
-		if WantedService.knowsWhere(player, t) or isSeen(player, t) then
+		local seen = deps.activeRobbery(player) == true or isSeen(player, t)
+		local draining = not (seen or WantedService.knowsWhere(player, t))
+		if not draining then
 			timerFrom[player] = t
 		elseif t - (timerFrom[player] or t) >= Constants.DRAIN_INTERVAL then
 			set(player, HeatModel.drainStep(heat))
 			if heatOf[player] then timerFrom[player] = t end
+		end
+		if heatOf[player] then
+			player:SetAttribute("WantedSeen", seen)
+			player:SetAttribute("WantedDraining", draining)
 		end
 	end
 end
@@ -260,6 +269,8 @@ function WantedService.start()
 	local function onPlayer(player: Player)
 		player:SetAttribute("WantedHeat", 0)
 		player:SetAttribute("WantedStars", 0)
+		player:SetAttribute("WantedSeen", false)
+		player:SetAttribute("WantedDraining", false)
 		player.CharacterAdded:Connect(function(character)
 			WantedService._watchCharacter(player, character)
 		end)
