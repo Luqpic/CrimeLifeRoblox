@@ -25,11 +25,16 @@ WantedService._deps = {
 	now = os.clock,
 	-- Task 2 installs the police and guard line-of-sight check through setSeenProvider.
 	seen = function(_player): boolean return false end,
-	-- Is the attacker seen by a witness (Witness tag, WITNESS_RANGE, line of sight; Task 3)?
-	witness = function(player): boolean
+	-- Is the attacker seen by a witness (Witness tag, WITNESS_RANGE, line of sight; Task 3)? The victim's own
+	-- model is no witness (final review 2026-11-17).
+	witness = function(player, victim: Instance?): boolean
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart")
-		return root ~= nil and Witnesses.sees(root.Position)
+		return root ~= nil and Witnesses.sees(root.Position, victim)
+	end,
+	-- Still in the game (final review 2026-11-17): a departed player gets no heat and no entry.
+	inGame = function(player): boolean
+		return player.Parent == Players
 	end,
 	playerFromCharacter = function(character) return Players:GetPlayerFromCharacter(character) end,
 	-- Still in the game with a living character. A hit or kill from anyone else (a bleed or a bullet landing
@@ -102,6 +107,11 @@ WantedService.Changed, fireChanged = newSignal()
 WantedService.Alarmed, fireAlarmed = newSignal()
 
 local function set(player, heat: number)
+	if not deps.inGame(player) then
+		-- Departed: drop every entry, so nothing steps them forever.
+		heatOf[player], timerFrom[player], raisedAt[player], lastPoliceHit[player] = nil, nil, nil, nil
+		return
+	end
 	local old = heatOf[player] or 0
 	if heat > 0 then
 		heatOf[player] = heat
@@ -131,7 +141,7 @@ end
 
 -- reason is for reading call sites and debugging only.
 function WantedService.addHeat(player, amount: number, _reason: string)
-	if amount <= 0 then return end
+	if amount <= 0 or not deps.inGame(player) then return end
 	set(player, HeatModel.raise(WantedService.getHeat(player), amount))
 	timerFrom[player] = deps.now()
 	raisedAt[player] = deps.now()
@@ -143,13 +153,17 @@ end
 function WantedService.onAlarm(locationName: string, players: { Player })
 	local level = Constants.ALARM_LEVELS[locationName]
 	if not level then return end
+	local present = {}
 	for _, player in players do
-		set(player, HeatModel.atLeast(WantedService.getHeat(player), level))
-		timerFrom[player] = deps.now()
-		raisedAt[player] = deps.now()
-		player:SetAttribute("WantedDraining", false)
+		if deps.inGame(player) then
+			table.insert(present, player)
+			set(player, HeatModel.atLeast(WantedService.getHeat(player), level))
+			timerFrom[player] = deps.now()
+			raisedAt[player] = deps.now()
+			player:SetAttribute("WantedDraining", false)
+		end
 	end
-	fireAlarmed(locationName, players)
+	fireAlarmed(locationName, present)
 end
 
 function WantedService.clear(player)
@@ -179,7 +193,7 @@ function WantedService.onDamaged(attacker, humanoid: Humanoid, _amount: number?)
 		hits = lastPoliceHit[attacker] or setmetatable({}, { __mode = "k" })
 		hits[humanoid] = now
 		lastPoliceHit[attacker] = hits
-	elseif isNpc(character) and CollectionService:HasTag(character, "Witness") and deps.witness(attacker) then
+	elseif isNpc(character) and CollectionService:HasTag(character, "Witness") and deps.witness(attacker, character) then
 		WantedService.addHeat(attacker, Constants.PUBLIC_HURT_HEAT, "civilian hurt")
 	end
 end
@@ -190,7 +204,7 @@ function WantedService.onEliminated(attacker, humanoid: Humanoid)
 	if not character or not deps.attackerActive(attacker) then return end
 	if isPolice(character) then
 		WantedService.addHeat(attacker, Constants.POLICE_KILL_HEAT, "police kill")
-	elseif isNpc(character) and deps.witness(attacker) then
+	elseif isNpc(character) and deps.witness(attacker, character) then
 		WantedService.addHeat(attacker, Constants.PUBLIC_KILL_HEAT, "public kill")
 	end
 end
@@ -219,6 +233,10 @@ end
 function WantedService._step(now: number?)
 	local t = now or deps.now()
 	for player, heat in heatOf do
+		if not deps.inGame(player) then
+			set(player, 0) -- departed without a clear: dropped here, never stepped again
+			continue
+		end
 		local seen = deps.activeRobbery(player) == true or isSeen(player, t)
 		local draining = not (seen or WantedService.knowsWhere(player, t))
 		if not draining then

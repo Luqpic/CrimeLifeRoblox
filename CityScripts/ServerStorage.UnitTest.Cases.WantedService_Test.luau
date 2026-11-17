@@ -32,6 +32,9 @@ return function(t)
 	deps.searchSeconds = 0
 	local robbing = {}
 	deps.activeRobbery = function(player) return robbing[player] == true end
+	-- Stand-ins are tables (no Parent): in the game unless a case marks them gone (final review 2026-11-17).
+	local gone = {}
+	deps.inGame = function(player) return not gone[player] end
 
 	-- Every test below runs inside this pcall, so the injected deps are restored even if building a case throws.
 	local ok, err = pcall(function()
@@ -239,8 +242,77 @@ return function(t)
 		WantedService.clear(p)
 	end)
 
-	t.test("the default witness check is the stub: false", function()
-		expect.equal(saved.witness(standIn()), false)
+	-- Final review 2026-11-17: the real default witness check (Witnesses.sees through the real Sight probe),
+	-- 9,000 studs above the map where no placed witness reaches. The attacker's character is unparented (only
+	-- its root's position is read); witnesses are tagged models in Workspace, destroyed at the end.
+	local function part(model: Model, name: string, position: Vector3)
+		local p = Instance.new("Part")
+		p.Name = name
+		p.Anchored = true
+		p.Size = Vector3.new(2, 2, 1)
+		p.Position = position
+		p.Parent = model
+	end
+	local function attackerAt(position: Vector3)
+		local p = standIn()
+		local character = Instance.new("Model")
+		part(character, "HumanoidRootPart", position)
+		p.Character = character
+		return p, character
+	end
+	local function witnessAt(position: Vector3)
+		local humanoid, model = victim(nil, "Witness")
+		part(model, "Head", position)
+		model.Parent = workspace
+		return humanoid, model
+	end
+
+	t.test("the real default witness check: a kill far from any witness gives nothing; a witness beside the attacker, +0.5", function()
+		local testWitness = deps.witness
+		deps.witness = saved.witness
+		local base = Vector3.new(0, 9000, 0)
+		local p, character = attackerAt(base)
+		local gang = victim("Gang Member")
+		local alone, beside
+		local ok = pcall(function()
+			WantedService.onEliminated(p, gang)
+			alone = WantedService.getHeat(p)
+			local _, bystander = witnessAt(base + Vector3.new(20, 0, 0))
+			WantedService.onEliminated(p, gang)
+			beside = WantedService.getHeat(p)
+			bystander:Destroy()
+		end)
+		deps.witness = testWitness
+		character:Destroy()
+		WantedService.clear(p)
+		expect.truthy(ok)
+		expect.equal(alone, 0)
+		expect.equal(beside, 0.5)
+	end)
+
+	t.test("a hurt victim is not its own witness (real default): the civilian alone gives nothing; another witness, +0.25", function()
+		local testWitness = deps.witness
+		deps.witness = saved.witness
+		local base = Vector3.new(0, 9000, 400)
+		local p, character = attackerAt(base)
+		local alone, withOther
+		local ok = pcall(function()
+			local humanoid, civilian = witnessAt(base + Vector3.new(10, 0, 0))
+			clock = 18000
+			WantedService.onDamaged(p, humanoid, 10)
+			alone = WantedService.getHeat(p)
+			local _, other = witnessAt(base + Vector3.new(-10, 0, 0))
+			WantedService.onDamaged(p, humanoid, 10)
+			withOther = WantedService.getHeat(p)
+			civilian:Destroy()
+			other:Destroy()
+		end)
+		deps.witness = testWitness
+		character:Destroy()
+		WantedService.clear(p)
+		expect.truthy(ok)
+		expect.equal(alone, 0)
+		expect.equal(withOther, 0.25)
 	end)
 
 	t.test("Changed fires with player, heat and stars", function()
@@ -503,8 +575,30 @@ return function(t)
 		expect.equal(afterAlarm, false)
 	end)
 
+	-- Final review 2026-11-17: a departed player (Parent not Players) is never given heat, and an entry left
+	-- by a player who departed is dropped at the next step instead of being stepped forever.
+	t.test("a departed player: addHeat and an alarm give nothing; a wanted player who departs is dropped at the next step", function()
+		local p = standIn()
+		gone[p] = true
+		clock = 19000
+		WantedService.addHeat(p, 2, "test")
+		WantedService.onAlarm("Bank", { p })
+		local given = WantedService.getHeat(p)
+		local attribute = p:GetAttribute("WantedHeat")
+		local q = standIn()
+		WantedService.addHeat(q, 2, "test")
+		gone[q] = true
+		clock = 19001; WantedService._step()
+		local left = WantedService.getHeat(q)
+		gone[p], gone[q] = nil, nil
+		WantedService.clear(q)
+		expect.equal(given, 0)
+		expect.equal(attribute, nil)
+		expect.equal(left, 0)
+	end)
+
 	end)
 	for key, value in saved do deps[key] = value end
-	deps.searchSeconds, deps.activeRobbery = saved.searchSeconds, saved.activeRobbery
+	deps.searchSeconds, deps.activeRobbery, deps.inGame = saved.searchSeconds, saved.activeRobbery, saved.inGame
 	if not ok then error(err, 0) end
 end

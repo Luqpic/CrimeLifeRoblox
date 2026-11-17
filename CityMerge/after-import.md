@@ -414,4 +414,14 @@ World (not scripts): `Workspace.Quests["Level 1 Quest"].Head.gui.name.Text` "GUA
 
 The one source re-exported to `CityScripts/`; on-disk Adler-32 equals the place (1 / 1). After: 1 enabled SpawnLocation, no temporary object.
 
+Final review fixes (2026-11-17). Same columns; "old" is the latest value above (or the place before this wave).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ReplicatedStorage.Blaster.Utility.canDamageHumanoid` (ModuleScript, from the FPS place) | 2,166 / 453962573 | 2,553 / 2408345008 | NPC fire (police, gangs, guards) never damages a model tagged `Witness` (guards, heist civilians): a police volley through a Bank guard cannot kill it and fire `GuardsCleared`. Players unchanged. `CityMergeDeviation` set (was none): "Witness NPCs (guards, heist civilians) not damaged by NPC fire (police and wanted final review 2026-11-17)". First export to `CityScripts/`. |
+
+New sources changed (not deviations): `ReplicatedStorage.Wanted.SquadPlan` 1,319 / 2600976218 -> 1,715 / 920340455 (`surplus`); `ServerScriptService.Wanted.PoliceDispatcher` 18,687 / 585788091 -> 20,421 / 3144991636 (`_spawnRound` stops at the first failed search, the alarm ring searched once; `shed` sends officers above the star target away, Armed first; seams `_findSpawn`, `_spawnOfficer`); `ServerScriptService.Wanted.WantedService` 11,465 / 542011034 -> 12,214 / 2218288967 (`inGame` dep: a departed player gets no heat and is dropped at the next step; the victim passed to the witness check); `ServerScriptService.Wanted.Witnesses` 2,363 / 1749821196 -> 2,548 / 2589221737 (`sees(position, except)`); cases `EnemyTargetFilter_Test` -> 7,659 / 741410838, `PoliceSpawnPoint_Test` -> 5,172 / 4118714214, `SquadPlan_Test` 2,281 / 3198336116 -> 2,884 / 1681095352, `WantedService_Test` 18,083 / 2348801503 -> 21,569 / 2875280365, `Witnesses_Test` 4,154 / 3584903647 -> 4,635 / 1257629373 (7 cases written, one of them replacing the stub-witness case: +6).
+
+The ten sources exported to `CityScripts/`; on-disk Adler-32 equals the place (10 / 10). After: 1 enabled SpawnLocation, no temporary object.
+
 NOT saved / NOT published

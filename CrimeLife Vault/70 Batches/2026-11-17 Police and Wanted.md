@@ -27,6 +27,17 @@ The heists had no threat beyond the Bank's guards and the timer. The developer c
 
 **Task 6: closing run and this record.** No code changed. `CityMerge/police/final-run.md`: the loop, the load, five Plays and both suites; the vault updated.
 
+## Final review
+
+The whole-batch review (Opus) read READY WITH FIXES, no Critical; one fix wave followed (commit `Batch: police and wanted, final review fixes`). Each fix was shown red, then green, in Play:
+- **Top-up starvation (Important).** A wanted player with no valid spawn point (an interior off the navmesh, a roof) made each round run 40 samples with path computations per owed officer. Now a round stops at the first search that finds nothing, and a missed alarm ring is not searched again. Test (seams around the search): 10 owed, no point: 1 search (was 10); with an alarm ring 2 (was 20). Cost seen in Play: where points are scarce a squad fills slowly (city spawn plaza, 5 stars: 1 officer in 60 s; Bank exit spawn: 10 in 26 s).
+- **A hurt victim is not its own witness.** `Witnesses.sees(position, except)`; `WantedService` passes the victim. Tests: a civilian alone gives 0 (was 0.25), with a second witness +0.25.
+- **Police crossfire.** `canDamageHumanoid` (deviation): NPC fire never damages a `Witness`-tagged model. Test at the function. Play: 8 police volleys through a guard (the guard's head first on the line), guard health 100 -> 100; control with the tag lifted, 100 -> 64.
+- **Squads shrink with the stars.** `SquadPlan.surplus` and the dispatcher's `shed` (leave path, Armed first). Play: forced 5 stars, 4 + 6 at 26 s; forced 2 stars: 4 Police + 0 Armed in the squad at +2.5 s, the 6 Armed gone at +7.5 s.
+- **Departed players.** `WantedService` ignores a player whose `Parent` is not `Players` (`set`, `addHeat`, `onAlarm`) and drops one left behind at the next step. Test.
+- **The stub-witness test** ("the default witness check is the stub: false", passing only because the stand-in had no character) is replaced by a real-default case that can fail: a kill far from any witness 0, with a witness beside the attacker +0.5.
+- Suites: city 257 / 257 / 0 (251 + 6); heist 620 passed, 1 failed (`Zone` timing, 3.78 ms). Ten sources exported (Adler-32 10 / 10); 1 enabled `SpawnLocation`, no temporary object. Vault: the Bank alarm wording, anchored guards, the reset-after-banking escape, the closed bleed-tick item.
+
 ## Decisions
 
 The developer's words and Claude's calls with their costs are in [[CrimeLife Tycoon Decisions]] under 2026-11-17 ("police and the wanted level"). The design's own calls (numbers, crooked cops) are open to correction.

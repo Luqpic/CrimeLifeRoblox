@@ -13,6 +13,13 @@ function SquadPlan.target(stars: number): (number, number)
 	return row.police, row.armed
 end
 
+-- How many officers of each kind are above the target at `stars` (final review 2026-11-17: the squad shrinks
+-- when stars fall; the dispatcher sends these away).
+function SquadPlan.surplus(stars: number, police: number, armed: number): (number, number)
+	local targetPolice, targetArmed = SquadPlan.target(stars)
+	return math.max(0, police - targetPolice), math.max(0, armed - targetArmed)
+end
+
 -- How many officers each player may get now. `alive` = officers already in that player's squad; `cap` =
 -- police that may be alive in total for these squads. Highest stars first; nobody above their target, the
 -- total never above the cap, nothing for 0 stars.

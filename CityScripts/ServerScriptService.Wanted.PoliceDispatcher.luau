@@ -9,7 +9,8 @@
 -- search window or an active robbery (the robbery's entrance when the player is inside it), else the spot
 -- an officer last saw them; their own chase takes over on sight, and each prefers its squad's player. An
 -- officer whose player is cleared, dead or gone takes another wanted player it can see, or walks away and
--- despawns once no player sees it (LEAVE_TIMEOUT at most); a leaving officer sees nobody for "seen".
+-- despawns once no player sees it (LEAVE_TIMEOUT at most); a leaving officer sees nobody for "seen". When
+-- stars fall, officers above the new squad target leave the same way, Armed Police first.
 --
 -- Also installs WantedService's seen provider: a wanted player is seen while a live officer within
 -- SEEN_RANGE can see them, or a live guard within SEEN_RANGE has them in sight (Witnesses.guardSees, Task 3).
@@ -297,6 +298,40 @@ local function countLive(): number
 	return n
 end
 
+-- Seams for PoliceSpawnPoint_Test (final review 2026-11-17): count the searches, spawn nothing.
+PoliceDispatcher._findSpawn = findSpawn
+PoliceDispatcher._spawnOfficer = spawnOfficer
+
+-- One player's spawn round: up to n officers, `police` / `armed` still owed by kind. Around the robbed
+-- location (`anchor`) first; where its ring has no valid point (SlowFoods' own box covers most of it), around
+-- the player as for a top-up. A ring that found no point is not searched again this round, and a round with
+-- no point at all stops (final review 2026-11-17): a player off the navmesh (an interior, a roof) costs one
+-- search per round, not SPAWN_TRIES path computations per owed officer that starve the other squads.
+function PoliceDispatcher._spawnRound(player: Player, n: number, anchor: Vector3?, police: number, armed: number)
+	for _ = 1, n do
+		local root = rootOf(player)
+		if not root or not isWanted(player) then
+			break
+		end
+		local position = anchor and PoliceDispatcher._findSpawn(anchor, Constants.ALARM_RING_MIN, Constants.ALARM_RING_MAX, player)
+		local fromAlarm = position ~= nil
+		if not position then
+			anchor = nil
+			position = PoliceDispatcher._findSpawn(root.Position, Constants.TOPUP_RING_MIN, Constants.TOPUP_RING_MAX, player)
+		end
+		if not position then
+			break
+		end
+		local templateName = if police > 0 or armed <= 0 then "Police" else "Armed Police"
+		if templateName == "Police" then
+			police -= 1
+		else
+			armed -= 1
+		end
+		PoliceDispatcher._spawnOfficer(templateName, position, player, fromAlarm)
+	end
+end
+
 local function topUp()
 	local requests = {}
 	local inSquads = 0
@@ -331,26 +366,7 @@ local function topUp()
 					end
 				end
 			end
-			for _ = 1, n do
-				local root = rootOf(player)
-				if not root or not isWanted(player) then
-					break
-				end
-				-- Around the robbed location first; where its ring has no valid point (SlowFoods' own box covers
-				-- most of it), around the player as for a top-up.
-				local position = anchor and findSpawn(anchor, Constants.ALARM_RING_MIN, Constants.ALARM_RING_MAX, player)
-				local fromAlarm = position ~= nil
-				position = position or findSpawn(root.Position, Constants.TOPUP_RING_MIN, Constants.TOPUP_RING_MAX, player)
-				if position then
-					local templateName = if police > 0 or armed <= 0 then "Police" else "Armed Police"
-					if templateName == "Police" then
-						police -= 1
-					else
-						armed -= 1
-					end
-					spawnOfficer(templateName, position, player, fromAlarm)
-				end
-			end
+			PoliceDispatcher._spawnRound(player, n, anchor, police, armed)
 		end
 	end
 end
@@ -405,6 +421,24 @@ local function startLeaving(record, now: number)
 	end
 end
 
+-- Stars fell (final review 2026-11-17): officers above SquadPlan.target leave by the leave path, per kind,
+-- Armed Police first. Every record left in `squad` is live (tick dropped the rest).
+local function shed(squad, stars: number, now: number)
+	local byKind = { Police = {}, Armed = {} }
+	for record in squad do
+		local kind = if record.ai.character:GetAttribute("EnemyTemplate") == "Armed Police" then "Armed" else "Police"
+		table.insert(byKind[kind], record)
+	end
+	local police, armed = SquadPlan.surplus(stars, #byKind.Police, #byKind.Armed)
+	for _, kind in { "Armed", "Police" } do
+		for i = 1, if kind == "Armed" then armed else police do
+			local record = byKind[kind][i]
+			squad[record] = nil
+			startLeaving(record, now)
+		end
+	end
+end
+
 -- Where the police believe `player` is (design section 9), or nil when they have no idea.
 local function believedPosition(player: Player, root: BasePart): Vector3?
 	if WantedService.knowsWhere(player) then
@@ -440,6 +474,9 @@ local function tick(now: number)
 					record.ai:investigate(believed)
 				end
 			end
+		end
+		if root then
+			shed(squad, player:GetAttribute("WantedStars") or 0, now)
 		end
 		if next(squad) == nil then
 			squads[player] = nil

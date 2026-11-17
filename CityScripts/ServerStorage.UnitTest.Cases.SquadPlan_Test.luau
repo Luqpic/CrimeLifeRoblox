@@ -56,4 +56,20 @@ return function(t)
 		end
 		expect.equal(total, 24)
 	end)
+
+	-- Final review 2026-11-17: when stars fall, officers above the new target leave, per kind.
+	t.test("surplus: 5 -> 2 stars sheds the 6 Armed Police and keeps 4 Police; none at or under target", function()
+		local police, armed = SquadPlan.surplus(2, 4, 6)
+		expect.equal(police, 0)
+		expect.equal(armed, 6)
+		police, armed = SquadPlan.surplus(1, 4, 0)
+		expect.equal(police, 2)
+		expect.equal(armed, 0)
+		police, armed = SquadPlan.surplus(5, 3, 6)
+		expect.equal(police, 0)
+		expect.equal(armed, 0)
+		police, armed = SquadPlan.surplus(0, 1, 1)
+		expect.equal(police, 1)
+		expect.equal(armed, 1)
+	end)
 end

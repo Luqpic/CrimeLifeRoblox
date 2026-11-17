@@ -77,4 +77,43 @@ return function(t)
 		expect.equal(ok, false)
 		expect.equal(why, "ground")
 	end)
+
+	-- Final review 2026-11-17: a wanted player with no valid spawn point (an interior off the navmesh, a roof)
+	-- costs one search per round, not one per owed officer; an alarm ring's miss falls through to the player
+	-- ring once. The searches and the spawns go through PoliceDispatcher's seams, both restored.
+	t.test("no valid spawn: one search per round (two with an alarm ring), whatever is owed", function()
+		local savedFind, savedSpawn = PoliceDispatcher._findSpawn, PoliceDispatcher._spawnOfficer
+		local calls, spawned = 0, 0
+		PoliceDispatcher._spawnOfficer = function() spawned += 1 end
+		local model = Instance.new("Model")
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Anchored = true
+		root.Position = Vector3.new(0, 5000, 0)
+		root.Parent = model
+		Instance.new("Humanoid").Parent = model
+		model.Parent = Workspace
+		local player = { Name = "StandIn", Character = model, GetAttribute = function(_, name)
+			return if name == "WantedStars" then 5 else nil
+		end }
+		local ok, plain, alarm, found = pcall(function()
+			PoliceDispatcher._findSpawn = function() calls += 1 return nil end
+			PoliceDispatcher._spawnRound(player, 10, nil, 4, 6)
+			local a = calls
+			calls = 0
+			PoliceDispatcher._spawnRound(player, 10, Vector3.new(0, 5000, 100), 4, 6)
+			local b = calls
+			calls = 0
+			PoliceDispatcher._findSpawn = function() calls += 1 return Vector3.new(0, 5000, 50) end
+			PoliceDispatcher._spawnRound(player, 3, nil, 4, 6)
+			return a, b, calls
+		end)
+		model:Destroy()
+		PoliceDispatcher._findSpawn, PoliceDispatcher._spawnOfficer = savedFind, savedSpawn
+		expect.truthy(ok)
+		expect.equal(plain, 1)
+		expect.equal(alarm, 2)
+		expect.equal(found, 3)
+		expect.equal(spawned, 3)
+	end)
 end

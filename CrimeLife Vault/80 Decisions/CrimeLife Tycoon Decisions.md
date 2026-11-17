@@ -40,6 +40,8 @@ Claude's rulings during the build (from `.superpowers/sdd/2026-11-17-police-and-
 - **Ruling: `GuardDamage` 6 per shot at both locations** (Bank in the open about 24 hp/s, cover matters; one NewsStation guard about 6 hp/s). The 12 ruling made the Bank unplayable in the open (dead in 2.3 s). Cost if wrong: one number, tune in playtests.
 - **Ruling: the Security givers' nameplates read `OFC. DOYLE` / `OFC. PIKE`, and the under-level line is "Not yet, kid. Earn a rep first."** ("GUARD" read honest). Cost if wrong: wording.
 - **Ruling: the controller's read of the one-line diff and the six live nameplates stands as Task 5's re-review.** Cost if wrong: a wording slip.
+- **Ruling: one fix wave after the final review.** The top-up stops a player's round at the first failed spawn search; a hurt victim is not its own witness; NPC shots cannot damage `Witness`-tagged NPCs (police crossfire could kill Bank guards and fire `GuardsCleared`); a squad above its target sheds officers (Armed first) when stars fall; `WantedService.set` ignores departed players; the stub-witness test is replaced by one that can fail. Cost if wrong: squads shrink faster than before when stars drop.
+- **Ruling: a reset after banking clears the wanted level** (death clears heat, by the design); it stays and goes to [[Open Items]] for the developer. Cost if wrong: a cheap escape until decided.
 
 ## 2026-11-17: the tycoon is parked
 

@@ -99,6 +99,17 @@ return function(t)
 		expect.equal(ok and result, true)
 	end)
 
+	-- Final review 2026-11-17: sees() leaves out the hurt victim's own model.
+	t.test("the hurt victim is not its own witness; another witness beside it still is", function()
+		local victim = witness(Vector3.zero)
+		reset({ victim })
+		local alone = Witnesses.sees(Vector3.new(10, 0, 0), victim)
+		models = { victim, witness(Vector3.new(5, 0, 0)) }
+		local withOther = Witnesses.sees(Vector3.new(10, 0, 0), victim)
+		expect.equal(alone, false)
+		expect.equal(withOther, true)
+	end)
+
 	t.test("(restore deps)", function()
 		reset({})
 		for k, v in saved do deps[k] = v end

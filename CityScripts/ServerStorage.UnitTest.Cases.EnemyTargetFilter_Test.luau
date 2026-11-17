@@ -126,4 +126,35 @@ return function(t)
 	EnemyAI._players, ShotResolver.hasLineOfSight = savedPlayers, savedSight
 	folder:Destroy()
 	if not ok then error(err, 0) end
+
+	-- Final review 2026-11-17: police crossfire. NPC fire (police, gangs, guards) never damages a model tagged
+	-- Witness (Bank and NewsStation guards, heist civilians), so a police volley through a Bank guard cannot
+	-- kill it or fire GuardsCleared; players still damage guards and police. Pinned at canDamageHumanoid, the
+	-- one decision ShotResolver asks for every shot.
+	t.test("canDamageHumanoid: an NPC shot spares a Witness NPC; a player's shot does not", function()
+		local CollectionService = game:GetService("CollectionService")
+		local ReplicatedStorage = game:GetService("ReplicatedStorage")
+		local canDamageHumanoid = require(ReplicatedStorage.Blaster.Utility.canDamageHumanoid)
+		local ENEMY_TAG = require(ReplicatedStorage.Enemy.Constants).ENEMY_TAG
+		local function npc(tags: { string }): (Humanoid, Model)
+			local model = Instance.new("Model")
+			local humanoid = Instance.new("Humanoid")
+			humanoid.Parent = model
+			for _, tag in tags do
+				CollectionService:AddTag(model, tag)
+			end
+			return humanoid, model
+		end
+		local _, officer = npc({ ENEMY_TAG, "Witness" }) -- a spawned police officer is both
+		local guard = npc({ "Witness" })
+		local cop = npc({ ENEMY_TAG, "Witness" })
+		local bystander = npc({})
+		-- A player shooter: canDamageHumanoid reads only IsA, Neutral and Team.
+		local player = { IsA = function(_, class) return class == "Player" end, Neutral = true }
+		expect.equal(canDamageHumanoid(officer, guard), false)
+		expect.equal(canDamageHumanoid(officer, cop), false)
+		expect.equal(canDamageHumanoid(officer, bystander), true)
+		expect.equal(canDamageHumanoid(player :: any, guard), true)
+		expect.equal(canDamageHumanoid(player :: any, cop), true)
+	end)
 end
