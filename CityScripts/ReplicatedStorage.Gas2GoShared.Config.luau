@@ -39,6 +39,10 @@ Config.AccrualPerSecond = 0
 -- HeistShared.Config), consistent with "Config Separation".
 Config.RegisterRobAmount = 2000
 Config.ATMRobAmount = 3000
+-- Heist layers 2026-11-17 (Task 4): "Rip Out ATM" carries the whole ATM out and banks it at the
+-- getaway for 3x the rob, paid outside the bag (the 4000 cap would refuse it). Server-timed hold.
+Config.ATMRipAmount = 9000
+Config.ATMRipHold = 10
 
 Config.HeartbeatRate = 10
 

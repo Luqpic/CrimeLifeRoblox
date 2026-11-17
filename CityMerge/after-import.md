@@ -568,3 +568,23 @@ Studio objects (not scripts): `RestaurantShared.ModelTemplates.Manager` (clone o
 The 8 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (8 / 8). City suites 262 / 262 / 0; heist 664 passed / 1 failed (15 new; the failure is the Zone "real occupancy sweep" timing). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 4 (Gas2Go ATM rip-out, `Batch: Gas2Go ATM rip-out`). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Gas2GoServer` (Script) | 12,817 / 803557551 | 14,597 / 1826010825 | The ATM is built as `Heist.Components.ATMRipOut` (Rob ATM as before + Rip Out ATM); pickup = `CarryState:PickUp(ATMCarryTool)` + toast "Carry it 200 studs clear of the gas station to cash in."; `hasDuffel` like the barrels; a `CarryGetaway` (StatusBillboardAnchor, `EscapeDistance`, inside = the location's `zoneService` on `Station`, `ATMRipAmount`, `WantedService.addActiveRobbery`) stepped from a new `heartbeatExtras` and forgotten in `onPlayerRemoving`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.Gas2GoShared.Config` (ModuleScript) | 3,199 / 3526898118 | 3,445 / 792494017 | `ATMRipAmount = 9000`, `ATMRipHold = 10`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.SupplyObject` (ModuleScript) | 23,058 / 517730419 | 24,248 / 4043999258 | Deps `enforceHold` + `clock`: a prompt with a HoldDuration is honoured only after a server-seen `PromptButtonHoldBegan` at least HoldDuration - 0.15 s earlier (FleeingManager's pattern; HoldDuration 0 re-pickup exempt); `_onTriggered` refuses when no prompt is armed (a late trigger after `Close`). Default path unchanged. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Weapons.Scripts.EquipService` (Script) | 2,377 / 880165296 | 2,854 / 400156196 | Equip and unequip requests are ignored while `CarryState:IsCarrying(player)`. Measured before: hotbar key on the Deagle swapped the carry Tool out (CarryState's Unequipped re-equip lost) and 3 shots fired (ammo 10 -> 7). Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Components.ATMRipOut` (ModuleScript) | none | 2,813 / 2224404498 | New: RobbableObject (rob) + SupplyObject (rip: bankOnly, speedCap = `Movement.Constants.CARRY_SPEED_CAP`, enforceHold) on the one ATM model; each closes the other; Seal closes an untouched ATM (stays standing) and hides a ripped one; Rearm puts a ripped one back, promptless. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.Gas2GoRipSpec` (ModuleScript) | none | 6,808 / 2152186568 | New: 9 cases (config, template, both armed, rob closes rip, rip closes rob, server-timed hold, bankOnly/speedCap/value, untouched ATM through Seal/Rearm, ripped ATM back at Rearm). Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.Gas2GoConfigSpec` (ModuleScript) | 2,896 / 672064278 | 3,144 / 2481795204 | 1 case: ATMRipAmount 9000, ATMRipHold 10. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.SupplyObjectSpec` (ModuleScript) | 27,619 / 1485979581 | 29,051 / 3470988621 | 1 case: enforceHold (no hold / short hold refused, full hold honoured, instant re-pickup exempt, default unchanged); Close case also refuses a late trigger. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,721 / 162300076 | 2,775 / 2345635765 | `Gas2GoRipSpec` registered. Attribute appended. |
+
+Studio objects (not scripts): `ReplicatedStorage.Gas2GoShared.PromptTemplates` (new Folder) with `RipOutATMPrompt` (clone of RobATMPrompt: "Rip Out ATM" / "ATM Machine", hold 10, key F / ButtonY so it shows beside Rob ATM's E under OnePerButton) and `PickUpATMPrompt` (clone of RepickupSuppliesPrompt: "Pick Up ATM" / "ATM Machine", hold 0); `ReplicatedStorage.Gas2GoShared.ModelTemplates` (new Folder) with `ATMCarryTool` (Tool, CanBeDropped false, RequiresHandle true, `IsSupplyCarryTool = true`, Grip (0, 0, -0.5); invisible massless 1x1x1 `Handle` plus copies of the ATM's 48 parts and its 2 text models, scaled 0.5 to 2 x 3.75 x 1.75, unanchored, non-colliding, massless, welded to the Handle).
+
+The 9 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (9 / 9). City suites 262 / 262 / 0; heist 675 passed / 1 failed (11 new; the failure is the Zone "real occupancy sweep" timing). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

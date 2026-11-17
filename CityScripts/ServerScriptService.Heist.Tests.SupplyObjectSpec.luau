@@ -90,6 +90,8 @@ return function()
 			startHidden = overrides.startHidden,
 			bankOnly = overrides.bankOnly,
 			speedCap = overrides.speedCap,
+			enforceHold = overrides.enforceHold,
+			clock = overrides.clock,
 			-- Per-location cash-out generalization (spec addendum, 2026-09-2X):
 			-- now a required dep -- defaulted here so every EXISTING test that
 			-- doesn't care about the exact value keeps working unchanged.
@@ -617,15 +619,47 @@ return function()
 
 	suite:test("Close removes the prompt until the next OnSessionStart", function(expect)
 		local now, advance = makeClock()
-		local bank, supply, model = makeBankAndSupply(now)
+		local bank, supply, model, _, pickups = makeBankAndSupply(now)
 		bank:TryStart("p1")
 		expect.equal(promptCount(model), 1, "armed")
 		supply:Close()
 		expect.equal(promptCount(model), 0, "prompt gone")
 		expect.falsy(supply.highlight.Enabled, "highlight off")
+		supply:_onTriggered("p1")
+		expect.equal(#pickups, 0, "a late trigger after Close is refused (Task 4)")
 		supply:OnSessionStart()
 		expect.equal(promptCount(model), 1, "re-armed at the next session start")
 		model:Destroy()
+	end)
+
+	-- Heist layers 2026-11-17 (Task 4): the engine's hold is client-side only.
+	suite:test("enforceHold honours a trigger only after a hold the server timed; the instant re-pickup needs none", function(expect)
+		local now, advance = makeClock()
+		local instant = tempPromptTemplate()
+		instant.HoldDuration = 0
+		local bank, supply, model, _, pickups = makeBankAndSupply(now, { enforceHold = true, clock = now, repickupPromptTemplate = instant })
+		bank:TryStart("p1")
+		supply:_onPromptTriggered("p1")
+		expect.equal(#pickups, 0, "no hold seen: refused")
+		supply:_onHoldBegan("p1")
+		advance(1)
+		supply:_onPromptTriggered("p1")
+		expect.equal(#pickups, 0, "1 s of a 3 s hold: refused")
+		supply:_onHoldBegan("p1")
+		advance(3)
+		supply:_onPromptTriggered("p1")
+		expect.equal(#pickups, 1, "full hold: picked up")
+		supply.despawnTime = 9999
+		supply:DropAt(CFrame.new(0, 20, 0))
+		supply:_onPromptTriggered("p2")
+		expect.equal(#pickups, 2, "the HoldDuration 0 re-pickup needs no timed hold")
+		model:Destroy()
+
+		local bank2, plain, model2, _, pickups2 = makeBankAndSupply(now)
+		bank2:TryStart("p1")
+		plain:_onPromptTriggered("p1")
+		expect.equal(#pickups2, 1, "without enforceHold a trigger is honoured as before")
+		model2:Destroy()
 	end)
 
 	return suite:run()

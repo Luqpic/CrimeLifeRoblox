@@ -45,6 +45,7 @@ local SPECS = {
 	"SupplierSaleSpec", -- city, phase 3 Task 5
 	"CarryGetawaySpec", -- heist layers 2026-11-17
 	"FleeingManagerSpec", -- heist layers 2026-11-17 (Task 3)
+	"Gas2GoRipSpec", -- heist layers 2026-11-17 (Task 4)
 }
 
 return function()

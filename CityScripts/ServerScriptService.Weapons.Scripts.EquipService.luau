@@ -11,6 +11,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local validateInstance = require(ServerScriptService.Utility.TypeValidation.validateInstance)
+-- Heist layers 2026-11-17 (Task 4): the shared carry singleton (see its header).
+local carryState = require(ReplicatedStorage.SharedSystems.CarryState)
 
 -- NOTE: this RemoteEvent must keep `Sandboxed = true`. The Custom Inventory came from a Creator
 -- Store package, so its scripts run sandboxed, and a sandboxed thread may only fire a RemoteEvent
@@ -27,6 +29,13 @@ equipRequest.OnServerEvent:Connect(function(player: Player, tool: any, equip: an
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
+		return
+	end
+
+	-- A carry (supplies, the ripped-out ATM) holds the hands: neither swap to a weapon nor put the
+	-- carry away. Measured in Play: equipping a weapon here won over CarryState's Unequipped
+	-- re-equip, and the weapon fired. Death drops the carry through SuppliesServer.
+	if carryState:IsCarrying(player) then
 		return
 	end
 

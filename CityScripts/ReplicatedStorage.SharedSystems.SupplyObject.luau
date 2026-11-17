@@ -59,6 +59,11 @@ end
 -- Heist layers 2026-11-17 (heavy loot): bankOnly (the Illegal Supplier refuses it) and speedCap
 -- (CarryState slows the carrier to it) are stored as plain fields. startHidden: OnSessionStart
 -- leaves the object hidden with no prompt, and only GiveTo hands it over.
+-- enforceHold (Task 4): the engine's hold is client-side only, so a prompt with a HoldDuration is
+-- honoured only after a hold the server timed itself (PromptButtonHoldBegan, then Triggered at
+-- least HoldDuration - HOLD_TOLERANCE later, as FleeingManager does). clock defaults to os.clock.
+local HOLD_TOLERANCE = 0.15
+
 function SupplyObject.new(model: Model, deps)
 	assert(model and model:IsA("Model"), "SupplyObject requires a Model")
 	local part = findAttachPart(model)
@@ -199,6 +204,10 @@ function SupplyObject.new(model: Model, deps)
 		bankOnly = deps.bankOnly,
 		speedCap = deps.speedCap,
 		startHidden = deps.startHidden == true,
+		enforceHold = deps.enforceHold == true,
+		clock = deps.clock or os.clock,
+		_holdBegan = {},
+		_holdDuration = 0,
 		countdownGui = countdownGui,
 		countdownLabel = countdownLabel,
 		-- Captured once, at construction, at the model's real placed position --
@@ -326,16 +335,37 @@ function SupplyObject:_arm(template: ProximityPrompt)
 	local prompt = template:Clone()
 	prompt.Parent = self.part
 	self._prompt = prompt
+	self._holdDuration = prompt.HoldDuration
+	table.clear(self._holdBegan)
 	self._conn = prompt.Triggered:Connect(function(player)
-		self:_onTriggered(player)
+		self:_onPromptTriggered(player)
 	end)
+	if self.enforceHold then
+		-- Destroyed with the prompt, so no connection to keep.
+		prompt.PromptButtonHoldBegan:Connect(function(player) self:_onHoldBegan(player) end)
+	end
 	self.highlight.Enabled = true
+end
+
+function SupplyObject:_onHoldBegan(player)
+	self._holdBegan[player] = self.clock()
+end
+
+function SupplyObject:_onPromptTriggered(player)
+	if self.enforceHold and self._holdDuration > 0 then
+		local began = self._holdBegan[player]
+		self._holdBegan[player] = nil
+		if not began or self.clock() - began < self._holdDuration - HOLD_TOLERANCE then return end
+	end
+	self:_onTriggered(player)
 end
 
 function SupplyObject:_onTriggered(player)
 	-- Race guard: a network delay could let a Triggered fire right after
 	-- another player's hold (or a despawn) already hid this exact object.
 	if not self._visible then return end
+	-- Task 4: nor after Close (or any teardown) took the prompt away.
+	if not self._prompt then return end
 	self:_take(player)
 end
 

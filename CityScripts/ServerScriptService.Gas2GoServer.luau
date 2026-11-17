@@ -33,6 +33,8 @@ local Heist = ServerScriptService.Heist
 local ComponentRegistry = require(Heist.ComponentRegistry)
 local AccessBarrier = require(Heist.Components.AccessBarrier)
 local LocationServer = require(Heist.Services.LocationServer)
+local CarryGetaway = require(Heist.Services.CarryGetaway)
+local ATMRipOut = require(Heist.Components.ATMRipOut)
 
 local RobbableObject = require(ReplicatedStorage.SharedSystems.RobbableObject)
 local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
@@ -114,6 +116,10 @@ end
 -- Collected here rather than inside LocationServer: it is a Gas2Go-only
 -- invariant, and the assert must name this location. Handed to the shared
 -- alarm through alarmExtras below.
+-- Heist layers 2026-11-17 (Task 4): the ripped-out ATM's getaway, built after the components and
+-- stepped by the location's heartbeat.
+local atmGetaway
+
 local pulseLights = {}
 local alarmLightsModel = workspace.Gas2Go:FindFirstChild("RobberyAlarmLights")
 if alarmLightsModel then
@@ -142,6 +148,12 @@ local location = LocationServer.new({
 		pulseLights = pulseLights,
 		pulsePhaseDuration = 0.2,
 	},
+	heartbeatExtras = function()
+		if atmGetaway then atmGetaway:Step() end
+	end,
+	onPlayerRemoving = function(player)
+		if atmGetaway then atmGetaway:Forget(player) end
+	end,
 })
 
 local bank = location.bank
@@ -195,17 +207,31 @@ for _, model in ipairs(CollectionService:GetTagged(T.Gas2GoRegister)) do
 	bank:RegisterComponent(register)
 	table.insert(robbableObjects, register)
 end
+-- Heist layers 2026-11-17 (Task 4): the ATM keeps "Rob ATM" and gains "Rip Out ATM" (see
+-- Heist.Components.ATMRipOut); using either closes the other for the run. The boot assert above
+-- pins exactly one ATM.
+local ATM_RIP_TOAST = "Carry it 200 studs clear of the gas station to cash in."
+local atmRipOut
 for _, model in ipairs(CollectionService:GetTagged(T.Gas2GoATM)) do
-	local atm = RobbableObject.new(model, {
+	atmRipOut = ATMRipOut.new(model, {
 		bank = bank,
-		promptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobATMPrompt,
-		amount = Config.ATMRobAmount,
+		robPromptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobATMPrompt,
+		ripPromptTemplate = ReplicatedStorage.Gas2GoShared.PromptTemplates.RipOutATMPrompt,
+		repickupPromptTemplate = ReplicatedStorage.Gas2GoShared.PromptTemplates.PickUpATMPrompt,
+		robAmount = Config.ATMRobAmount,
+		ripAmount = Config.ATMRipAmount,
 		onRefused = notifyRefused,
 		playRobSound = function(part) part.ATMRobSound:Play() end,
 		isBlocked = function(player) return carryState:IsCarrying(player) end,
+		hasDuffel = function(player) return bank:GetDuffel(player) > 0 end,
+		onPickup = function(player, ripObject)
+			if carryState:PickUp(player, ReplicatedStorage.Gas2GoShared.ModelTemplates.ATMCarryTool, ripObject) then
+				net:Toast(player, ATM_RIP_TOAST)
+			end
+		end,
 	})
-	bank:RegisterComponent(atm)
-	table.insert(robbableObjects, atm)
+	bank:RegisterComponent(atmRipOut)
+	table.insert(robbableObjects, atmRipOut.rob)
 end
 
 -- Supplies Robbery (spec addendum, 2026-09-19): a bespoke pickup component,
@@ -252,6 +278,19 @@ local lockedDoor = LockedDoor.new(workspace.Gas2Go.LockedDoor, {
 	openCFrame = CFrame.new(-975.507, 5.500, 2047.686) * CFrame.Angles(0, math.rad(-90), 0), -- city (phase 3 G12); Robbery: CFrame.new(-111.893, 5.539, -337.486) * CFrame.Angles(0, math.rad(90), 0)
 })
 bank:RegisterComponent(lockedDoor)
+
+atmGetaway = CarryGetaway.new({
+	escapeDistance = Config.EscapeDistance,
+	anchor = workspace.Gas2GoMarkers.StatusBillboardAnchor,
+	isInsideBuilding = function(player) return location.zoneService:IsInside(location.interiorRole, player) end,
+	matches = function(carried) return carried == atmRipOut.rip end,
+	value = Config.ATMRipAmount,
+	carryState = carryState,
+	currency = location.currency,
+	net = net,
+	getPlayers = location.getPlayers,
+	addActiveRobbery = require(ServerScriptService.Wanted.WantedService).addActiveRobbery,
+})
 
 do
 	local manifest = registry:Manifest()
