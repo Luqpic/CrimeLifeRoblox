@@ -195,3 +195,9 @@ remotes:WaitForChild("RobberyTriggered").OnClientEvent:Connect(function(payload)
 	show(string.format("<b>%s</b> is robbing %s.",
 		escapeRichText(playerName), escapeRichText(phraseFor(location))), true)
 end)
+
+-- Heist layers 2026-11-17: the News Station broadcast hijack, with the alarm box.
+remotes:WaitForChild("BroadcastHijacked").OnClientEvent:Connect(function(playerName)
+	if type(playerName) ~= "string" then return end
+	show(string.format("<b>%s</b> hijacked the News Station broadcast!", escapeRichText(playerName)), true)
+end)

@@ -285,6 +285,13 @@ function GuardPost:Update()
 	if not ok then warn("[GuardPost] damage failed: " .. tostring(err)) end
 end
 
+-- Heist layers 2026-11-17: engage at once, as if a player had come within GuardActivationRange.
+-- Targeting (mayTarget, sight range, line of sight) is unchanged. No-op when the guard is dead.
+function GuardPost:Alert()
+	if not self:IsAlive() then return end
+	self._activated = true
+end
+
 function GuardPost:_despawn()
 	if self._diedConn then
 		self._diedConn:Disconnect()

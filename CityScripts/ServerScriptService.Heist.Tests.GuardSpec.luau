@@ -332,5 +332,56 @@ return function()
 		marker:Destroy()
 	end)
 
+	-- Heist layers 2026-11-17 (Task 2): Alert() engages a guard at once, without a player in activation range.
+	suite:test("Alert: a mayTarget player in sight range but out of activation range is shot only after Alert()", function(expect)
+		local function run(alert)
+			local marker = tempMarker()
+			local shots = {}
+			local postedConfig = { GuardsAlwaysPosted = true, GuardSpawnLift = 0, GuardRespawnSeconds = 60, Tags = {},
+				GuardActivationRange = 60, GuardSightRange = 120, GuardFireInterval = 0.9, GuardDamage = 6 }
+			local bank = activeBank()
+			local robber = { GetAttribute = function() return nil end }
+			bank:AddParticipant(robber)
+			local post = GuardPost.new(marker, {
+				config = postedConfig, bank = bank,
+				now = function() return 100 end,
+				spawnGuard = function()
+					local model = Instance.new("Model")
+					Instance.new("Humanoid").Parent = model
+					local root = Instance.new("Part")
+					root.Name = "HumanoidRootPart"
+					root.Anchored = true
+					root.Parent = model
+					model.PrimaryPart = root
+					model.Parent = workspace
+					return model
+				end,
+				damage = function(target, amount) table.insert(shots, { target = target, amount = amount }) end,
+			})
+			-- 90 studs: past GuardActivationRange (60), inside GuardSightRange (120).
+			post._candidates = function() return { { player = robber, position = Vector3.new(90, 0, 0), visible = true } } end
+			if alert then post:Alert() end
+			post:Update()
+			post:Destroy()
+			marker:Destroy()
+			return shots, robber
+		end
+		local quiet = run(false)
+		expect.equal(#quiet, 0, "without Alert the guard holds")
+		local shots, robber = run(true)
+		expect.equal(#shots, 1, "after Alert it fires")
+		expect.equal(shots[1] and shots[1].target, robber, "at the robber")
+	end)
+
+	suite:test("Alert on a dead guard is a no-op", function(expect)
+		local marker = tempMarker()
+		local post = GuardPost.new(marker, { config = Config, bank = activeBank(), now = function() return 100 end,
+			spawnGuard = function() return nil end })
+		post:Alert()
+		expect.falsy(post._activated, "no guard: latch untouched")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
 	return suite:run()
 end

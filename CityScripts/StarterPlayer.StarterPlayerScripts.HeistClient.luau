@@ -1117,7 +1117,9 @@ RunService.RenderStepped:Connect(function()
 		-- widget and the getaway distance further down both consume it, and neither
 		-- should call extrapolate a second time to reach it.
 		local duffel = duffelStates[location]
-		local amount = extrapolate(duffel.base, duffel.rate, duffel.since, now, duffel.cap)
+		-- Heist layers 2026-11-17: a bonus (BankInstance:AddBonus) can put the bag over its cap;
+		-- extrapolate clamps at the cap, so keep the real base. The fill ratio below still clamps.
+		local amount = math.max(duffel.base, extrapolate(duffel.base, duffel.rate, duffel.since, now, duffel.cap))
 
 		-- WHICH location's timer is on screen is decided once, after this loop has
 		-- closed, in the same pass that picks the getaway widget's location -- see
@@ -1174,7 +1176,7 @@ RunService.RenderStepped:Connect(function()
 				widget.amount.TextColor3 = full and UITheme.Color.gold or UITheme.Color.accent
 			end
 			if full then
-				widget.amount.Text = string.format("%s / %s", commas(duffel.cap), commas(duffel.cap))
+				widget.amount.Text = string.format("%s / %s", commas(amount), commas(duffel.cap))
 				if not duffelFullPlayed[location] then
 					duffelFullPlayed[location] = true
 					playCue("DuffelFullSound")
