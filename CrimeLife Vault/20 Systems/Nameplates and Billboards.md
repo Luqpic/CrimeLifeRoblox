@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, ui, billboard, nameplate]
-updated: 2026-11-14
-sources: ["CLAUDE.md (Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Overhead-GUI-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Player-Nameplates-And-LevelUp-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Nameplate-Scaling-And-Death-Hud-Hide.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Stat-Billboard-And-Cash-Upgrade-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Player-Overhead-GUI-Integration.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Overhead-GUI-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Player-Nameplates-And-LevelUp-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Nameplate-Scaling-And-Death-Hud-Hide.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Stat-Billboard-And-Cash-Upgrade-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Player-Overhead-GUI-Integration.md"]
 ---
 
 # Nameplates and Billboards
@@ -17,7 +17,7 @@ World-space overheads: one name + health plate design shared by enemies and play
 - `StarterPlayer.StarterPlayerScripts.PlayerNameplates` (client): player plates, `ViewCardPrompt`, rank line.
 - `ReplicatedStorage.UI.OpenPlayerCard` (BindableEvent) -> `PlayerCardController.openCard(target)` ([[Player Card]]).
 - Ranks: `ReplicatedStorage.Leveling.Constants.RANKS`, `rankForLevel(level)` ([[Leveling and Renown]]).
-- Legacy: `Workspace.UI.OverheadGui` (a Part template cloned by `IndicatorClient`).
+- Legacy: `Workspace.Dev.UI.OverheadGui` (a Part template). In the city nothing clones it: `IndicatorClient` draws only the floating damage number on the shooter's client, and the template's own per-frame Script returns early. Removal is the developer's call.
 - Robbery: per-location `StatusBillboardAnchor` parts in each `*Markers` folder; colour driven from `HeistClient`'s `LOCATIONS` loop ([[Robbery Heists and Getaway]]).
 
 ## How it works
@@ -39,9 +39,10 @@ World-space overheads: one name + health plate design shared by enemies and play
 - `info.Name` returns the instance's name string; use `FindFirstChild("Name")`. The label "Name" and script "Text" collide with properties.
 - Wait for the Head (10 s) before building a plate; under streaming it can land after `CharacterAdded`.
 - A world GUI is drawn but never hit-tested; clickable UI must live in `PlayerGui`.
-- `IndicatorClient`'s `OverheadGui` and `PlayerNameplates` may double up in multiplayer (unconfirmed solo).
+- No double name (read 2026-11-17): only `PlayerNameplates` draws a name over a player (and turns Roblox's default name off, yours included). A second player has still not looked.
 
 ## History
+- 2026-11-17: checked for a double name over a player: none, only `PlayerNameplates` draws one; every NPC overhead kept. [[2026-11-17 Known Issues Pass]]
 - 2026-09-24: criminal ranks on player plates; Health icon in every overhead bar; plate waits for the Head. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - 2026-09-19: enemy nameplate gap (bar starts at 0.640, +0.071 gap). [[Enemies-Climbing-Each-Other-And-Nameplate-Gap]]
 - 2026-09-18: prompts stand down while a panel is open. [[FPS-Shop-Polish-And-Denied-Feedback]]

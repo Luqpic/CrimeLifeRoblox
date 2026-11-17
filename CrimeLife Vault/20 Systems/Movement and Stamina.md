@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, movement, stamina, camera, fps]
-updated: 2026-11-14
-sources: ["CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md"]
 ---
 
 # Movement and Stamina
@@ -41,12 +41,13 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - Anything dividing by `WalkSpeed` breaks now that landing sets it to exactly 0.
 - Sprint detection on the server must read `IsSprinting`, not server-side velocity (server read below 22 on a 25.4 studs/s landing).
 - Lean/turn effect has been **off, not fixed** since 2026-09-11 (old rig assumptions threw every frame); a rewrite for the current rig is outstanding.
-- Unexplained (2026-09-19): after a recovery window `WalkSpeed` oscillated 20.00-25.83 instead of settling at 38 while the character was blocked by geometry; not chased.
+- Explained and fixed 2026-11-17: the 20.00 / 25.83 swing came from `Animate2`. Pressed against a wall, collision made the velocity read backward, so the backward clamp (`min(WalkSpeed, 20)`) fired, and the `move()` ramp (+50 per second on a 0.1 s tick, 20 + 5.83) lifted it again. The clamp now keys on input (`isInputBackwards`, `Humanoid.MoveDirection` against the look vector); walking backwards still clamps to 20. Inside the 0.55 s landing window the client ramp and the server's replicated cap still interleave in a small sawtooth (not changed).
 - If the landing jolt reappears on a steady 60 fps client, the cause is the speed-scaled roll term (`calcRootMagnitude`), not frame time.
 - Lean is slightly reduced while crouched (side effect of the baseline divisor).
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-17: `Animate2` backward clamp keys on input, not velocity: the 20 / 25.83 `WalkSpeed` swing against a wall is gone. [[2026-11-17 Known Issues Pass]]
 - 2026-09-20: every landing is a dead stop; soft floor (12) and sprint detection deleted. [[FPS-All-Landings-Dead-Stop]]
 - 2026-09-19: sprint landing dead stop with shared ramp; landing camera jolt traced to the lean divisor (first fix, frame-time clamp, kept but was not the cause); dead fall/climb animation assets replaced. [[FPS-Sprint-Landing-Dead-Stop]] [[FPS-Landing-Camera-Jolt]] [[FPS-Landing-Jolt-Root-Cause]] [[FPS-Fall-Animation-Dead-Asset]]
 - 2026-09-18: stamina outline no longer visible while idle. [[FPS-Figma-UI-Bugfix-Pass]]

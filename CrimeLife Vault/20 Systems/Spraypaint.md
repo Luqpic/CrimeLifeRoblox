@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, currency, spraypaint, cosmetics, fps]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Badge-Beside-Price-Label.md", "CrimeLifeRoblox/.superpowers/sdd/per-weapon-spraypaint-report.md", "CrimeLifeRoblox/.superpowers/sdd/revert-global-spraypaint-report.md", "CrimeLifeRoblox/FPSSystem/Spraypaint/Constants.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintService.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintHud.luau"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Badge-Beside-Price-Label.md", "CrimeLifeRoblox/.superpowers/sdd/per-weapon-spraypaint-report.md", "CrimeLifeRoblox/.superpowers/sdd/revert-global-spraypaint-report.md", "CrimeLifeRoblox/FPSSystem/Spraypaint/Constants.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintService.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintHud.luau"]
 ---
 
 # Spraypaint
@@ -37,9 +37,10 @@ The cosmetic currency. Earned only by killing NPCs and levelling up, spent only 
 - `Eliminated` is shared with `LevelingService`; a kill test can cross a level and add +25, which once looked like a broken PvP rule. Test the rule through `awardForVictim` directly.
 - `ShotResolver` still passes a weapon name as a 4th `Eliminated` argument from the per-weapon era; it is unread and was left on purpose.
 - `RunUnitTest`'s filter is an unanchored substring match: a case name containing another's name runs both (fixed by renaming, the filter is unchanged).
-- `SpraypaintHud` can show a spurious `+N` toast at join if hydration lands after its first read (pre-existing).
+- Join toast fixed: `SpraypaintService.hydrate` sets `SpraypaintRestored` (`Constants.RESTORED_ATTRIBUTE`) last, and `SpraypaintHud` re-seeds its previous balance and XP at every change while the flag is not true. The join was emulated with an attribute sequence in one Play; a real rejoin with a saved balance was not run.
 
 ## History
+- 2026-11-17: no more join toast: `SpraypaintRestored` flag; `handleBuySkinRequest` refuses a weapon the player does not own before it charges. [[2026-11-17 Known Issues Pass]]
 - 2026-09-24: back to one global balance (schema v2 -> v3 migration sums per-weapon balances plus the shared bucket); prices raised: Cobalt 500, Verdigris 700, Ember 900, RoseGold 1200. [[Revert-Global-Spraypaint-Balance]]
 - 2026-09-24: per-weapon balances (schema v1 -> v2, `spraypaintShared` grandfather bucket). Reverted the same day. [[Per-Weapon-Spraypaint]]
 - 2026-09-24: kill toast titled "KILLED <NAME>"; XP line and icons on the toast. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]] [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]

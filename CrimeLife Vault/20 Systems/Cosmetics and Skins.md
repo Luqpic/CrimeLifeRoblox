@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, cosmetics, skins, monetisation, fps]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-09-22-cosmetics-phase-1.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Skins-Phase-1.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "CrimeLifeRoblox/.superpowers/sdd/skins-card-revamp-report.md", "CrimeLifeRoblox/.superpowers/sdd/skins-card-sticky-fix-report.md", "CrimeLifeRoblox/FPSSystem/Cosmetics/Palettes.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/SkinApplier.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/CosmeticsService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/SkinsCardController.luau"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-09-22-cosmetics-phase-1.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Skins-Phase-1.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "CrimeLifeRoblox/.superpowers/sdd/skins-card-revamp-report.md", "CrimeLifeRoblox/.superpowers/sdd/skins-card-sticky-fix-report.md", "CrimeLifeRoblox/FPSSystem/Cosmetics/Palettes.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/SkinApplier.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/CosmeticsService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/SkinsCardController.luau"]
 ---
 
 # Cosmetics and Skins
@@ -26,7 +26,7 @@ Weapon skins: 20 colour palettes, any of which can dress any weapon. A skin reco
 - **Palette** = `key`, `name`, `source` (`Free` | `Vip` | `Spraypaint`), `swatch`, a 3-stop dark-to-light `ramp`, and `price` on Spraypaint entries only. Free: Stock, Carbon, Sandstorm, Crimson, Acid. Spraypaint: Cobalt 500, Verdigris 700, Ember 900, RoseGold 1200, Slate 1500, Rust 1800, Forest 2200, Coral 2600, Aqua 3100, Lilac 3700, Fuchsia 4400, Arctic 5200, Obsidian 6100, Gold 7100, Nebula 8200. No Vip palette exists while Vip is on hold.
 - **Applying.** `SkinApplier` works inside the Tool's `Blaster` sub-model, takes only parts with `Transparency < 1`, and ranks them by luminance against their stock colour onto the palette ramp, so every weapon keeps its own contrast. It never keys on part names: 11 of 29 viewmodels render through `Mesh1..8` parts while `Body`/`TrimA..` are invisible donor skeleton (Spas 12, Glock 17). Original colours are recorded (`SkinOriginalColor`) and restored exactly on `remove`.
 - **Signal.** `SkinId` attribute on the Tool; the viewmodel re-dresses on `GetAttributeChangedSignal("SkinId")`, strictly after `WeaponViewmodelMotion` has solved joints.
-- **Ownership.** Free always; Spraypaint palettes need `SkinOwned_<key>` (gate keyed on `source`, fails closed); Vip would need `GamepassOwned_Vip`. `handleEquipRequest`: type check -> armoury check -> ownership check -> write -> refresh. A successful buy auto-equips.
+- **Ownership.** Free always; Spraypaint palettes need `SkinOwned_<key>` (gate keyed on `source`, fails closed); Vip would need `GamepassOwned_Vip`. `handleEquipRequest`: type check -> armoury check -> weapon ownership (`ownsWeapon`, `WeaponOwned_<name>`) -> palette ownership check -> write -> refresh. A skin for a weapon the player does not own is refused before any write or charge (2026-11-17). A successful buy auto-equips.
 - **Skins card** (240x580, 20 chips, price row with the spray icon). Click a locked chip = preview on the 3D model with an accent ring and `BUY <price>`; click again = buy (click tone, or denied tone + red outline flash if unaffordable); on success the purchase sound and a spray-can burst (`UI.CashBurst` with a style). `paintChip` alone owns each chip's outline: rest dark 1px, hover grey 2px, previewed/equipped accent green 3px, can't-afford red 3px. The card tracks the shop's `AbsolutePosition`/`AbsoluteSize` live and shares its UIScale; the shop slides left by `SHOP_SHIFT` (130) to make room.
 - **Persistence.** Owned skins and equipped skin per weapon are in the profile since 2026-09-23 ([[Persistence and Saves]]).
 
@@ -44,6 +44,7 @@ Weapon skins: 20 colour palettes, any of which can dress any weapon. A skin reco
 - The `rarity` field from the spec was dropped deliberately; nothing reads it.
 
 ## History
+- 2026-11-17: a skin choice or purchase for an unowned weapon is refused (`CosmeticsService.ownsWeapon`; `SpraypaintService.handleBuySkinRequest` checks before it charges). [[2026-11-17 Known Issues Pass]]
 - 2026-09-24: chip outlines finally render (`ApplyStrokeMode.Border`). [[FPS-Skins-Chip-Outline-And-Weapon-Level-Pill]]
 - 2026-09-24: Vip on hold (Arctic 5200, Obsidian 6100, Gold 7100, Nebula 8200 sold for Spraypaint); hover, preview-then-buy, spray burst. [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
 - 2026-09-24: shop slides aside rather than shrinking. [[FPS-Skins-Card-Shop-Slides-Aside]]

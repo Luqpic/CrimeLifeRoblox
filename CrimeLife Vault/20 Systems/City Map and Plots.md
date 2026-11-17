@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, city, plots, streaming]
-updated: 2026-11-16
-sources: ["70 Batches/2026-11-15 FPS Systems Into City.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/CityMerge/placement.md", "CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-15 FPS Systems Into City.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/CityMerge/placement.md", "CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
 ---
 
 # City Map and Plots
@@ -41,7 +41,7 @@ The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of Crim
 - **Entrances** (exit spawns): Bank (1142.9, 2.25, 2305.8), SlowFoods (96.8, 5.94, 1778.8), Gas2Go (-986.6, 1.50, 1967.6), NewsStation (-614.0, 7.00, 988.6). Nearest plot 362 studs (SlowFoods) to 710; spawn 782 to 1,585; no anchor within 200 studs of another.
 - **Bank vault underground:** 147.75 studs below its transformed spot, y -154 to -44, above `FallenPartsDestroyHeight` (-500); the Terrain under it (646 solid voxels) was cleared.
 - **New Workspace children:** the 14 imported roots plus `Illegal Supplier` (`ImportedFrom = "Robbery System"`; `Workspace` 29 direct children, 236,393 descendants). The four marker containers (`HeistMarkers`, `SlowFoodsMarkers`, `Gas2GoMarkers`, `NewsStationMarkers`) are Models, `Persistent`; `Illegal Supplier` is `Persistent`.
-- **Prompts:** the old "26 leftover prompts saved `Default`" stay an Open Item: measured 2026-11-16, 2 went with the quarantined buildings and 4 are still in `Workspace.Map` (3 warehouse buttons, the casino button); where the other 20 are is not recorded; `PromptUiController` forces `Custom` at runtime ([[Robbery Prompts]]).
+- **Prompts:** the four prompts left in `Workspace.Map` (3 warehouse buttons, the casino button) are saved `Custom` since 2026-11-17 (before: Default 4, Custom 0; after: Default 0, Custom 4); `PromptUiController` also forces `Custom` at runtime ([[Robbery Prompts]]). `Workspace.TycoonPreview` and `ServerStorage.HQ` keep prompts of their own.
 
 ## How it works
 
@@ -62,10 +62,11 @@ Not recorded: no system code exists yet. The plots feed the tycoon phase of the 
 - `Map.Loose` is unsorted (138 unnamed Models); `Plot7`, `Plot8` and the origin Baseplate remain from the slab.
 - `Robbery` buildings are about 83,419 instances in total; the warehouse alone is about 56,000.
 - Saved by Claude at checkpoints on 2026-11-15 and 2026-11-16 (last after phase 3 Task 5), never published ([[Save and Publish Rules]]). Anything done after that checkpoint exists only in the open session.
-- The city map's `ProximityPrompt`s are saved `Default` (4 left in `Workspace.Map` since the heist buildings replaced the art); the imported `PromptUiController` forces every prompt to the FPS `Custom` face as it streams in ([[Open Items]]).
-- East arm of the city's road crossing: valid road only 180 to 220 studs from the spawn (`Building_15` across its end); one Thug stood stuck there at about (215, 5, 2485).
+- `Workspace.HQ` (a 58,277-descendant Folder, a copy of `ServerStorage.HQ`, nobody knew who added it) was quarantined on 2026-11-17 to `ServerStorage.CityQuarantine.WorkspaceHQ.HQ` (attributes `OriginalPath`, `OriginalCFrame`, `Reason`); the developer said "Quarantine it". Its 3 server errors per Play are gone (client Workspace descendants read 100,256 before and 73,236 after, taken at different client times).
+- East arm of the city's road crossing: valid road only 180 to 220 studs from the spawn (`Building_15` across its end); one Thug stood stuck there at about (215, 5, 2485) on 2026-11-15; a 185 s Play on 2026-11-17 did not reproduce it, so the Thug point was not moved.
 
 ## History
+- 2026-11-17: `Workspace.HQ` quarantined, the four map prompts saved `Custom`, the stuck Thug not reproduced. [[2026-11-17 Known Issues Pass]]
 - 2026-11-16: the four heists placed on the city's Robbery buildings, vault underground, art quarantined ([[2026-11-16 Robbery Systems Into City]]).
 
 See [[Batch Log]]. Created by [[2026-11-14 City Baseline and Cleanup]]. 2026-11-15: FPS systems, `Dev`, placed enemies and givers, `TycoonPreview` ([[2026-11-15 FPS Systems Into City]]).

@@ -2,7 +2,7 @@
 type: system
 tags: [system, enemies, npc-ai, fps]
 updated: 2026-11-17
-sources: ["70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
 ---
 
 # Enemies and Spawner
@@ -62,6 +62,7 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - A staging folder of downloaded outfit assets was left in `ServerStorage` (2026-09-16), to remove once outfits were seen on spawned enemies; whether it was removed is not recorded.
 
 ## History
+- 2026-11-17: the Thug that stood stuck at the east road end did not reproduce (185 s Play, five Thugs sampled every 10 s, none within 2 studs for 30 s); no change, because every other point breaks a placement rule. [[2026-11-17 Known Issues Pass]]
 - 2026-11-17 (city): target filter, preferred target, `canSee`, `investigate`, `getLive` on `EnemyAI`; `EnemyRig` extracted; Police and Armed Police spawn for wanted players. [[2026-11-17 Police and Wanted]]
 - 2026-11-15: ported into the city as an exact copy; the six points moved onto the city's roads. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: overhead health bar gains a white Health icon; kill toast names the enemy from `EnemyTemplate`. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]

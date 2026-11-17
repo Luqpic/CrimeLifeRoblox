@@ -2,7 +2,7 @@
 type: system
 tags: [system, police, wanted, npc-ai, heists, hud]
 updated: 2026-11-17
-sources: ["70 Batches/2026-11-17 Police and Wanted.md", "70 Batches/2026-11-17 Police Slow Fill.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-17-police-and-wanted.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CityScripts/ReplicatedStorage.Wanted.Constants.luau"]
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "70 Batches/2026-11-17 Police Slow Fill.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-17-police-and-wanted.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CityScripts/ReplicatedStorage.Wanted.Constants.luau"]
 ---
 
 # Police and Wanted
@@ -23,7 +23,7 @@ Each player has a wanted level of 0 to 5 stars. Heist alarms, hurting police and
 - Police templates: `ServerStorage.EnemyTemplates.Police` and `Armed Police`; spawned officers live in `Workspace.Police` (made at the first spawn).
 - Alarm hooks: `Heist.Services.LocationServer:TryTriggerRobbery` and `HeistServer.tryTriggerRobbery` call `WantedService.onAlarm`; both register an "active robbery near the building" check through `Getaway:IsNear` ([[Robbery Heists and Getaway]]).
 - Guards: `Heist.Components.GuardPost` (generalised), `ServerStorage.GuardTemplate` (tag `Witness`, attribute `WitnessRole = "Guard"`), `Workspace.NewsStationMarkers.GuardPost1..3`.
-- Witness tag `Witness` on `HeistShared.ModelTemplates.BankClerk`, `RestaurantShared.ModelTemplates.Cashier`, `NewsStationShared.ModelTemplates.NewsWorker`, `GuardTemplate` and every spawned officer.
+- Witness tag `Witness` on `HeistShared.ModelTemplates.BankClerk`, `RestaurantShared.ModelTemplates.Cashier`, `NewsStationShared.ModelTemplates.NewsWorker`, `GuardTemplate` and every spawned officer. Since 2026-11-17 the NewsWorker is also `Invulnerable` (as the Cashier and Bank Clerk already were), so no civilian in a heist can be hurt by a player: the "hurting a witness" heat (+0.25) comes from guards only.
 - Client: `StarterPlayer.StarterPlayerScripts.WantedHud` builds the `WantedHud` ScreenGui ([[HUD and UI Shell]]).
 - NPC-vs-NPC damage rule: `ReplicatedStorage.Blaster.Utility.canDamageHumanoid` (`Witness` clause, final review).
 - Tests (`ServerStorage.UnitTest.Cases`): `HeatModel_Test`, `WantedService_Test`, `SquadPlan_Test`, `EnemyTargetFilter_Test`, `PoliceSpawnPoint_Test`, `Witnesses_Test`; heist `GuardSpec`, `WorldSpec`.
@@ -63,6 +63,7 @@ Measured end to end on 2026-11-17 (`CityMerge/police/final-run.md`): SlowFoods 1
 - Building a full round of 10 officers makes one server step of about 120 ms.
 
 ## History
+- 2026-11-17: NewsWorker tagged `Invulnerable` (it keeps `Witness`): witnessed-hurt heat now comes from guards only. [[2026-11-17 Known Issues Pass]]
 - 2026-11-17: built in six tasks: heat and alarms; police squads on the enemy AI; witnesses and NewsStation guards; the star meter; the quest givers become crooked cops; closing run. [[2026-11-17 Police and Wanted]]
 - 2026-11-17: the slow fill fixed: many cheap samples, a per-round path-check budget. [[2026-11-17 Police Slow Fill]]
 - 2026-11-17, final review fixes: the top-up stops at the first failed spawn search; a hurt victim is not its own witness; NPC fire spares `Witness` NPCs (`ReplicatedStorage.Blaster.Utility.canDamageHumanoid`, a deviation); squads shrink to the new star target, Armed first; departed players get no heat. [[2026-11-17 Police and Wanted]]

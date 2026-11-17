@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, shop, weapons, upgrades, fps]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Shop-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Pistol-3D-Display-Fix-Persistent-Loadout-Slots.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/FPSSystem/Weapons/WeaponUpgradeService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponShopService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponaryShopController.luau", "CLAUDE.md (Systems: Shop and upgrades)"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Shop-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Pistol-3D-Display-Fix-Persistent-Loadout-Slots.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/FPSSystem/Weapons/WeaponUpgradeService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponShopService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponaryShopController.luau", "CLAUDE.md (Systems: Shop and upgrades)"]
 ---
 
 # Weapon Shop and Upgrades
@@ -47,6 +47,7 @@ The Weaponary shop is the only way to get a weapon. Players browse a catalogue b
 - Aiming head-on at an enemy at chest height can hit the gun it holds (zero damage) — matters for tests.
 
 ## History
+- 2026-11-17: re-slotting a held weapon no longer grants a second copy (`WeaponShopService` grants only when `findLiveTool` finds nothing in the Backpack or the character; the held Tool keeps its ammo); the shop's detail card reads `Description`; a gamepass weapon's grid card reads OWNED once the pass is owned. [[2026-11-17 Known Issues Pass]]
 - 2026-09-25: the Gamepass panel's grid scrolls ([[Gamepasses]]). [[FPS-Gamepass-Shop-Scrolling-Grid]]
 - 2026-09-24: buy goes straight to the slot picker; upgrades and re-views never do. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-24: Gamepass tab replaces All (last), shop opens on Melee, CLAIM · FREE flow; Gamepass tab logo. [[FPS-RPG-Gamepass-Launcher]] [[FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons]]

@@ -2,12 +2,33 @@
 type: decision
 tags: [decision, tycoon, merge, crimelife-tycoon]
 updated: 2026-11-17
-sources: [".superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
+sources: [".superpowers/sdd/2026-11-17-known-issues-pass/progress.md", ".superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
 ---
 
 # CrimeLife Tycoon Decisions
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
+
+## 2026-11-17: the known issues pass
+
+Recorded in [[2026-11-17 Known Issues Pass]]; the plan is `docs/superpowers/plans/2026-11-17-known-issues-pass.md`.
+
+The developer's answers, quoted from the plan:
+- `Workspace.HQ`: "Quarantine it".
+- Weapon descriptions: "Yes, write them".
+- Old city prompts: "CrimeLife face everywhere".
+- On the tycoon: "Nevermind, skip the tycoon. I want to spend more time sharpening what's outside of the tycoon right now."
+
+No word to save: the place was not saved this run.
+
+Claude's rulings (the controller's, each with its cost if wrong):
+- **Ruling: baselines are city 258 / 258 / 0 plus the new cases, heist 620 / 1 (Zone only)**, because the plan's numbers predate police. Cost if wrong: none, a stricter bar.
+- **Ruling: tag NewsWorker `Invulnerable`** as the plan says (consistent with clerks and cashiers, closes city XP farming); it keeps its `Witness` tag, so witnessed-hurt heat comes from guards only ([[Police and Wanted]]). Cost if wrong: one tag to remove.
+- **Ruling: the stuck Thug gets no change.** It did not reproduce in a 185 s Play and every other spot breaks a placement rule; the Open Item stays with that measurement. Cost if wrong: one Thug may still snag on the east road end.
+- **Ruling: the level-up popup overlap fix is Option A plus B1.** Desktop: the popup's top sits at the toast's bottom. Where the smaller viewport side is under 500: scaled about 0.71 into the gap left of the duffel. The plan required every pair clear at both sizes and B1 is the only phone option that keeps the level-up visible. Cost if wrong: an off-centre, smaller popup on phones.
+- **Ruling: Task 4 includes the `WantedHud` star meter in the overlap pairs** (a HUD element on screen since police). Cost if wrong: a little more measuring.
+- **Ruling: every NPC overhead stays**, the six crooked-cop quest givers' names included. Cost if wrong: none.
+- **Ruling: no save this run;** every Studio-only change lives in the open session until the developer saves. Cost if wrong: work lost if Studio closes.
 
 ## 2026-11-17: police and the wanted level
 

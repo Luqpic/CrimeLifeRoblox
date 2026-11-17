@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, weapons, combat, blaster]
-updated: 2026-11-15
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Loadout-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Eight-New-Pistols-And-Shotguns.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau", "CrimeLifeRoblox/FPSSystem/Blaster/BuildNewPistolsShotguns.luau", "CLAUDE.md (Systems)"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Loadout-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Eight-New-Pistols-And-Shotguns.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau", "CrimeLifeRoblox/FPSSystem/Blaster/BuildNewPistolsShotguns.luau", "CLAUDE.md (Systems)"]
 ---
 
 # Weapons and Blaster
@@ -42,13 +42,18 @@ Every gun, melee weapon and the RPG runs on one shared, data-driven blaster: sta
 - Copying a weapon does not redirect welds that point outside the copied subtree: rebuild viewmodel joints against the viewmodel's own `Body`.
 - Reference rigs disagree where the left hand hangs (body vs magazine); assume nothing.
 - `raysPerShot` is only listed explicitly on shotguns; a clone can inherit nothing.
-- The existing Glock 17, Benelli M4 and Spas 12 Tool `MuzzleAttachment` sits at the stock end (third-person flash and tracer only); found, not fixed.
-- The RPG's engine `Explosion` still plays Roblox's own small bang under the impact sound.
+- The Glock 17, Benelli M4 and Spas 12 Tool `MuzzleAttachment` now sits at the barrel end (measured to 0.000 of the barrel-end point, 2026-11-17) and carries a `FlashEmitter`. 12 other guns (APS, AR-18, Glock 18, HK G3, Itacha Mag-10, M14 EBR, M45A1, MP443, PB, S&W 29, SIG M17, USP Compact) still have no third-person `FlashEmitter`, and their muzzle positions were not checked.
+- The RPG's blast is no longer an engine `Explosion` (its bang cannot be silenced): `ShotResolver.explode` clones `ReplicatedStorage.Blaster.Objects.RPGBlast`, a particle burst. Damage, `Tagged` / `Damaged` / `Eliminated` are unchanged. The burst is smaller than the old fireball and was not judged by eye.
+- Mossberg 590 and Spas 12 have no `Pump` part or `PumpJoint`: their fore-ends are fused into long meshes, so they cannot rack. The fix is a mesh split in Blender plus an upload (the developer); `WeaponViewmodelMotion` already moves any `Pump` joint.
+- Every Tool has a `Description` (38 of 38, longest 53 characters); `WeaponShopService.CATALOG_ATTRIBUTES` carries it to the shop's detail card.
+- A shotgun's ammo readout counts shells up through the shell-by-shell reload (`GuiController.updateAmmoText`); magazine weapons keep the dashes while reloading.
+- Dry-fire cue: a press that the client's own fire-rate cooldown holds back plays `GuiController.DryFire` (not for Auto fire, not for melee), once per press. The server never answers a refused shot, so the cue cannot play for one.
 - The repo copy `FPSSystem/Blaster/ShotResolver.luau` was last committed with per-weapon Spraypaint and has no `explode()`; Studio holds the newer code.
 - Never reuse the old prop-impulse formula on characters (range-scaled; once flung a corpse at 584 studs/s).
 - The `StarterCharacterScripts.Lean` line 25 error (direct `HumanoidRootPart` index) shows up in weapon testing; unfixed as of 2026-09-24.
 
 ## History
+- 2026-11-17: descriptions on all 38 Tools, shotgun reload readout, dry-fire cue, RPG blast as a particle burst, three muzzles moved to the barrel end. [[2026-11-17 Known Issues Pass]]
 - 2026-09-25: the RPG reload carries the rocket in the hand. [[FPS-RPG-Reload-Hand-Carries-Rocket]]
 - 2026-09-24: RPG preview upright (`ShopViewRotation` 180,0,0), stand-in pass id 10904398, own sounds and icon. [[FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons]]
 - 2026-09-24: RPG gamepass launcher with explosive rounds. [[FPS-RPG-Gamepass-Launcher]]
