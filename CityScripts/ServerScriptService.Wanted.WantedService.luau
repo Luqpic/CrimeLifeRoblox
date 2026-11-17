@@ -135,6 +135,7 @@ function WantedService.addHeat(player, amount: number, _reason: string)
 	set(player, HeatModel.raise(WantedService.getHeat(player), amount))
 	timerFrom[player] = deps.now()
 	raisedAt[player] = deps.now()
+	player:SetAttribute("WantedDraining", false) -- the search window starts now, not at the next step
 end
 
 -- A robbery's alarm: every participant's heat becomes at least the location's level. A location without a
@@ -146,6 +147,7 @@ function WantedService.onAlarm(locationName: string, players: { Player })
 		set(player, HeatModel.atLeast(WantedService.getHeat(player), level))
 		timerFrom[player] = deps.now()
 		raisedAt[player] = deps.now()
+		player:SetAttribute("WantedDraining", false)
 	end
 	fireAlarmed(locationName, players)
 end

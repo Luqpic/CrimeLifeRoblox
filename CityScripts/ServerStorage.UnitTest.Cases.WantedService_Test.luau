@@ -484,6 +484,25 @@ return function(t)
 		expect.equal(p:GetAttribute("WantedSeen"), false)
 	end)
 
+	t.test("a rise in heat (addHeat or an alarm) sets WantedDraining false at once, before the next step", function()
+		local p = standIn()
+		clock = 16000
+		WantedService.addHeat(p, 2, "test")
+		clock = 16001; WantedService._step()
+		local before = p:GetAttribute("WantedDraining")
+		WantedService.addHeat(p, 0.25, "test")
+		local afterHit = p:GetAttribute("WantedDraining")
+		clock = 16002; WantedService._step()
+		local again = p:GetAttribute("WantedDraining")
+		WantedService.onAlarm("Bank", { p })
+		local afterAlarm = p:GetAttribute("WantedDraining")
+		WantedService.clear(p)
+		expect.equal(before, true)
+		expect.equal(afterHit, false)
+		expect.equal(again, true)
+		expect.equal(afterAlarm, false)
+	end)
+
 	end)
 	for key, value in saved do deps[key] = value end
 	deps.searchSeconds, deps.activeRobbery = saved.searchSeconds, saved.activeRobbery

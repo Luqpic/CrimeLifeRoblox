@@ -383,3 +383,11 @@ Changed new sources (not deviations): `WantedService` 10,729 / 1711108376 -> 11,
 The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 4 fix round 1 (2026-11-17, star meter camera, fill and stale draining). No existing script edited. "old" is the latest value above.
+
+Changed new sources (not deviations): `WantedService` 11,318 / 1789475611 -> 11,465 / 542011034 (`addHeat` and `onAlarm` set `WantedDraining = false` at once: the search window starts with the rise); case `WantedService_Test` 17,374 / 2745169990 -> 18,083 / 2348801503 (one case); `WantedHud` 5,291 / 1430248998 -> 6,348 / 732449840 (follows `workspace.CurrentCamera`, nil-safe, re-binds `ViewportSize`; the fraction is laid over the glyph's ink from `TextBounds`, rounded to whole px; no pulse or blink while a panel hides the plate).
+
+The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
