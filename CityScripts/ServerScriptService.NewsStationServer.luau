@@ -41,6 +41,10 @@ local Safe = require(Heist.Components.Safe)
 local MasterComputer = require(Heist.Components.MasterComputer)
 local LaserHazard = require(Heist.Components.LaserHazard)
 local LocationServer = require(Heist.Services.LocationServer)
+-- Security guards (police and wanted Task 3, 2026-11-17): the Bank's GuardPost component on NewsStation's
+-- own posts, built by this script's registry exactly as HeistServer builds the Bank's.
+local GuardPost = require(Heist.Components.GuardPost)
+local WantedConstants = require(ReplicatedStorage.Wanted.Constants)
 
 -- NewsStation carries its OWN tag table, unlike SlowFoods/Gas2Go which both
 -- read HeistConfig.Tags. The weapon tag is the exception -- there is no
@@ -93,6 +97,11 @@ do
 end
 
 do
+	local posts = CollectionService:GetTagged(T.NewsStationGuardPost)
+	assert(#posts == WantedConstants.NEWSSTATION_GUARDS, string.format("[NewsStationServer] expected exactly %d NewsStationGuardPost parts, found %d", WantedConstants.NEWSSTATION_GUARDS, #posts))
+end
+
+do
 	local oilParts = CollectionService:GetTagged(T.NewsStationOilHazard)
 	assert(#oilParts == 15, string.format("[NewsStationServer] expected exactly 15 NewsStationOilHazard parts, found %d", #oilParts))
 end
@@ -135,6 +144,7 @@ end
 -- each is built further down, but the hooks only ever fire after Start(),
 -- by which point every one of these is assigned.
 local oilHazards = {}
+local guardPosts = {}
 local masterComputer
 local lastNewsStationSafeSubmit = {}
 local fadeLightSphere
@@ -165,6 +175,10 @@ local location = LocationServer.new({
 		for _, oil in ipairs(oilHazards) do
 			oil:Update()
 		end
+		-- Guards act only while the session is Active (GuardPost:Update), as at the Bank.
+		for _, post in ipairs(guardPosts) do
+			post:Update()
+		end
 	end,
 	-- Per-player state the shared skeleton doesn't know about.
 	onPlayerRemoving = function(player)
@@ -180,14 +194,24 @@ local notifyRefused = location.notifyRefused
 
 local registry = ComponentRegistry.new({
 	config = Config,
-	componentDeps = { onContact = applyLaserDamage },
+	componentDeps = {
+		onContact = applyLaserDamage,
+		-- Guards deal damage the Bank's way (HeistServer's damage dep).
+		damage = function(player, amount)
+			local character = player.Character
+			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+			if humanoid and humanoid.Health > 0 then humanoid:TakeDamage(amount) end
+		end,
+	},
 	classes = {
 		[T.NewsStationAccessBarrier] = AccessBarrier,
 		[T.NewsStationOilHazard] = LaserHazard,
+		[T.NewsStationGuardPost] = GuardPost,
 	},
 })
 local byTag = registry:BindAll(bank)
 oilHazards = byTag[T.NewsStationOilHazard] or {}
+guardPosts = byTag[T.NewsStationGuardPost] or {}
 
 -- Cash Registers and the ATM aren't bound through the generic registry (they
 -- need extra deps -- promptTemplate, amount, onRefused, playRobSound -- that

@@ -16,6 +16,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local Constants = require(ReplicatedStorage.Wanted.Constants)
 local HeatModel = require(ReplicatedStorage.Wanted.HeatModel)
+local Witnesses = require(script.Parent.Witnesses)
 
 local WantedService = {}
 
@@ -23,8 +24,12 @@ WantedService._deps = {
 	now = os.clock,
 	-- Task 2 installs the police and guard line-of-sight check through setSeenProvider.
 	seen = function(_player): boolean return false end,
-	-- Is the attacker seen by a witness? Task 3 replaces this stub with the Witness-tag check.
-	witness = function(_player): boolean return false end,
+	-- Is the attacker seen by a witness (Witness tag, WITNESS_RANGE, line of sight; Task 3)?
+	witness = function(player): boolean
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		return root ~= nil and Witnesses.sees(root.Position)
+	end,
 	playerFromCharacter = function(character) return Players:GetPlayerFromCharacter(character) end,
 	-- Still in the game with a living character. A hit or kill from anyone else (a bleed or a bullet landing
 	-- after the shooter died or left) must not re-create heat on a player who was just cleared.

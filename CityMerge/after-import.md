@@ -329,3 +329,21 @@ Task 2 fix round 2 (2026-11-17: the robbery keeps a participant "seen" only near
 Case changed (not a deviation): `ServerStorage.UnitTest.Cases.WantedService_Test` 13,189 / 1203546623 -> 15,457 / 1908116138 (3 cases). `Getaway` exported to `CityScripts/` for the first time. The four sources' on-disk Adler-32 equals the place (4 / 4). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 3 (2026-11-17, witnesses and NewsStation guards). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Heist.Components.GuardPost` (ModuleScript) | 9,843 / 1939221827 | 10,998 / 1315880415 | `config.GuardsAlwaysPosted`: the guard is spawned in `new`, a live one stays at `Seal`, a fresh one replaces it at `Rearm`; `_moveToCover` and `Rearm` skip cover when `config.Tags.HeistCoverPoint` is absent (hold the post); `spawnGuard(marker.CFrame, config.GuardSpawnLift)`, `defaultSpawn` lifts by `lift or 3` (the Bank unchanged: no flag, lift 3). Attribute (new) "config.GuardsAlwaysPosted (guard from boot, kept at Seal, replaced at Rearm), cover optional when config.Tags has no HeistCoverPoint, config.GuardSpawnLift (default 3) (police and wanted Task 3)". |
+| 2026-11-17 | `ServerScriptService.NewsStationServer` (Script) | 19,460 / 1123707390 | 20,609 / 4028888056 | Boot assert: exactly `Wanted.Constants.NEWSSTATION_GUARDS` (3) `NewsStationGuardPost` parts; `[T.NewsStationGuardPost] = GuardPost` in the registry; `damage` dep (HeistServer's); `post:Update()` in `heartbeatExtras`. Attribute appended "; 3 NewsStationGuardPost GuardPost components (boot assert, registry, damage dep, heartbeat Update) (police and wanted Task 3)". |
+| 2026-11-17 | `ReplicatedStorage.NewsStationShared.Config` (ModuleScript) | 4,544 / 1767577253 | 5,452 / 3133755255 | `GuardsAlwaysPosted = true`, `GuardSpawnLift = 0`, `GuardActivationRange` 60, `GuardSightRange` 120, `GuardFireInterval` 0.9, `GuardDamage` 0 (the Bank's values); tag `NewsStationGuardPost`. Attribute (new) "guard settings GuardsAlwaysPosted, GuardSpawnLift, Guard* combat numbers, tag NewsStationGuardPost (police and wanted Task 3)". |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.WorldSpec` (ModuleScript) | 49,042 / 3496098806 | 50,282 / 3545750290 | Manifest: `NewsStationGuardPost` = 3; new test: each post inside `NewsroomZone`, Transparency 1, not colliding, anchored, in `NewsStationMarkers`. Attribute (new) "NewsStationGuardPost count 3 and a placement test (police and wanted Task 3)". |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.GuardSpec` (ModuleScript) | 8,130 / 1317285606 | 9,721 / 3536925508 | One case: `GuardsAlwaysPosted` (guard from construction, none extra at session start, kept at Seal, fresh at Rearm, no cover, lift handed to `spawnGuard`). No attribute (test). |
+
+World (not scripts): `Workspace.NewsStationMarkers.GuardPost1` (-668, 14.25, 986; upper floor, faces the three safes), `GuardPost2` (-664, 2.25, 986; ground floor, faces `MasterComputer`), `GuardPost3` (-634, 2.25, 1003; faces the entrance), each a 2 x 1 x 2 anchored Part, Transparency 1, CanCollide/CanQuery/CanTouch false, centred on the floor top, tag `NewsStationGuardPost`, attribute `Covers`. Tag `Witness` added to `HeistShared.ModelTemplates.BankClerk`, `RestaurantShared.ModelTemplates.Cashier` (SlowFoods and Gas2Go), `NewsStationShared.ModelTemplates.NewsWorker`, `ServerStorage.GuardTemplate`; `GuardTemplate` attribute `WitnessRole = "Guard"`.
+
+New: `ServerScriptService.Wanted.Sight` 2,769 / 2676598123 (the line-of-sight probe and the ray params, moved out of `PoliceDispatcher` unchanged except an optional `ignore`); `ServerScriptService.Wanted.Witnesses` 2,173 / 111339273; case `Witnesses_Test` 3,002 / 3079264878. Changed new sources (not deviations): `PoliceDispatcher` 20,106 / 2732147937 -> 18,687 / 585788091 (uses `Sight`; `isSeen` also true when `Witnesses.guardSees`); `WantedService` 10,527 / 4033096710 -> 10,729 / 1711108376 (`deps.witness` = `Witnesses.sees` at the attacker's root).
+
+The ten sources exported to `CityScripts/`; on-disk Adler-32 equals the place (10 / 10). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
