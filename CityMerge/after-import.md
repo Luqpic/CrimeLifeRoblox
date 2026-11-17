@@ -425,3 +425,19 @@ New sources changed (not deviations): `ReplicatedStorage.Wanted.SquadPlan` 1,319
 The ten sources exported to `CityScripts/`; on-disk Adler-32 equals the place (10 / 10). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+## Known issues pass 2026-11-17
+
+Task 1 (city cleanup). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 20,074 / 3295735053 | 20,132 / 3584032727 | A character removed mid-heist forfeits with its own cause `removed` and the toast "Your character was removed. Bag lost." instead of the death toast. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.LocationServerSpec` (ModuleScript) | 24,130 / 2041343054 | 24,257 / 3258815741 | The removal case reads the cause through Forfeit's `notify` and asserts `removed`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.CashClaimVFX` (ModuleScript) | 12,623 / 816478649 | 11,096 / 1118537320 | Dead code removed: the five cash-frame/value constants, `formatWithCommas`, the empty `_render` and its five callers, `self._gui` in `Destroy`. Attribute appended. |
+
+World (not scripts): `Workspace.HQ` (Folder, 58,277 descendants, 23 scripts, 21 Humanoids; no script, ObjectValue or path references it) moved to `ServerStorage.CityQuarantine.WorkspaceHQ.HQ` (the `WorkspaceHQ` folder carries `OriginalPath` "Workspace.HQ", `OriginalCFrame` identity: a Folder has no pivot, its children keep their world CFrames). The 4 `ProximityPrompt`s under `Workspace.Map.Robbery` saved `Default` (3 warehouse buttons, `CasinoMain.OpenBTN`) are now `Custom` (Default 4 -> 0, Custom 0 -> 4). `ReplicatedStorage.NewsStationShared.ModelTemplates.NewsWorker` tags: Witness -> Invulnerable, Witness. Thug point not moved (see the task report).
+
+The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

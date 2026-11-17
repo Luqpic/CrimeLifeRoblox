@@ -576,10 +576,12 @@ return function()
 	-- respawn holding the bag and bank it. Removal now forfeits exactly like a death.
 	suite:test("a character removed mid-heist forfeits the bag, so the respawn banks nothing", function(expect)
 		local Forfeit = TestRunner.freshRequire(game.ServerScriptService.Heist.Services.Forfeit)
+		local cause
 		local rig = makeRig({ forfeit = Forfeit.new({
 			teleport = function() end,
 			exitCFrame = function() return CFrame.new() end,
 			log = function() end,
+			notify = function(_, c) cause = c end,
 		}) })
 		local player = { UserId = 55 }
 		rig.connected[1] = player
@@ -596,6 +598,7 @@ return function()
 		local credits = #rig.calls.CurrencyAdd
 		rig.teardown()
 
+		expect.equal(cause, "removed", "its own cause, not the death toast")
 		expect.equal(bagAfterRemoval, 0, "bag voided on removal")
 		expect.falsy(stillParticipant, "off the roster")
 		expect.equal(credits, 0, "nothing banked after the respawn")

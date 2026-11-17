@@ -51,33 +51,6 @@ local DEFAULT_BURST_ORIGIN = UDim2.new(0.5, 0, 0.5, 0)
 -- frame of the property change in every observed case).
 local PASSIVE_LISTENER_GRACE = 0.05
 
--- Anchored top-right, matching the rest of this project's HUD corner
--- conventions. Kept as named constants (not just baked into _buildPersistentGui)
--- since _targetPosition needs this frame's own on-screen CENTER to fly icons
--- toward, and the two must never drift apart.
-local CASH_FRAME_ANCHOR = Vector2.new(1, 0)
-local CASH_FRAME_POSITION = UDim2.new(1, -12, 0, 12)
--- 268x76 -- the adopted CashHUD slice from the FPS library, reused verbatim
--- rather than rebuilt, so the merged game has ONE cash widget.
-local CASH_FRAME_SIZE = UDim2.new(0, 268, 0, 76)
-
--- Icon + value layout inside the card. Offsets only, so they stay put at any
--- viewport size -- same treatment as the duffel widget's own internals.
--- Matches the baked slice exactly: the money-stack icon sits at (18,20) and
--- the "CASH" caption at (68,42), both painted into the image. Only the value
--- above them is live.
-local CASH_VALUE_INSET = 68
-local CASH_VALUE_TOP = 10
-
--- Roblox has no built-in thousands-separator formatting. Reverse, group every
--- three digits, reverse back, then drop the comma the grouping leaves on a
--- length-divisible-by-3 value ("123" -> ",123").
-local function formatWithCommas(value: number): string
-	local digits = tostring(math.max(0, math.floor(value)))
-	local grouped = digits:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return (grouped:gsub("^,", ""))
-end
-
 local function defaultGetCash(player)
 	local stats = player:FindFirstChild("leaderstats")
 	local cash = stats and stats:FindFirstChild("Cash")
@@ -137,7 +110,6 @@ function CashClaimVFX.new(deps)
 
 	self:_buildPersistentGui()
 	self._displayedValue = getCash()
-	self:_render()
 
 	if player then
 		local cash = self:_findCashValue()
@@ -154,7 +126,6 @@ function CashClaimVFX.new(deps)
 				if self._animating then return end
 				if self._displayedValue == value then return end
 				self._displayedValue = value
-				self:_render()
 			end)
 		end
 	end
@@ -179,8 +150,6 @@ function CashClaimVFX:_buildPersistentGui()
 end
 
 -- The readout belongs to the city's CashHud; _displayedValue only paces the claim sequence.
-function CashClaimVFX:_render()
-end
 
 -- Centre of the city cash frame (AbsolutePosition + AbsoluteSize / 2), as an offset inside
 -- `space` (the burst ScreenGui), so inset settings of either ScreenGui cancel out.
@@ -260,14 +229,12 @@ function CashClaimVFX:PlaySequence()
 					coin:Destroy()
 					arrived += 1
 					self._displayedValue = oldValue + math.floor((newValue - oldValue) * (arrived / total))
-					self:_render()
 
 					if arrived >= total then
 						-- Force-set to the exact true value, never trusting the
 						-- interpolated math above to land exactly on it (integer
 						-- division across `total` icons can round short by 1-2).
 						self._displayedValue = newValue
-						self:_render()
 						if burstGui.Parent then burstGui:Destroy() end
 						self._animating = false
 					end
@@ -281,7 +248,6 @@ end
 
 function CashClaimVFX:Destroy()
 	if self._cashConn then self._cashConn:Disconnect() end
-	if self._gui then self._gui:Destroy() end
 end
 
 return CashClaimVFX

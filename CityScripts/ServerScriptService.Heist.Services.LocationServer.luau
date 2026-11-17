@@ -147,6 +147,7 @@ function LocationServer.new(cfg)
 			if cause == "timer_expired" then return end
 			local messages = {
 				died = "You died before banking. Bag lost.",
+				removed = "Your character was removed. Bag lost.",
 			}
 			self.net:Toast(player, messages[cause] or "Run failed. Bag lost.")
 		end,
@@ -347,7 +348,7 @@ end
 -- the player is already off the roster, so the CharacterRemoving that follows does nothing.
 function LocationServer:_onCharacterRemoving(player)
 	if self.bank:GetState() == "Active" and self.bank:IsParticipant(player) then
-		self.forfeit:Die(self.bank, player, "died")
+		self.forfeit:Die(self.bank, player, "removed")
 	end
 end
 
