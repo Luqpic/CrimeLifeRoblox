@@ -391,3 +391,15 @@ Changed new sources (not deviations): `WantedService` 11,318 / 1789475611 -> 11,
 The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 5 (2026-11-17, quest givers become crooked cops). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.QuestDialogueController` (LocalScript) | 9,078 / 3223924563 | 9,190 / 404181644 | The givers' spoken lines (built here from `QuestConfig` fields, not stored in `QuestConfig`) rewritten as crooked officers paying off the books: completed, ready, in progress, under level, offer (first and repeat), accept and turn-in quips; placeholders, replies and logic unchanged. Attribute (new) "spoken lines rewritten: the givers are crooked cops paying off the books (police and wanted Task 5)". |
+
+World (not scripts): `Workspace.Quests.<giver>.Head.gui.name.Text` only (model names and `npcName` unchanged): `Level 1 Quest` "LEVEL 1 QUEST" -> "GUARD DOYLE - LV 1"; `Level 10 Quest` "LEVEL 10 QUEST" -> "GUARD PIKE - LV 10"; `Level 20 Quest` "LEVEL 20 QUEST" -> "SGT. MARSH - LV 20"; `Level 35 Quest` "LEVEL 35 QUEST" -> "LT. GRADY - LV 35"; `Level 50 Quest` "LEVEL 50 QUEST" -> "CPT. VOSS - LV 50"; `Level 70 Quest` "LEVEL 70 QUEST" -> "CHIEF HARLAN - LV 70". `QuestConfig` not edited.
+
+The one source exported to `CityScripts/` for the first time; on-disk Adler-32 equals the place (1 / 1). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
