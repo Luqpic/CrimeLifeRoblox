@@ -122,7 +122,7 @@ local worldParams = Sight.params
 -- Would an officer standing at `position` be in view from `eye`?
 PoliceDispatcher._inSight = Sight.inSight
 
-local function reaches(from: Vector3, to: Vector3): boolean
+function PoliceDispatcher._reaches(from: Vector3, to: Vector3): boolean
 	local path = PathfindingService:CreatePath(Constants.POLICE_AGENT)
 	local ok = pcall(function()
 		path:ComputeAsync(from, to)
@@ -146,61 +146,95 @@ local function entranceNear(position: Vector3): Vector3?
 	return nil
 end
 
--- Can a police officer stand at `position` (SPAWN_HEIGHT above its ground)? Not in a plot's footprint or a
--- robbery building's box, on road or footpath ground; with a player, also out of that player's line of
--- sight and reachable by a path to them. Returns false and the first reason that failed.
-function PoliceDispatcher.isValidSpawn(position: Vector3, player: Player?): (boolean, string?)
+-- The cheap checks (rays and boxes only): not in a plot's footprint or a robbery building's box, on road or
+-- footpath ground; with a player, out of that player's line of sight. Returns the first reason that failed.
+function PoliceDispatcher._cheapReason(position: Vector3, player: Player?): string?
 	local b = getBoxes()
 	for _, box in b.plots do
 		if inBox(box, position, true) then
-			return false, "plot"
+			return "plot"
 		end
 	end
 	for _, box in b.robbery do
 		if inBox(box, position, false) then
-			return false, "robbery"
+			return "robbery"
 		end
 	end
 	local params = worldParams()
 	local hit = Workspace:Raycast(position, Vector3.new(0, -Constants.GROUND_PROBE, 0), params)
 	if not hit or not isGround(hit.Instance) then
-		return false, "ground"
+		return "ground"
 	end
 	if not player then
-		return true
+		return nil
 	end
-
 	local character = player.Character
 	local head = character and character:FindFirstChild("Head")
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not head or not root then
-		return false, "no character"
+	if not head or not character:FindFirstChild("HumanoidRootPart") then
+		return "no character"
 	end
 	if PoliceDispatcher._inSight(head.Position, position) then
-		return false, "sight"
+		return "sight"
 	end
-	-- Reachable: a path to the player, or, when no path leads to the player (the robbery interiors are cut
-	-- off from the city's navmesh: measured at SlowFoods, door to inside NoPath), to the entrance of the
-	-- robbery location they are in, its ExitSpawn marker.
-	if not reaches(position, root.Position) then
-		local entrance = entranceNear(root.Position)
-		if not entrance or not reaches(position, entrance) then
-			return false, "path"
+	return nil
+end
+
+-- The expensive check: a path to the player, or, when no path leads to the player (the robbery interiors are
+-- cut off from the city's navmesh: measured at SlowFoods, door to inside NoPath), to the entrance of the
+-- robbery location they are in, its ExitSpawn marker. Each ComputeAsync spends one from `budget` when given;
+-- an empty budget fails the check.
+local function reachesPlayer(position: Vector3, player: Player, budget): boolean
+	local function reaches(to: Vector3): boolean
+		if budget then
+			if budget.paths <= 0 then
+				return false
+			end
+			budget.paths -= 1
 		end
+		return PoliceDispatcher._reaches(position, to)
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not root then
+		return false
+	end
+	if reaches(root.Position) then
+		return true
+	end
+	local entrance = entranceNear(root.Position)
+	return entrance ~= nil and reaches(entrance)
+end
+
+-- Can a police officer stand at `position` (SPAWN_HEIGHT above its ground)? The cheap checks, then with a
+-- player the path check. Returns false and the first reason that failed.
+function PoliceDispatcher.isValidSpawn(position: Vector3, player: Player?): (boolean, string?)
+	local why = PoliceDispatcher._cheapReason(position, player)
+	if why then
+		return false, why
+	end
+	if player and not reachesPlayer(position, player) then
+		return false, "path"
 	end
 	return true
 end
 
--- A valid point in the ring rMin..rMax (horizontal) around `center`, or nil after SPAWN_TRIES.
-local function findSpawn(center: Vector3, rMin: number, rMax: number, player: Player): Vector3?
-	for _ = 1, Constants.SPAWN_TRIES do
+-- A valid point in the ring rMin..rMax (horizontal) around `center`, or nil after SPAWN_SAMPLES samples or
+-- when `budget` runs out of path checks (slow fill fix, 2026-11-17: only path checks are budgeted).
+local function findSpawn(center: Vector3, rMin: number, rMax: number, player: Player, budget): Vector3?
+	for i = 1, Constants.SPAWN_SAMPLES do
+		if budget.paths <= 0 then
+			return nil
+		end
+		if i % 50 == 0 then
+			task.wait() -- spread the rays over frames
+		end
 		local angle = math.random() * 2 * math.pi
 		local radius = rMin + math.random() * (rMax - rMin)
 		local top = Vector3.new(center.X + math.cos(angle) * radius, Constants.SAMPLE_TOP_Y, center.Z + math.sin(angle) * radius)
 		local hit = Workspace:Raycast(top, Vector3.new(0, -Constants.SAMPLE_DEPTH, 0), worldParams())
 		if hit and isGround(hit.Instance) then
 			local position = hit.Position + Vector3.new(0, Constants.SPAWN_HEIGHT, 0)
-			if PoliceDispatcher.isValidSpawn(position, player) then
+			if not PoliceDispatcher._cheapReason(position, player) and reachesPlayer(position, player, budget) then
 				return position
 			end
 		end
@@ -305,19 +339,21 @@ PoliceDispatcher._spawnOfficer = spawnOfficer
 -- One player's spawn round: up to n officers, `police` / `armed` still owed by kind. Around the robbed
 -- location (`anchor`) first; where its ring has no valid point (SlowFoods' own box covers most of it), around
 -- the player as for a top-up. A ring that found no point is not searched again this round, and a round with
--- no point at all stops (final review 2026-11-17): a player off the navmesh (an interior, a roof) costs one
--- search per round, not SPAWN_TRIES path computations per owed officer that starve the other squads.
+-- no point at all stops (final review 2026-11-17). The round's searches share SPAWN_PATH_BUDGET path checks
+-- (slow fill fix, 2026-11-17): a player off the navmesh (an interior, a roof) costs at most that many path
+-- computations per round and cannot starve the other squads, while cheap misses (sight, ground) cost none.
 function PoliceDispatcher._spawnRound(player: Player, n: number, anchor: Vector3?, police: number, armed: number)
+	local budget = { paths = Constants.SPAWN_PATH_BUDGET }
 	for _ = 1, n do
 		local root = rootOf(player)
 		if not root or not isWanted(player) then
 			break
 		end
-		local position = anchor and PoliceDispatcher._findSpawn(anchor, Constants.ALARM_RING_MIN, Constants.ALARM_RING_MAX, player)
+		local position = anchor and PoliceDispatcher._findSpawn(anchor, Constants.ALARM_RING_MIN, Constants.ALARM_RING_MAX, player, budget)
 		local fromAlarm = position ~= nil
 		if not position then
 			anchor = nil
-			position = PoliceDispatcher._findSpawn(root.Position, Constants.TOPUP_RING_MIN, Constants.TOPUP_RING_MAX, player)
+			position = PoliceDispatcher._findSpawn(root.Position, Constants.TOPUP_RING_MIN, Constants.TOPUP_RING_MAX, player, budget)
 		end
 		if not position then
 			break

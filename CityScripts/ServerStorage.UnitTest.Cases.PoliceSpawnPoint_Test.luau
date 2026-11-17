@@ -116,4 +116,49 @@ return function(t)
 		expect.equal(found, 3)
 		expect.equal(spawned, 3)
 	end)
+
+	-- Slow fill fix (2026-11-17): only path checks are budgeted, SPAWN_PATH_BUDGET per player per round.
+	t.test("a round spends at most SPAWN_PATH_BUDGET path checks; cheap misses spend none", function()
+		local saved = { PoliceDispatcher._cheapReason, PoliceDispatcher._reaches, PoliceDispatcher._spawnOfficer }
+		local paths, spawned = 0, 0
+		PoliceDispatcher._spawnOfficer = function() spawned += 1 end
+		local model = Instance.new("Model")
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Anchored = true
+		root.Position = Vector3.new(0, 5000, 0)
+		root.Parent = model
+		Instance.new("Humanoid").Parent = model
+		model.Parent = Workspace
+		local player = { Name = "StandIn", Character = model, GetAttribute = function(_, name)
+			return if name == "WantedStars" then 5 else nil
+		end }
+		local results = {}
+		local ok = pcall(function()
+			-- every sample passes the cheap checks; no path leads anywhere
+			PoliceDispatcher._cheapReason = function() return nil end
+			PoliceDispatcher._reaches = function() paths += 1 return false end
+			PoliceDispatcher._spawnRound(player, 10, road, 4, 6)
+			results.noPath = { paths, spawned }
+			paths, spawned = 0, 0
+			-- every path leads: one path check per officer
+			PoliceDispatcher._reaches = function() paths += 1 return true end
+			PoliceDispatcher._spawnRound(player, 10, road, 4, 6)
+			results.allPath = { paths, spawned }
+			paths, spawned = 0, 0
+			-- every sample is in sight: no path check at all
+			PoliceDispatcher._cheapReason = function() return "sight" end
+			PoliceDispatcher._spawnRound(player, 10, road, 4, 6)
+			results.inSight = { paths, spawned }
+		end)
+		model:Destroy()
+		PoliceDispatcher._cheapReason, PoliceDispatcher._reaches, PoliceDispatcher._spawnOfficer = table.unpack(saved)
+		expect.truthy(ok)
+		expect.equal(results.noPath[1], Constants.SPAWN_PATH_BUDGET)
+		expect.equal(results.noPath[2], 0)
+		expect.equal(results.allPath[1], 10)
+		expect.equal(results.allPath[2], 10)
+		expect.equal(results.inSight[1], 0)
+		expect.equal(results.inSight[2], 0)
+	end)
 end

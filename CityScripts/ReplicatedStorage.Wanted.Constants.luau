@@ -39,7 +39,8 @@ return {
 	POLICE_CAP = 24,
 	-- Dispatcher (Task 2, the builder's numbers): a spawn point stands SPAWN_HEIGHT above road or footpath
 	-- ground found within GROUND_PROBE studs below it; ring samples are cast down from SAMPLE_TOP_Y for
-	-- SAMPLE_DEPTH studs, SPAWN_TRIES per officer. The path check uses the AI's own agent (EnemyAI:_computePath).
+	-- SAMPLE_DEPTH studs, up to SPAWN_SAMPLES per officer; the cheap checks (box, ground, sight) are unbudgeted,
+	-- the path checks share SPAWN_PATH_BUDGET per player per round (slow fill fix, 2026-11-17). The path check uses the AI's own agent (EnemyAI:_computePath).
 	SPAWN_HEIGHT = 3,
 	GROUND_PROBE = 5,
 	SAMPLE_TOP_Y = 500,
@@ -48,7 +49,11 @@ return {
 	SIGHT_PROBE_SIDE = 1.5, -- and left and right of the root, across the line of view (a pole hides none of it)
 	SEE_THROUGH_TRANSPARENCY = 0.3, -- a part at least this transparent (glass) does not hide an officer
 	SIGHT_RECASTS = 8, -- see-through parts passed per sight ray at most
-	SPAWN_TRIES = 40, -- measured near SlowFoods: about 1 in 20 ring samples passes every check
+	-- Measured 2026-11-17: near SlowFoods about 1 in 20 ring samples passes every check, at the city spawn plaza
+	-- 4 in 3,000 (the open road grid is in sight out to 320 studs); 3,000 cheap samples took 0.48 s spread over
+	-- frames. 2,000 samples find a point there about 93 % of the time.
+	SPAWN_SAMPLES = 2000,
+	SPAWN_PATH_BUDGET = 20, -- ComputeAsync calls per player per round
 	POLICE_AGENT = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true },
 	-- An officer whose player is cleared, dead or gone and who sees no other wanted player walks this far away
 	-- from the nearest player, and despawns once no player has line of sight to it, or after LEAVE_TIMEOUT.
