@@ -9,7 +9,7 @@ sources: ["CrimeLifeRoblox/docs/crimelife-compound-plan.html", "CrimeLife Vault/
 
 The drawing set the developer's hired builder works from for the CrimeLife tycoon base. It **supersedes the tower-style HQ blueprint** (`Documents/Roblox/docs/crimelife-hq-blueprint.html`, drawn 2026-09-30) and the 2023 tycoon build as the layout to build.
 
-- **Page:** `CrimeLifeRoblox/docs/crimelife-compound-plan.html`, published as a private artifact at https://claude.ai/artifact/Q9v2zXssGBmYU81wWsfmQ3. The builder can open it only after the developer shares it from the page's Share menu.
+- **Page:** `CrimeLifeRoblox/docs/crimelife-compound-plan.html` is a standalone file (doctype + UTF-8 added) that the developer sends the builder directly; it opens in any browser and needs internet for the fonts and the 3D view. The same page is also published as a private artifact at https://claude.ai/artifact/Q9v2zXssGBmYU81wWsfmQ3. The builder can open it only after the developer shares it from the page's Share menu.
 - **Sheets:** a 3D block model (orbit, level toggles, Explode, Fixtures), S-00 Site, S-01 Ground, S-02 Upper, S-03 Roof terrace, S-04 Bunker, S-05 Section + unlock order. Each sheet has a room schedule with X/Z ranges, sizes and fit-out notes.
 - **Prompt and answers:** [[Original Prompts]] (`Tycoon/2026-11-17 Compound Floor Plan.md`). Decisions: [[CrimeLife Tycoon Decisions]].
 
