@@ -38,6 +38,7 @@ local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
 local DepositBoxes = require(Heist.Components.DepositBoxes)
 local DepositBoxLoot = require(ReplicatedStorage.HeistShared.DepositBoxLoot)
 local CarryGetaway = require(Heist.Services.CarryGetaway)
+local CARRY_SPEED_CAP = require(ReplicatedStorage.Movement.Constants).CARRY_SPEED_CAP
 local Net = require(Heist.Services.Net)
 -- Global singleton, shared with SlowFoodsServer/Gas2GoServer/SuppliesServer
 -- (spec addendum, 2026-09-19) -- see CarryState's own header for why this
@@ -640,7 +641,7 @@ local goldBar = SupplyObject.new(workspace.BankVault.GoldBar, {
 	repickupPromptTemplate = heistShared.PromptTemplates.PickUpGoldBarPrompt,
 	cashOutAmount = Config.GoldBarValue,
 	bankOnly = true,
-	speedCap = require(ReplicatedStorage.Movement.Constants).CARRY_SPEED_CAP,
+	speedCap = CARRY_SPEED_CAP,
 	startHidden = true,
 	onRefused = notifyRefused,
 	isBlocked = function(player) return carryState:IsCarrying(player) end,

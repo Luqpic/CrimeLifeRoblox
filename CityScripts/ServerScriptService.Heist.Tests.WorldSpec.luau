@@ -1018,11 +1018,23 @@ return function()
 		expect.truthy(prompt ~= nil and prompt:IsA("ProximityPrompt"), "PickUpGoldBarPrompt template")
 		expect.equal(workspace.BankVault:FindFirstChild("PlaceWhatYouWawnt"), nil, "placeholder quarantined")
 		-- The carrier route out of the vault: a ledge beside the obby pillar so a slowed carrier reaches the moving platform.
-		local ledge = workspace.BankVault:FindFirstChild("CarrierLedge")
-		expect.truthy(ledge ~= nil and ledge:IsA("Model"), "BankVault.CarrierLedge is a Model")
-		if ledge then
-			local p = ledge:GetBoundingBox().Position
-			expect.truthy((p - Vector3.new(1361.8, -95.25, 2511)).Magnitude < 0.5, "CarrierLedge beside the moving platform's far end")
+		-- Carrier-only: tagged, invisible, in the CarrierLedge collision group that Default does not collide with.
+		local PhysicsService = game:GetService("PhysicsService")
+		expect.truthy(PhysicsService:IsCollisionGroupRegistered("Carrier") and PhysicsService:IsCollisionGroupRegistered("CarrierLedge"), "Carrier and CarrierLedge groups registered")
+		expect.falsy(PhysicsService:CollisionGroupsAreCollidable("Default", "CarrierLedge"), "Default passes through ledges")
+		expect.truthy(PhysicsService:CollisionGroupsAreCollidable("Carrier", "CarrierLedge"), "carriers stand on ledges")
+		expect.truthy(PhysicsService:CollisionGroupsAreCollidable("Carrier", "Default"), "carriers collide with the world")
+		for name, at in pairs({ CarrierLedge = Vector3.new(1361.8, -95.25, 2511), CarrierLedge2 = Vector3.new(1363.2, -94.25, 2476.9) }) do
+			local ledge = workspace.BankVault:FindFirstChild(name)
+			expect.truthy(ledge ~= nil and ledge:IsA("Model") and CollectionService:HasTag(ledge, "CarrierLedge"), name .. " is a tagged Model")
+			if ledge then
+				expect.truthy((ledge:GetBoundingBox().Position - at).Magnitude < 0.5, name .. " in place")
+				for _, d in ipairs(ledge:GetDescendants()) do
+					if d:IsA("BasePart") then
+						expect.truthy(d.CollisionGroup == "CarrierLedge" and d.Transparency == 1, name .. "." .. d.Name .. " carrier-only and invisible")
+					end
+				end
+			end
 		end
 	end)
 

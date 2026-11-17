@@ -204,6 +204,68 @@ return function()
 		for _, m in ipairs(rig.models) do m:Destroy() end
 	end)
 
+	suite:test("a seal while a lockpick attempt is in flight on a gold box drops it: later clicks judge and give nothing", function(expect)
+		local rig = makeRig({ "gold" })
+		local door = rig.boxes.doors[1]
+		rig.boxes:Unlock()
+		door:_onTriggered(PLAYER)
+		rig.net:click(PLAYER)
+		rig.net:click(PLAYER)
+		expect.equal(door._attempts[PLAYER].progress, 0.5, "half-picked when the timer runs out")
+		rig.bank:_seal("timer_expired")
+		local updates = #rig.net.updates
+		for _ = 1, 4 do rig.net:click(PLAYER) end
+		expect.equal(#rig.net.updates, updates, "no click judged after the seal")
+		expect.equal(#rig.net.solved, 0, "nothing solved")
+		expect.equal(#rig.goldBar.given, 0, "no gold given")
+		expect.falsy(door.isOpen, "box shut")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	suite:test("two players race one gold box: one solve, exactly one GiveTo", function(expect)
+		local RIVAL = "rival"
+		local rig = makeRig({ "gold" })
+		rig.bank:AddParticipant(RIVAL)
+		local door = rig.boxes.doors[1]
+		rig.boxes:Unlock()
+		door:_onTriggered(PLAYER)
+		door:_onTriggered(RIVAL)
+		rig.net:click(RIVAL)
+		for _ = 1, 4 do rig.net:click(PLAYER) end
+		expect.truthy(door.isOpen, "opened by the first to finish")
+		rig.net:click(RIVAL) -- the loser's next click only closes their lockpick
+		for _ = 1, 3 do rig.net:click(RIVAL) end
+		expect.equal(#rig.goldBar.given, 1, "one GiveTo")
+		expect.equal(rig.goldBar.given[1], PLAYER, "to the solver")
+		expect.equal(door._attempts[RIVAL], nil, "rival's attempt dropped")
+		local goldToasts = 0
+		for _, t in ipairs(rig.net.toasts) do
+			if t.text:find("Gold bar") then goldToasts += 1 end
+		end
+		expect.equal(goldToasts, 1, "one gold toast")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	suite:test("a non-participant's trigger starts no lockpick and the box keeps its contents", function(expect)
+		local rig = makeRig({ "cash" })
+		rig.boxes:Unlock()
+		rig.boxes.doors[1]:_onTriggered("bystander")
+		expect.equal(#rig.net.opened, 0, "no lockpick opened")
+		expect.equal(rig.boxes.contents[1], "cash", "contents kept")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	suite:test("no payout from a solve once the session is no longer Active", function(expect)
+		local rig = makeRig({ "gold" })
+		rig.boxes:Unlock()
+		rig.bank:_seal("timer_expired")
+		rig.boxes:_onSolved(1, PLAYER)
+		expect.equal(#rig.goldBar.given, 0, "no gold given")
+		expect.equal(#rig.goldBar.drops, 0, "no gold dropped")
+		expect.equal(#rig.net.toasts, 0, "no toast")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
 	suite:test("Unlock opens nothing outside an Active session", function(expect)
 		local rig = makeRig({ "cash" })
 		rig.bank:_seal("timer_expired")

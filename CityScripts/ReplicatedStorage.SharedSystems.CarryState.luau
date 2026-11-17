@@ -15,10 +15,27 @@ CarryState.__index = CarryState
 -- through this character attribute; the movement scripts read it.
 local SPEED_CAP_ATTRIBUTE = require(game:GetService("ReplicatedStorage").Movement.Constants).CARRY_SPEED_CAP_ATTRIBUTE
 
+-- Heist layers 2026-11-17 (Task 6): a capped carrier's character parts join the "Carrier" collision
+-- group, which also collides with "CarrierLedge" (carrier-only ledges on the Bank vault obby; the
+-- Default group does not). Set and cleared together with the attribute; only parts in Default or
+-- Carrier are touched.
+local CARRIER_GROUP = "Carrier"
+
+local function setCarrierGroup(character: Instance, on: boolean)
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") and (part.CollisionGroup == "Default" or part.CollisionGroup == CARRIER_GROUP) then
+			part.CollisionGroup = if on then CARRIER_GROUP else "Default"
+		end
+	end
+end
+
 -- On the player's CURRENT character, if any (a fake string player in a spec has none).
 local function setSpeedCap(player, value: number?)
 	local character = type(player) ~= "string" and player.Character
-	if character then character:SetAttribute(SPEED_CAP_ATTRIBUTE, value) end
+	if character then
+		character:SetAttribute(SPEED_CAP_ATTRIBUTE, value)
+		setCarrierGroup(character, value ~= nil)
+	end
 end
 
 function CarryState.new()

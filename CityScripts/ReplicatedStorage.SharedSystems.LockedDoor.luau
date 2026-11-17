@@ -145,7 +145,8 @@ local function defaultGenerateZoneAngle(): number
 	return math.random() * 2 * math.pi
 end
 
--- deps = {bank, net, location, openCFrame, now?, generateZoneAngle?, onSolved?, objectText?}.
+-- deps = {bank, net, location, openCFrame, now?, generateZoneAngle?, onSolved?, objectText?, canAttempt?}.
+-- canAttempt(player) -> boolean (heist layers Task 6): a trigger from a player it refuses starts nothing.
 -- onSolved(player) (heist layers 2026-11-17) runs once at a lockpick solve, after LockpickSolved;
 -- objectText overrides the prompt's "Locked Door". net is
 -- required: this component owns its own full remote round-trip (open the
@@ -206,6 +207,7 @@ function LockedDoor.new(model: Model, deps)
 		now = deps.now or function() return workspace:GetServerTimeNow() end,
 		generateZoneAngle = deps.generateZoneAngle or defaultGenerateZoneAngle,
 		onSolved = deps.onSolved,
+		canAttempt = deps.canAttempt,
 		closedCFrame = closedCFrame,
 		openCFrame = openCFrame,
 		isOpen = false,
@@ -280,6 +282,7 @@ function LockedDoor:_onTriggered(player)
 	-- never trust prompt-existence/enabled-state alone.
 	if self.isOpen then return end
 	if self.bank:GetState() ~= "Active" then return end
+	if self.canAttempt and not self.canAttempt(player) then return end
 
 	-- Already mid-puzzle: ignore. The GUI is modal but the world is not, so the
 	-- player can walk back into the prompt's radius and re-trigger it with the

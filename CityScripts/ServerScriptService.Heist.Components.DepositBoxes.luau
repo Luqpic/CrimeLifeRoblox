@@ -50,6 +50,8 @@ function DepositBoxes.new(models: { Model }, deps)
 			openCFrame = pivot * CFrame.Angles(0, OPEN_ANGLE, 0),
 			now = deps.now,
 			generateZoneAngle = deps.generateZoneAngle,
+			-- Only this robbery's participants may pick a box (a bystander would empty it for nothing).
+			canAttempt = function(player) return deps.bank:IsParticipant(player) end,
 			onSolved = function(player) self:_onSolved(i, player) end,
 		})
 		local handle = model:FindFirstChild("ProximityPart Handle") :: BasePart
@@ -80,6 +82,8 @@ function DepositBoxes:Seal()
 end
 
 function DepositBoxes:_onSolved(i: number, player)
+	-- Own guard for every branch (gold included): nothing is paid or given outside an Active session.
+	if self.bank:GetState() ~= "Active" then return end
 	local kind = self.contents[i]
 	self.contents[i] = "empty" -- paid once
 	if kind == "cash" then
