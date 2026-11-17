@@ -9,7 +9,24 @@ sources: [".superpowers/sdd/2026-11-17-known-issues-pass/progress.md", ".superpo
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
 
-## 2026-11-17: the known issues pass
+## 2026-11-17: the compound floor plan
+
+Recorded in [[2026-11-17 Compound Floor Plan]]; the layout is [[Compound Floor Plan]]. The developer is hiring a builder for the tycoon place and said to "ignore the old one". The reference screenshot is for inspiration: "don't replicate it exactly".
+
+The developer's answers, quoted:
+- Levels: "Option 1 but I want a terrace too" (ground + one upper floor + bunker, plus a terrace).
+- 361 × 300: "Whole plot (blue base)".
+- Rooms: "All of them (Recommended)" (every room from `docs/crimelife-hq-blueprint.html`).
+- Yard: "Open hangout / spawn", "Training / fight pit".
+- "And I need a 3d view of it."
+
+Claude's rulings (not yet confirmed by the developer), each with its cost if wrong:
+- **Ruling: Weapon Shop, Display Armory and Tailor move to the ground floor;** the old F3 rooms move to F2. Two floors cannot hold the old four. Cost if wrong: the builder swaps rooms between levels.
+- **Ruling: F2 west (x 4–56, z 80–150) is a spare slot** with walls and floor only. Cost if wrong: one room to assign.
+- **Ruling: three 16 × 16 corner towers plus one 60-tall Watchtower on a skybridge** replace the four corner towers. Cost if wrong: one more corner tower at the SE.
+- **Ruling: the bunker sits under the west wing and the yard,** reached only by the core. Cost if wrong: the bunker moves; nothing above it changes.
+- **Ruling: unlock order 0 to 8, prices unset.** Cost if wrong: reordering stages.
+
 
 Recorded in [[2026-11-17 Known Issues Pass]]; the plan is `docs/superpowers/plans/2026-11-17-known-issues-pass.md`.
 

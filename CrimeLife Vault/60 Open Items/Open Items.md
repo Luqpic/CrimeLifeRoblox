@@ -88,6 +88,7 @@ All from [[2026-11-17 Known Issues Pass]].
 - **Humanoids not tagged `Invulnerable`** (as read in Edit 2026-11-17): `Workspace.Map.Props` rigs and dummies, the `TycoonPreview` band, Barista2 and 14 mannequins, `Workspace.Targets.Target` x7, the six `Workspace.Quests` givers (tagged at runtime by `QuestService`), and the placed `SlowFoods.Cashier` x3 and `Bank.Bank Clerk` x2 (their templates carry the tag and they are re-cloned at runtime). Only the heist ones matter if a placed copy ever stays.
 
 ### Product calls waiting
+- **Tycoon compound plan (2026-11-17):** share the artifact with the builder (Share menu), pick a room for the F2 spare slot, confirm Claude's layout rulings and price stages 0 to 8. [[2026-11-17 Compound Floor Plan]] -> [[Compound Floor Plan]]
 - **Price curve.** Nebula at 8200 Spraypaint is about 4,100 Criminal kills; re-size it (2026-09-24). Upgrade, cash-drop and Spraypaint rates are all placeholders (2026-09-16, 2026-09-23). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]] [[FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix]] -> [[Spraypaint]]
 - **Bring back a buy confirm step** for locked Spraypaint chips? (2026-09-24) [[FPS-Skins-Card-Detached-And-Palette-Expansion]]
 - **A lifetime "cash earned" stat** for the player card was offered and never answered; the pill shows the current balance (2026-09-18). [[FPS-Figma-UI-Bugfix-Pass-4]]

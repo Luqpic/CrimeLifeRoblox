@@ -1,0 +1,472 @@
+<title>Crimelife Compound Plan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: a drawing set. Title block, a brief, then one sheet per level (plan + room schedule) under a sticky sheet index. */
+:root{
+ --bg:#e9edf1; --sheet:#f8fafb; --ink:#16222e; --muted:#5a6978; --rule:#c5cfd9;
+ --grid1:#e6ebf0; --grid2:#cdd6df; --accent:#d69a00; --accent-ink:#241a00; --conv:#2d7a3a;
+ --k-money:#d6e9cf; --k-social:#eed7e5; --k-weapon:#f2d4cf; --k-exec:#d9def3; --k-vehicle:#d0e6e8;
+ --k-util:#e3e0d8; --k-circ:#f0f2f4; --k-secure:#e9d8c6; --k-core:#cad3dc; --k-outdoor:#e4eadf; --k-tower:#bfc9d3; --k-road:#d5dbe1; --k-spare:#ffffff; --k-fx:#ffffffcc;
+ --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+ --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+ --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+ --bg:#0b151e; --sheet:#10202e; --ink:#d9e4ee; --muted:#8fa1b3; --rule:#253a4d;
+ --grid1:#152736; --grid2:#20374b; --accent:#f2b830; --accent-ink:#1d1500; --conv:#6fd08a;
+ --k-money:#1c3a29; --k-social:#3a2236; --k-weapon:#43231f; --k-exec:#242b4b; --k-vehicle:#15393d;
+ --k-util:#2a2b28; --k-circ:#152534; --k-secure:#3a2a1b; --k-core:#2a3b4c; --k-outdoor:#142519; --k-tower:#34475a; --k-road:#22313f; --k-spare:#10202e; --k-fx:#0e1c28cc;
+ color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#0b151e; --sheet:#10202e; --ink:#d9e4ee; --muted:#8fa1b3; --rule:#253a4d;
+ --grid1:#152736; --grid2:#20374b; --accent:#f2b830; --accent-ink:#1d1500; --conv:#6fd08a;
+ --k-money:#1c3a29; --k-social:#3a2236; --k-weapon:#43231f; --k-exec:#242b4b; --k-vehicle:#15393d;
+ --k-util:#2a2b28; --k-circ:#152534; --k-secure:#3a2a1b; --k-core:#2a3b4c; --k-outdoor:#142519; --k-tower:#34475a; --k-road:#22313f; --k-spare:#10202e; --k-fx:#0e1c28cc;
+ color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:28px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+h1{font-size:clamp(2.4rem,6vw,4rem);font-weight:800;line-height:.95;text-transform:uppercase}
+h2{font-size:1.9rem;font-weight:800;text-transform:uppercase}
+h3{font-size:1.2rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+p{margin:0;max-width:70ch}
+.lbl{font:500 .72rem var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-inline:-16px;padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap}
+nav a{font:500 .78rem var(--f-mono);color:var(--ink);text-decoration:none;padding:4px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--sheet)}
+nav a:hover,nav a:focus-visible{border-color:var(--accent);outline:none}
+nav a b{color:var(--muted);font-weight:500;margin-right:4px}
+.tb{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);border:2px solid var(--ink);background:var(--sheet);margin-top:20px}
+.tb>div{padding:20px;min-width:0}
+.tb .lead{display:grid;gap:14px}
+.tb .meta{border-left:2px solid var(--ink);display:grid;grid-template-columns:1fr 1fr;padding:0}
+.tb .meta div{padding:10px 14px;border-bottom:1px solid var(--rule);border-right:1px solid var(--rule);min-width:0}
+.tb .meta div:nth-child(2n){border-right:0}
+.tb .meta b{display:block;font:500 .95rem var(--f-mono);margin-top:2px}
+@media (max-width:760px){.tb{grid-template-columns:1fr}.tb .meta{border-left:0;border-top:2px solid var(--ink)}}
+.panel{background:var(--sheet);border:1px solid var(--rule);padding:20px;display:grid;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+ul.rules{margin:0;padding-left:18px;display:grid;gap:6px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:.84rem}
+.sw{width:18px;height:12px;border:1px solid var(--ink);display:inline-block}
+.sw.line{border:0;height:0;width:22px}
+section.sheet{display:grid;gap:14px;scroll-margin-top:64px}
+.shead{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;border-bottom:2px solid var(--ink);padding-bottom:8px}
+.shead .no{font:500 .9rem var(--f-mono);background:var(--ink);color:var(--sheet);padding:2px 8px}
+.shead .lv{margin-left:auto}
+.plan{overflow-x:auto;background:var(--sheet);border:1px solid var(--rule)}
+.plan svg{display:block;width:100%;min-width:720px;height:auto}
+.tbl{overflow-x:auto;border:1px solid var(--rule);background:var(--sheet)}
+table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:760px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font:500 .7rem var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+td.n{font-family:var(--f-mono);font-size:.82rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+td .k{display:inline-block;width:10px;height:10px;border:1px solid var(--ink);margin-right:6px;vertical-align:-1px}
+.stages{display:grid;gap:8px}
+.stage{display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;background:var(--sheet);border:1px solid var(--rule);padding:12px 16px;align-items:start}
+.stage .num{font:800 2rem/1 var(--f-display)}
+.stage p{font-size:.9rem}
+svg text{font-family:var(--f-mono);fill:var(--ink)}
+svg .gl1{stroke:var(--grid1)} svg .gl2{stroke:var(--grid2)} svg .gtx{fill:var(--muted)}
+svg .rm{stroke:var(--ink)} svg .rn{font-family:var(--f-body);font-weight:600} svg .rd{fill:var(--muted)}
+svg .fx{fill:var(--k-fx);stroke:var(--ink);stroke-dasharray:1.2 .8}
+svg .conv{fill:none;stroke:var(--conv);stroke-dasharray:3 1.6}
+svg .gap{stroke:var(--sheet)} svg .dr{stroke:var(--ink)} svg .roll{stroke:var(--accent);stroke-dasharray:2 1.2}
+svg .ghost{fill:none;stroke:var(--muted);stroke-dasharray:4 2}
+svg .wall{fill:none;stroke:var(--ink)}
+svg .pad{fill:var(--accent);stroke:var(--accent-ink)}
+.m3bar{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.m3bar button{font:500 .78rem var(--f-mono);color:var(--ink);background:var(--sheet);border:1px solid var(--rule);border-radius:3px;padding:5px 10px;cursor:pointer}
+.m3bar button[aria-pressed="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.m3bar button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.m3stage{position:relative;height:clamp(380px,64vh,740px);background:var(--sheet);border:1px solid var(--rule);overflow:hidden;touch-action:none}
+.m3stage canvas{display:block;width:100%;height:100%}
+#m3tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--sheet);font:500 .76rem/1.45 var(--f-mono);padding:6px 9px;border-radius:3px;max-width:260px;z-index:2}
+#m3msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.m3key{position:absolute;left:10px;bottom:8px;font:500 .72rem var(--f-mono);color:var(--muted);pointer-events:none}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+html{scroll-behavior:smooth}
+</style>
+
+<div class="wrap">
+<nav id="nav" aria-label="Sheets"></nav>
+
+<header class="tb">
+ <div class="lead">
+  <span class="lbl">Tycoon base · Drawing set for the builder</span>
+  <h1>Crimelife Compound</h1>
+  <p>The new Crimelife tycoon base. It replaces the old 2023 build and the earlier tower-style HQ blueprint. It's a walled compound that looks like a scrap-and-logistics company from the street. The rooms wrap around an open central <b>Yard</b> with a player spawn and a fight pit. A drive lane runs down the east side, and a skybridge links the main building to a Watchtower.</p>
+  <p>It keeps every room from the old blueprint. It moves to a flatter layout with a ground floor, an upper floor, a roof terrace and a bunker under the yard. Use the reference screenshot for mood and massing only: the ring of rooms around a yard, the cut-off corner, the bridged tower. Don't copy it one to one.</p>
+  <p class="lbl">Style: semi-low-poly industrial. Chunky shapes, a few strong details per room.</p>
+ </div>
+ <div class="meta">
+  <div><span class="lbl">Plot</span><b>361 × 300 studs</b></div>
+  <div><span class="lbl">Building</span><b>264 × 244</b></div>
+  <div><span class="lbl">Floor to floor</span><b>20 studs</b></div>
+  <div><span class="lbl">Levels</span><b>B1 · G · F2 · Roof</b></div>
+  <div><span class="lbl">Grid</span><b>10 minor · 50 major</b></div>
+  <div><span class="lbl">Sheets</span><b>S-00 → S-05</b></div>
+  <div><span class="lbl">Drawn</span><b>17 Nov 2026</b></div>
+  <div><span class="lbl">Status</span><b>Draft for builder</b></div>
+ </div>
+</header>
+
+<div class="grid2">
+ <div class="panel">
+  <h3>Coordinates</h3>
+  <ul class="rules">
+   <li>Every number uses one plot coordinate system. The origin is the plot's <b>north-west corner</b>, <b>+X runs east</b>, <b>+Z runs south</b>. Units are studs.</li>
+   <li>Put the plot model's pivot on the NW corner so the numbers become offsets in Studio.</li>
+   <li>Y = 0 is the top of the ground slab. B1 runs from −24 to 0, G from 0 to 20, F2 from 20 to 40. The roof terrace floor is at 40 with a parapet to 44.</li>
+   <li>Exterior walls are 2 thick and interior walls 1. Room edges on the plans are wall centrelines.</li>
+  </ul>
+ </div>
+ <div class="panel">
+  <h3>Standard openings</h3>
+  <ul class="rules">
+   <li>Person door: 8 wide × 12 tall (drawn 12 wide on plans with the frame). Main entrance: 24-wide double glass door.</li>
+   <li>Roll-up door: 24 × 16. Garage bay door: 24 × 18. Gate: 32 wide sliding.</li>
+   <li>Stairs: 16 wide with a half landing. Freight lift: 16 × 16 cab, B1 to roof.</li>
+   <li>Vault door: round, 16 diameter.</li>
+  </ul>
+ </div>
+ <div class="panel">
+  <h3>Legend</h3>
+  <div class="legend" id="legend"></div>
+ </div>
+ <div class="panel">
+  <h3>Four money lines</h3>
+  <ul class="rules">
+   <li><b>G · Scrap Foundry.</b> 6 droppers → conveyor → moulder → part collector.</li>
+   <li><b>F2 · Counterfeit Printers.</b> 6 presses → conveyor through the wall → a cash pile in Cash Counting.</li>
+   <li><b>G · Chop Shop.</b> Car lift → 2 strip bays → parts conveyor → crusher.</li>
+   <li><b>B1 · Gold Refinery.</b> 5 furnaces → mould conveyor → into the Vault → a gold stack.</li>
+  </ul>
+ </div>
+</div>
+
+<section class="sheet" id="model">
+ <div class="shead"><span class="no">3D</span><h2>Block model</h2><span class="lbl lv">Drag to orbit · scroll to zoom · right-drag to pan</span></div>
+ <p>Every room from the plans as a block at its real size and height, built from the same numbers as the sheets. Hover a block to see its name and size. Pull the levels apart with Explode, or switch on Fixtures to see machines, the fight pit and furniture spots.</p>
+ <div class="m3bar">
+  <div class="m3bar" role="group" aria-label="Levels" id="m3lv"></div>
+  <div class="m3bar"><button type="button" id="m3fx" aria-pressed="false">Fixtures</button><button type="button" id="m3ex" aria-pressed="false">Explode</button><button type="button" id="m3reset">Reset view</button></div>
+ </div>
+ <div class="m3stage" id="m3stage"><canvas id="m3c" aria-label="3D block model of the compound"></canvas><div id="m3tip" hidden></div><div id="m3msg" hidden></div><div class="m3key">Cone points north · colours match the legend</div></div>
+</section>
+
+<div id="sheets" class="wrap"></div>
+
+<section class="sheet" id="section">
+ <div class="shead"><span class="no">S-05</span><h2>Section + unlocks</h2><span class="lbl lv">Heights · build order</span></div>
+ <p>A north-south cut through the yard (looking east) shows how the levels stack. The yard is open to the sky, and the bunker sits underneath it.</p>
+ <div class="plan"><svg id="cut" viewBox="-14 -74 340 108" role="img" aria-label="Section through the compound"></svg></div>
+ <h3>Unlock stages</h3>
+ <p class="lbl">Order for the scripter. Prices are set later.</p>
+ <div class="stages" id="stages"></div>
+ <div class="panel">
+  <h3>Rules so every stage looks finished</h3>
+  <ul class="rules">
+   <li><b>Temporary caps.</b> Until F2 is bought, the ground floor wears a flat roof cap with a parapet. Buying F2 deletes the cap.</li>
+   <li><b>Early boundary.</b> A low chain-link fence marks the plot line from stage 0. The concrete wall, gate and towers in stage 8 replace it.</li>
+   <li><b>Empty rooms still read as rooms.</b> Each room ships with its floor finish and ceiling lights as part of its structure. Furniture and machines come as separate buttons.</li>
+   <li><b>Button pads.</b> Each room gets one button-pad strip just inside its main door, on the deck side.</li>
+  </ul>
+ </div>
+</section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const r=(x0,z0,x1,z1)=>[[x0,z0],[x1,z0],[x1,z1],[x0,z1]];
+const OCT=[[92,96],[180,96],[200,116],[200,192],[180,212],[92,212],[72,192],[72,116]];
+const BLD=[[4,36],[268,36],[268,232],[220,280],[4,280]];
+const SE=[[216,200],[268,200],[268,232],[220,280],[216,280]];
+const RING=[...r(56,80,216,228)];
+const R=(n,p,k,note,o={})=>({n,p,k,note,...o});
+const F=(t,x0,z0,x1,z1)=>({t,p:r(x0,z0,x1,z1)});
+const D=(x0,z0,x1,z1,t='door')=>({x0,z0,x1,z1,t});
+const KINDS={money:'Money line',social:'Social / front',weapon:'Weapons',exec:'Executive',vehicle:'Vehicles',secure:'Security / bunker',util:'Utility',circ:'Circulation',core:'Stair + lift core',outdoor:'Outdoor',tower:'Tower',road:'Road',spare:'Spare slot'};
+
+const SHEETS=[
+{id:'S00',title:'Site plan',lv:'Ground · Y 0',
+ intro:'The building sits against the north and west sides of the plot. A 32-wide drive lane runs down the east side from the gate to the north service lane, and the garage bays open onto it. East of the lane are the Watchtower, parking and the gatehouse. The skybridge (dashed) crosses the lane at F2 height.',
+ rooms:[
+  R('Service lane',r(2,2,268,36),'road','Scrap pile next to the Foundry intake door, plus dumpsters. Joins the east drive lane.'),
+  R('East drive lane',r(268,2,300,298),'road','32-wide road from the gate to the service lane. Garage bays, Chop Shop and Showroom open onto it. Cars pass under the skybridge (20 clear).',{lz:250}),
+  R('East lot',r(300,2,359,298),'outdoor','',{hide:1,nolabel:1}),
+  R('Front walk',r(2,280,268,298),'outdoor','Footpath from the gate to the glass entrance. Pole sign "Southside Scrap & Logistics" by the gate. Planters and lamp posts.'),
+  R('HQ building',BLD,'core','Ground + F2 + roof terrace + bunker. See S-01 to S-04.',{lz:62,lx:136}),
+  R('Yard',OCT,'outdoor','Open to the sky. See S-01.'),
+  R('Watchtower',r(300,44,356,104),'tower','Main tower, 60 tall. Guard post on the ground, skybridge landing at F2, top deck at Y 56 with a searchlight and a guard NPC.'),
+  R('Parking',r(304,120,356,232),'outdoor','6 bays in two rows, angled toward the lane.'),
+  R('Gatehouse',r(304,256,332,286),'secure','Guard booth with a barrier arm next to the gate.'),
+  R('T1',r(2,2,18,18),'tower','Corner towers T1–T3: 16 × 16, 48 tall. Stairs inside, lookout deck with a searchlight.',{sn:'Corner towers T1–T3',nodim:1}),
+  R('T2',r(343,2,359,18),'tower','',{hide:1,nodim:1}),
+  R('T3',r(2,282,18,298),'tower','',{hide:1,nodim:1}),
+ ],
+ fx:[F('Scrap pile',196,8,236,30),F('Bins',150,8,170,22),F('Bay',306,124,330,140),F('Bay',306,142,330,158),F('Bay',306,160,330,176),F('Bay',332,124,354,140),F('Bay',332,142,354,158),F('Bay',332,160,354,176),F('Sign',250,284,262,292)],
+ ghost:[r(268,54,300,66)],ghostLabel:[[284,51,'Skybridge (F2)']],
+ perimeter:{gate:[268,300]},
+ doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(268,92,268,116,'roll'),D(268,136,268,160,'roll'),D(268,168,268,192,'roll'),D(268,204,268,228,'roll')],
+ extra:[['Perimeter wall','0–361','0–300','361 × 300','2 thick, 16 tall concrete with barbed wire on top. 32-wide sliding gate at X 268–300 on the south wall.']]},
+
+{id:'S01',title:'Ground floor',lv:'Y 0 → 20',
+ intro:'This is the public business. The bar, shop, reception and garage all open onto a covered wooden deck that rings the yard, so the yard works as the hub of the base. The upper floor\'s gallery roofs the deck. The core sits in the same place on every level.',
+ ghost:[BLD],
+ rooms:[
+  R('Bar + Stage',r(4,36,112,80),'social','Stage with the Crime Band at the west end, bar counter along the north wall, booths along the south wall, stools, bartender NPCs.'),
+  R('Dispatch',r(112,36,168,80),'util','Loading area: pallets of "product", a desk and a clipboard. Door east into the Foundry.'),
+  R('Scrap Foundry',r(168,36,268,80),'money','Money line 1. Droppers D1–D6 along the north wall (Stainless → Diamond). The conveyor runs east along Z 58 to the moulder and part collector. Leave a parallel lane for Conveyor 2.0. The roll-up scrap intake on the north wall faces the scrap pile. Scrap-worker NPCs.'),
+  R('Warehouse',r(4,80,56,150),'util','The "legit" storage room: 3 shelf rows, crates and a forklift.'),
+  R('Core',r(4,150,56,190),'core','Stair (16 wide, half landing) and freight lift (16 × 16). Same footprint from B1 to the roof.'),
+  R('Tailor',r(4,190,56,228),'social','14 outfit mannequins on the walls, a tailor NPC, a mirror and a changing booth.'),
+  R('Weapon Shop',r(4,228,100,280),'weapon','Counter across the north half and wall racks on the west and south walls. Door into Reception.'),
+  R('Reception',r(100,228,160,280),'social','Front-company desk, cash collector, the 24-wide double glass entrance on the south wall and an open arch north to the yard. Holds the structure pads for the shell.'),
+  R('Display Armory',r(160,228,216,280),'weapon','Glass cases and lit wall racks showing owned weapons. Doors to Reception and the deck.'),
+  R('Chop Shop',r(216,80,268,130),'vehicle','Money line 3. Car lift by the east roll-up (cars drive in from the lane), 2 strip bays, parts conveyor to a crusher.'),
+  R('Garage Bays 1–2',r(216,130,268,200),'vehicle','Two parking bays with roll-up doors onto the lane. Tool walls and tyre stacks.'),
+  R('Showroom + Bay 3',SE,'vehicle','One display car on a turntable. Glass on the cut corner faces the gate. The Bay 3 roll-up on the east wall lets the car drive out.',{lx:240,lz:236,cut:1}),
+  R('Yard deck',RING,'circ','16-wide wooden walkway around the yard, roofed by the F2 gallery. Every ground room opens onto it.',{lx:136,lz:89}),
+  R('Yard',OCT,'outdoor','Open to the sky. Player spawn pad on the south side by Reception, fight pit in the middle (36 × 36 ring with ropes and corner posts), benches and a flag pole. Grass with a big painted logo.',{lz:110}),
+ ],
+ fx:[
+  ...[176,186,196,206,216,226].map((x,i)=>F('D'+(i+1),x,38,x+8,46)),
+  F('Moulder',240,54,252,66),F('Collector',254,54,266,66),
+  F('Stage',6,40,30,76),F('Bar counter',40,38,104,44),F('Booths',40,70,104,78),
+  F('Pallets',116,40,164,56),
+  F('Shelves',10,94,50,98),F('Shelves',10,110,50,114),F('Shelves',10,126,50,130),
+  F('Stair',8,152,24,188),F('Lift',34,162,50,178),
+  F('Outfits',6,194,10,224),F('Counter',10,236,96,242),F('Racks',6,246,10,276),
+  F('Desk',112,250,148,256),F('Cases',166,246,210,252),
+  F('Car lift',224,94,250,118),F('Crusher',220,82,236,90),
+  F('Bay 1',226,134,262,160),F('Bay 2',226,168,262,194),F('Turntable',226,206,250,230),
+  F('Fight pit',118,122,154,158),F('Benches',84,132,92,176),F('Benches',180,132,188,176),
+ ],
+ pads:[r(126,188,146,202)],padLabel:[136,186,'Spawn'],
+ conv:[[[180,58],[240,58]]],
+ doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(80,80,92,80),D(134,80,146,80),D(168,52,168,64),D(184,80,196,80),
+  D(56,108,56,120),D(56,164,56,176),D(56,203,56,215),D(70,228,82,228),D(118,228,142,228),D(180,228,192,228),
+  D(100,248,100,260),D(160,248,160,260),D(216,99,216,111),D(216,159,216,171),D(216,208,216,220),
+  D(268,92,268,116,'roll'),D(268,136,268,160,'roll'),D(268,168,268,192,'roll'),D(268,204,268,228,'roll')]},
+
+{id:'S02',title:'Upper floor',lv:'Y 20 → 40',
+ intro:'This floor holds the real operation. The printer conveyor runs through the wall into Cash Counting. The boss suite takes the north-east corner and opens onto the skybridge. A gallery rings the yard so players upstairs can watch fights.',
+ ghost:[BLD],
+ rooms:[
+  R('Counterfeit Printers',r(4,36,112,80),'money','Money line 2. 6 presses along the north wall (Ink, Offset, Intaglio, Holo-foil, Polymer, Mint Master). The conveyor runs east through the wall into Cash Counting.'),
+  R('Cash Counting',r(112,36,168,80),'money','Counting tables, money counters and a cash pile that grows with each printer tier.'),
+  R('Boss Penthouse',r(168,36,268,80),'exec','Boss office and living space: big desk, wall safe, sofa, windows on the north and east. The east door opens onto the skybridge.'),
+  R('Spare slot',r(4,80,56,150),'spare','Walls and floor only. Kept free for a future room.'),
+  R('Core',r(4,150,56,190),'core','Stair and lift. The stair continues up to the Roof Terrace.'),
+  R('Upper lobby',r(4,190,56,228),'circ','Landing from the core with a crew notice board and a vending machine.'),
+  R('Shooting Range',r(4,228,160,280),'weapon','5 lanes, about 140 long. Firing booths at X 150 and targets on track rails at X 10. Sound-panel walls.'),
+  R('Weapon Workshop',r(160,228,216,280),'weapon','Benches, vices and parts bins. A glass wall looks into the range\'s firing line.'),
+  R('Exec Hall',r(216,80,268,140),'exec','Boss reception: secretary desk, trophy wall, waiting chairs. Leads north into the Penthouse.'),
+  R('Lounge',r(216,140,268,200),'exec','Crew lounge: sofas, pool table, TV wall and windows over the lane.'),
+  R('Meeting Office',SE,'exec','Long table for 10 and a map wall. Glass on the cut corner looks at the gate.',{lx:240,lz:236,cut:1}),
+  R('Gallery',RING,'circ','Balcony ring over the deck, with a railing on the yard side. Players watch the fight pit from here.',{lx:136,lz:89}),
+  R('Yard (open below)',OCT,'outdoor','',{hide:1}),
+  R('Skybridge',r(268,54,300,66),'circ','12-wide covered bridge over the drive lane to the Watchtower, 20 clear underneath.',{nodim:1,nolabel:1}),
+ ],
+ fx:[
+  ...[8,24,40,56,72,88].map((x,i)=>F('P'+(i+1),x,38,x+12,48)),
+  F('Cash pile',128,58,156,76),F('Tables',116,40,164,48),
+  F('Desk',236,44,262,54),F('Sofa',176,64,206,72),
+  F('Stair',8,152,24,188),F('Lift',34,162,50,178),
+  F('Targets',6,232,10,276),F('Booths',146,232,154,276),
+  F('Benches',166,264,210,276),F('Pool',228,158,256,172),F('Table',226,214,248,250),
+ ],
+ conv:[[[14,52],[104,52],[124,52],[124,60]]],
+ doors:[D(80,80,92,80),D(134,80,146,80),D(184,80,196,80),D(112,48,112,60),D(268,54,268,66),D(230,80,242,80),
+  D(56,108,56,120),D(56,164,56,176),D(56,203,56,215),D(70,228,82,228),D(180,228,192,228),D(160,248,160,260),
+  D(216,104,216,116),D(216,164,216,176),D(216,208,216,220)]},
+
+{id:'S03',title:'Roof terrace',lv:'Y 40 · parapet 44',
+ intro:'The core stair comes up into a stair house. The terrace wraps the south side and the cut corner, so it looks down into the yard and out over the gate. The north and east roofs are flat service roofs.',
+ ghost:[BLD],
+ rooms:[
+  R('Roof Terrace',[[4,190],[56,190],[56,228],[216,228],[216,200],[268,200],[268,232],[220,280],[4,280]],'social','Walkable roof with a parapet to Y 44. Lounge chairs, BBQ grill, hot tub, bar cart, string lights, and a railing over the yard and the gate.',{lx:110,lz:256,cut:1}),
+  R('Stair house',r(4,150,56,190),'core','The core stair and lift arrive here. Door onto the terrace.'),
+  R('Service roof',[[4,36],[268,36],[268,200],[216,200],[216,80],[56,80],[56,150],[4,150]],'util','Not walkable: AC units, vents, antennas and a satellite dish. Parapet all round.',{lx:136,lz:60,cut:1}),
+  R('Yard (open)',OCT,'outdoor','',{hide:1}),
+ ],
+ fx:[F('Hot tub',20,240,48,264),F('BBQ',70,262,90,272),F('Loungers',100,236,150,248),F('Bar cart',160,262,178,272),F('Seating',226,212,256,228),F('AC',24,46,44,60),F('AC',80,46,100,60),F('Dish',236,110,256,130)],
+ doors:[D(26,190,38,190)]},
+
+{id:'S04',title:'Bunker',lv:'Y −24 → 0',
+ intro:'The bunker sits under the west wing and the yard. Only the core reaches it. A blast corridor runs east-west under the fight pit, with the refinery and vault on one side and the cache and cells on the other.',
+ ghost:[BLD,OCT],
+ rooms:[
+  R('Generator Room',r(4,80,56,150),'util','Generators, fuel drums and fuse boxes. Vent ducts rise to the roof.'),
+  R('Core',r(4,150,56,190),'core','Stair and lift down from G.'),
+  R('Interrogation',r(4,190,56,228),'secure','Table, 2 chairs, a hanging lamp and a one-way mirror.'),
+  R('Gold Refinery',r(56,80,150,146),'money','Money line 4. 5 furnaces along the north wall. The mould conveyor runs east through the wall into the Vault.'),
+  R('Vault',r(150,80,216,146),'secure','Round 16-diameter vault door on the corridor. A gold stack grows with each furnace tier, plus shelves of cash bricks.'),
+  R('Blast Corridor',r(56,146,216,162),'circ','16-wide concrete spine with blast doors at both ends and red emergency lights.',{nodim:0}),
+  R('Weapon Cache',r(56,162,140,228),'weapon','Crates, rifle racks, ammo shelves and an explosives cage.'),
+  R('Cells C1–C3',r(140,162,216,228),'secure','3 cells with bar doors, about 25 wide each, off the corridor.'),
+ ],
+ fx:[...[62,80,98,116,134].map((x,i)=>F('F'+(i+1),x,84,x+12,96)),F('Gold stack',172,100,204,130),F('Gens',10,90,48,112),
+  F('C1',142,170,164,226),F('C2',167,170,189,226),F('C3',192,170,214,226),F('Racks',64,170,132,176),F('Crates',64,200,110,222),
+  F('Stair',8,152,24,188),F('Lift',34,162,50,178),F('Table',20,204,40,214)],
+ conv:[[[68,102],[140,102],[160,102],[160,110]]],
+ doors:[D(56,150,56,160),D(56,104,56,116),D(56,200,56,212),D(96,146,108,146),D(175,146,191,146,'roll'),D(92,162,104,162),D(147,162,159,162),D(172,162,184,162),D(197,162,209,162)]},
+];
+
+const STAGES=[
+ ['0','Plot, Reception and Yard','Chain-link fence, Reception shell, yard grass with the spawn pad, deck ring. Temporary flat roof cap.'],
+ ['1','Scrap Foundry','Money line 1, plus Dispatch and the Warehouse.'],
+ ['2','Bar + Stage and Tailor','The social rooms on the ground floor.'],
+ ['3','Upper floor and Printers','F2 shell and gallery (deletes the roof cap), Counterfeit Printers and Cash Counting (money line 2).'],
+ ['4','Weapons','Weapon Shop, Display Armory, Weapon Workshop and Shooting Range.'],
+ ['5','Garage','Chop Shop (money line 3), Bays 1–2 and Showroom with Bay 3.'],
+ ['6','Executive suite','Exec Hall, Lounge, Meeting Office and Boss Penthouse.'],
+ ['7','Bunker','Gold Refinery (money line 4), Vault, Blast Corridor, Weapon Cache, cells, Interrogation and Generator Room.'],
+ ['8','Compound and roof','Fight pit, Roof Terrace, Watchtower and skybridge, perimeter wall with gate and gatehouse, corner towers T1–T3.'],
+];
+
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const bbox=p=>{const xs=p.map(q=>q[0]),zs=p.map(q=>q[1]);return[Math.min(...xs),Math.min(...zs),Math.max(...xs),Math.max(...zs)]};
+const pts=p=>p.map(q=>q.join(',')).join(' ');
+const W=361,H=300;
+
+function grid(){let s='';
+ for(let x=0;x<=W;x+=10)s+=`<line class="${x%50?'gl1':'gl2'}" x1="${x}" y1="0" x2="${x}" y2="${H}" stroke-width="${x%50?.15:.3}"/>`;
+ for(let z=0;z<=H;z+=10)s+=`<line class="${z%50?'gl1':'gl2'}" x1="0" y1="${z}" x2="${W}" y2="${z}" stroke-width="${z%50?.15:.3}"/>`;
+ for(let x=0;x<=W;x+=50)s+=`<text class="gtx" x="${x}" y="-3" font-size="3.2" text-anchor="middle">${x}</text>`;
+ for(let z=0;z<=H;z+=50)s+=`<text class="gtx" x="-3" y="${z+1}" font-size="3.2" text-anchor="end">${z}</text>`;
+ return s}
+
+function label(x,z,w,name,dim){
+ const fs=Math.max(2.8,Math.min(5.4,(w-4)/(name.length*.6)));
+ return `<text class="rn" x="${x}" y="${z}" font-size="${fs.toFixed(2)}" text-anchor="middle">${esc(name)}</text>`+
+  (dim?`<text class="rd" x="${x}" y="${z+fs*.95}" font-size="${(fs*.68).toFixed(2)}" text-anchor="middle">${dim}</text>`:'')}
+
+function svgFor(s){
+ let o=`<svg viewBox="-12 -10 ${W+20} ${H+22}" role="img" aria-label="${esc(s.title)} plan">`+grid();
+ (s.ghost||[]).forEach(g=>o+=`<polygon class="ghost" points="${pts(g)}" stroke-width=".5"/>`);
+ s.rooms.forEach(rm=>o+=`<polygon class="rm" points="${pts(rm.p)}" fill="var(--k-${rm.k})" stroke-width=".6"/>`);
+ (s.fx||[]).forEach(f=>{const[a,b,c,d]=bbox(f.p),w=c-a,h=d-b,fs=Math.min(2.6,Math.max(1.6,w/(f.t.length*.62)));
+  o+=`<rect class="fx" x="${a}" y="${b}" width="${w}" height="${h}" stroke-width=".3"/>`;
+  if(w>=7&&h>=3)o+=`<text x="${a+w/2}" y="${b+h/2+fs*.35}" font-size="${fs.toFixed(2)}" text-anchor="middle">${esc(f.t)}</text>`;
+  else o+=`<text x="${a+w/2}" y="${b+h/2}" font-size="1.7" text-anchor="middle" transform="rotate(-90 ${a+w/2} ${b+h/2})" dy=".6">${esc(f.t)}</text>`});
+ (s.pads||[]).forEach(p=>{const[a,b,c,d]=bbox(p);o+=`<rect class="pad" x="${a}" y="${b}" width="${c-a}" height="${d-b}" stroke-width=".3"/>`});
+ if(s.padLabel)o+=`<text x="${s.padLabel[0]}" y="${s.padLabel[1]+10}" font-size="2.6" text-anchor="middle" style="fill:var(--accent-ink)">${s.padLabel[2]}</text>`;
+ (s.conv||[]).forEach(c=>o+=`<polyline class="conv" points="${pts(c)}" stroke-width="1.1"/>`);
+ if(s.perimeter){const[g0,g1]=s.perimeter.gate;
+  o+=`<polyline class="wall" points="${g0},${H} 0,${H} 0,0 ${W},0 ${W},${H} ${g1},${H}" stroke-width="1.6"/>`;
+  o+=`<text x="${(g0+g1)/2}" y="${H+6}" font-size="3" text-anchor="middle">GATE</text>`}
+ (s.doors||[]).forEach(d=>{o+=`<line class="gap" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="1.8"/>`;
+  o+=`<line class="${d.t=='roll'?'roll':'dr'}" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="${d.t=='roll'?.9:.35}"/>`});
+ (s.ghostLabel||[]).forEach(([x,z,t])=>o+=`<text x="${x}" y="${z}" font-size="2.6" text-anchor="middle" class="rd">${t}</text>`);
+ s.rooms.forEach(rm=>{if(rm.nolabel)return;const[a,b,c,d]=bbox(rm.p),w=c-a,h=d-b;
+  const x=rm.lx??a+w/2,z=rm.lz??b+h/2;
+  o+=label(x,z,rm.lx?60:w,rm.n,rm.nodim?'':`${w} × ${h}`)});
+ // north arrow + scale
+ o+=`<g transform="translate(${W-2},${H+12})"><text x="-40" y="1" font-size="3" text-anchor="end">0</text><rect x="-39" y="-1.5" width="20" height="3" fill="var(--ink)"/><rect x="-19" y="-1.5" width="20" height="3" fill="none" stroke="var(--ink)" stroke-width=".4"/><text x="3" y="1" font-size="3">40 studs</text></g>`;
+ o+=`<g transform="translate(-6,${H+12})"><path d="M0,-4 L2.5,3 L0,1.5 L-2.5,3Z" fill="var(--ink)"/><text x="5" y="2" font-size="3.2">N ↑ (−Z)</text></g>`;
+ return o+'</svg>'}
+
+function rows(s){
+ return s.rooms.filter(rm=>!rm.hide&&rm.note).map(rm=>{const[a,b,c,d]=bbox(rm.p);
+  return `<tr><td><span class="k" style="background:var(--k-${rm.k})"></span>${esc(rm.sn||rm.n)}</td><td class="n">${a}–${c}</td><td class="n">${b}–${d}</td><td class="n">${c-a} × ${d-b}${rm.cut?' (cut corner)':''}</td><td>${esc(rm.note)}</td></tr>`}).join('')+
+  (s.extra||[]).map(e=>`<tr><td>${e[0]}</td><td class="n">${e[1]}</td><td class="n">${e[2]}</td><td class="n">${e[3]}</td><td>${e[4]}</td></tr>`).join('')}
+
+document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
+<section class="sheet" id="${s.id.toLowerCase()}">
+ <div class="shead"><span class="no">${s.id.replace('S','S-')}</span><h2>${s.title}</h2><span class="lbl lv">${s.lv}</span></div>
+ <p>${s.intro}</p>
+ <div class="plan">${svgFor(s)}</div>
+ <div class="tbl"><table><thead><tr><th>Room</th><th>X</th><th>Z</th><th>Size</th><th>What goes in it</th></tr></thead><tbody>${rows(s)}</tbody></table></div>
+</section>`).join('');
+
+// 3D block model, built from SHEETS. Plot X → x, plot Z → z, Y up; plot centred on the origin.
+(function(){
+ const stage=document.getElementById('m3stage'),canvas=document.getElementById('m3c'),tip=document.getElementById('m3tip'),msg=document.getElementById('m3msg');
+ const fail=t=>{msg.textContent=t;msg.hidden=false};
+ if(!window.THREE||!THREE.OrbitControls){fail('The 3D viewer could not load. The 2D sheets below have every dimension.');return}
+ let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(e){fail('This browser can\'t show 3D (WebGL is off). The 2D sheets below have every dimension.');return}
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+ const css=n=>{const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return new THREE.Color(v.length>7?v.slice(0,7):v)};
+ const scene=new THREE.Scene();scene.background=css('--sheet');
+ const camera=new THREE.PerspectiveCamera(38,1,1,4000);
+ const controls=new THREE.OrbitControls(camera,canvas);controls.maxPolarAngle=Math.PI*.495;controls.minDistance=40;controls.maxDistance=1400;
+ const home=()=>{camera.position.set(330,330,420);controls.target.set(0,0,0);controls.update()};home();
+ scene.add(new THREE.HemisphereLight(0xffffff,css('--grid2'),.95));
+ const sun=new THREE.DirectionalLight(0xffffff,.55);sun.position.set(220,320,160);scene.add(sun);
+ const CX=W/2,CZ=H/2,edgeCol=css('--ink'),pick=[];
+ // Level bands per sheet; per-room overrides by name.
+ const LV={S00:{y:0,h:.4,name:'Site'},S04:{y:-24,h:23,name:'Bunker'},S01:{y:0,h:19,name:'Ground'},S02:{y:20,h:19,name:'Upper'},S03:{y:40,h:1,name:'Roof'}};
+ const OVR={S00:{'HQ building':null,'Watchtower':{h:60},'T1':{h:48},'T2':{h:48},'T3':{h:48},'Gatehouse':{h:10},'Yard':null},
+  S01:{'Yard':{h:.6},'Yard deck':{h:.5}},S02:{'Yard (open below)':null,'Gallery':{h:1.2},'Skybridge':{h:12}},S03:{'Yard (open)':null,'Stair house':{h:12}}};
+ const groups={},fxGroups=[];
+ function prism(p,y,h,color,op){
+  const s=new THREE.Shape(p.map(([x,z])=>new THREE.Vector2(x-CX,-(z-CZ))));
+  const g=new THREE.ExtrudeGeometry(s,{depth:h,bevelEnabled:false});g.rotateX(-Math.PI/2);g.translate(0,y,0);
+  const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,transparent:op<1,opacity:op}));
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:edgeCol,transparent:true,opacity:.4}));
+  const grp=new THREE.Group();grp.add(m,e);return[grp,m]}
+ SHEETS.forEach(s=>{const lv=LV[s.id],G=new THREE.Group(),F=new THREE.Group();G.userData.base=lv.y;groups[s.id]=G;scene.add(G);G.add(F);fxGroups.push(F);F.visible=false;
+  s.rooms.forEach(rm=>{const o=(OVR[s.id]||{})[rm.n];if(o===null)return;
+   const h=o?.h??lv.h,[a,b,c,d]=bbox(rm.p);
+   const[grp,m]=prism(rm.p,lv.y,h,css('--k-'+rm.k),rm.k=='outdoor'||rm.k=='road'?.85:1);
+   m.userData={n:rm.sn||rm.n,lv:lv.name,dim:`${c-a} × ${d-b} · Y ${lv.y} → ${+(lv.y+h).toFixed(1)}`};pick.push(m);G.add(grp)});
+  (s.fx||[]).forEach(f=>{const[grp]=prism(f.p,lv.y+(lv.h>2?0:lv.h),f.t=='Fight pit'?1.5:4,css('--accent'),1);F.add(grp)});
+  (s.conv||[]).forEach(c=>c.slice(1).forEach((q,i)=>{const[x0,z0]=c[i],[x1,z1]=q;const p=r(Math.min(x0,x1)-1,Math.min(z0,z1)-1,Math.max(x0,x1)+1,Math.max(z0,z1)+1);const[grp]=prism(p,lv.y+lv.h*0+(s.id=='S00'?0:0),2,css('--conv'),1);F.add(grp)}));
+ });
+ // Perimeter wall with the gate gap on the south side
+ const wall=(p)=>{const[grp,m]=prism(p,0,16,css('--k-tower'),1);m.userData={n:'Perimeter wall',lv:'Site',dim:'2 thick · 16 tall'};pick.push(m);groups.S00.add(grp)};
+ wall(r(0,0,W,2));wall(r(0,0,2,H));wall(r(W-2,0,W,H));wall(r(0,H-2,268,H));wall(r(300,H-2,W,H));
+ const cone=new THREE.Mesh(new THREE.ConeGeometry(5,14,16),new THREE.MeshLambertMaterial({color:css('--accent')}));cone.rotation.x=-Math.PI/2;cone.position.set(0,2,-CZ-24);scene.add(cone);
+ const grid=new THREE.GridHelper(400,40,css('--grid2'),css('--grid1'));grid.position.y=-.05;scene.add(grid);
+ // Controls
+ const lvBar=document.getElementById('m3lv');
+ ['S00','S04','S01','S02','S03'].forEach(id=>{const b=document.createElement('button');b.type='button';b.textContent=LV[id].name;b.setAttribute('aria-pressed','true');
+  b.onclick=()=>{const on=b.getAttribute('aria-pressed')!='true';b.setAttribute('aria-pressed',on);groups[id].visible=on;draw()};lvBar.appendChild(b)});
+ const tog=(id,fn)=>{const b=document.getElementById(id);b.onclick=()=>{const on=b.getAttribute('aria-pressed')!='true';b.setAttribute('aria-pressed',on);fn(on);draw()}};
+ tog('m3fx',on=>{fxGroups.forEach(f=>f.visible=on);pick.forEach(m=>{const M=m.material,op=M.userData.op??(M.userData.op=M.opacity);M.transparent=on||op<1;M.opacity=on?Math.min(op,.28):op;M.depthWrite=!on;M.needsUpdate=true})});
+ const EX={S00:0,S04:-30,S01:0,S02:40,S03:80};
+ tog('m3ex',on=>{for(const id in groups)groups[id].position.y=on?EX[id]:0});
+ document.getElementById('m3reset').onclick=()=>{home();draw()};
+ // Hover
+ const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();
+ canvas.addEventListener('pointermove',e=>{const rc=canvas.getBoundingClientRect();ptr.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects(pick.filter(m=>{let o=m;while(o){if(!o.visible)return false;o=o.parent}return true}))[0];
+  if(!hit){tip.hidden=true;return}const u=hit.object.userData;tip.innerHTML=`<b>${esc(u.n)}</b><br>${u.lv} · ${u.dim}`;tip.hidden=false;
+  tip.style.left=Math.min(e.clientX-rc.left+14,rc.width-200)+'px';tip.style.top=(e.clientY-rc.top+14)+'px'});
+ canvas.addEventListener('pointerleave',()=>tip.hidden=true);
+ function size(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();draw()}
+ function draw(){renderer.render(scene,camera)}
+ controls.addEventListener('change',draw);new ResizeObserver(size).observe(stage);size();
+})();
+
+document.getElementById('nav').innerHTML=`<a href="#model"><b>3D</b>Block model</a>`+SHEETS.map(s=>`<a href="#${s.id.toLowerCase()}"><b>${s.id.replace('S','S-')}</b>${s.title}</a>`).join('')+`<a href="#section"><b>S-05</b>Section + unlocks</a>`;
+
+document.getElementById('legend').innerHTML=Object.entries(KINDS).map(([k,v])=>`<span class="chip"><span class="sw" style="background:var(--k-${k})"></span>${v}</span>`).join('')+
+ `<span class="chip"><span class="sw line" style="border-top:3px solid var(--ink)"></span>Door</span><span class="chip"><span class="sw line" style="border-top:3px dashed var(--accent)"></span>Roll-up / bay / vault</span><span class="chip"><span class="sw line" style="border-top:3px dashed var(--conv)"></span>Conveyor</span><span class="chip"><span class="sw" style="background:var(--accent)"></span>Spawn pad</span><span class="chip"><span class="sw" style="border-style:dashed"></span>Fixture</span>`;
+
+document.getElementById('stages').innerHTML=STAGES.map(([n,t,d])=>`<div class="stage"><div class="num">${n}</div><div><h3>${t}</h3><p>${d}</p></div></div>`).join('');
+
+// Section: N-S cut at X ~136, Y up (svg y = -Y). Z 0..300 → x.
+(function(){
+ const b=(z0,z1,y0,y1,k,t)=>`<rect x="${z0}" y="${-y1}" width="${z1-z0}" height="${y1-y0}" fill="var(--k-${k})" stroke="var(--ink)" stroke-width=".5"/>`+(t?`<text x="${(z0+z1)/2}" y="${-(y0+y1)/2+1}" font-size="3" text-anchor="middle">${t}</text>`:'');
+ let s='';
+ s+=`<line x1="-6" y1="0" x2="306" y2="0" stroke="var(--muted)" stroke-width=".4"/>`;
+ [[-24,'−24'],[0,'0'],[20,'20'],[40,'40'],[44,'44']].forEach(([y,t])=>s+=`<text x="-8" y="${-y+1}" font-size="2.8" text-anchor="end" class="rd">Y ${t}</text>`);
+ s+=b(36,80,0,20,'social','Dispatch')+b(36,80,20,40,'money','Cash Count')+b(36,80,40,44,'util','');
+ s+=b(80,96,0,20,'circ','Deck')+b(80,96,20,40,'circ','Gallery');
+ s+=b(212,228,0,20,'circ','Deck')+b(212,228,20,40,'circ','Gallery');
+ s+=b(228,280,0,20,'social','Reception')+b(228,280,20,40,'weapon','Range')+b(228,280,40,44,'util','');
+ s+=`<text x="254" y="-48" font-size="3" text-anchor="middle">Roof Terrace</text>`;
+ s+=`<rect x="96" y="-1" width="116" height="1" fill="var(--k-outdoor)" stroke="var(--ink)" stroke-width=".3"/><text x="154" y="-24" font-size="3.6" text-anchor="middle">YARD · open to sky</text>`;
+ s+=`<rect x="118" y="-2" width="36" height="1" fill="var(--accent)"/><text x="136" y="-4" font-size="2.6" text-anchor="middle">Fight pit</text>`;
+ s+=b(80,146,-24,0,'money','Refinery')+b(146,162,-24,0,'circ','Corr.')+b(162,228,-24,0,'weapon','Cache');
+ s+=`<rect x="2" y="-16" width="2" height="16" fill="var(--ink)"/><rect x="298" y="-16" width="2" height="16" fill="var(--ink)"/><text x="300" y="-18" font-size="2.6" text-anchor="end" class="rd">Wall 16</text>`;
+ s+=`<text x="0" y="8" font-size="3" class="rd">Z 0 · north</text><text x="300" y="8" font-size="3" text-anchor="end" class="rd">Z 300 · south</text>`;
+ document.getElementById('cut').innerHTML=s})();
+</script>

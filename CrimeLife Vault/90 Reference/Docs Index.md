@@ -1,7 +1,7 @@
 ---
 type: reference
 tags: [reference, index, docs]
-updated: 2026-11-14
+updated: 2026-11-17
 sources: ["CrimeLifeRoblox/ (listing 2026-11-14)", "CrimeLifeRoblox/docs/superpowers/ (listing)", "CrimeLifeRoblox/.superpowers/sdd/ (listing)", "CrimeLifeRoblox/FPSSystem/ (listing)", "CrimeLifeRoblox/graphify-out/GRAPH_REPORT.md", "Documents/Roblox top level (listing 2026-11-14)", "CLAUDE.md"]
 ---
 
@@ -26,6 +26,7 @@ Status key: **current** = still the best source for its subject. **historical** 
 | `FPSSystem/Weapons/` | `CashService`, `LevelingService`, `WeaponUpgradeService` | current mirrors |
 | `FPSSystem/Stats/` | `KillStatsService` (per-faction kill counters) | current mirror |
 | `FPSSystem/UI/` | `CashBurst` | current mirror |
+| `docs/crimelife-compound-plan.html` | The tycoon base drawing set for the builder (2026-11-17); also the private artifact https://claude.ai/artifact/Q9v2zXssGBmYU81wWsfmQ3 | **current**; see [[Compound Floor Plan]]; supersedes `Documents/Roblox/docs/crimelife-hq-blueprint.html` |
 | `docs/superpowers/specs/` | 3 design specs: `2026-09-22-cosmetics-monetisation-design.md`, `2026-09-23-renown-phase-2-design.md` (titled Spraypaint Phase 2), `2026-09-23-persistence-phase-3-design.md` | historical design records; [[Cosmetics and Skins]], [[Spraypaint]], [[Persistence and Saves]] |
 | `docs/superpowers/plans/` | 3 implementation plans matching the specs | historical; the plans' "medium" and test sections are still the best statement of the test harness ([[Unit Test Runner]]) |
 | `.superpowers/sdd/2026-09-22-cosmetics-phase-1/` | Ledger: `progress.md`, 8 task briefs and reports, 13 review diffs | historical |

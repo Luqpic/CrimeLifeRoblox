@@ -1,7 +1,7 @@
 ---
 type: reference
 tags: [reference, index, prompts]
-updated: 2026-11-14
+updated: 2026-11-17
 sources: ["CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/ (listing and first headings, 2026-11-14)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/ (listing)", "CLAUDE.md (How to work, rule 5)"]
 ---
 
@@ -155,5 +155,6 @@ The working ledger of the getaway change: briefs, reports, fix rounds, pre-chang
 | File | Bytes | What it asks for | Kind |
 |---|---|---|---|
 | `Tycoon/2026-11-14 CrimeLife Tycoon Kickoff.md` | not recorded | The kickoff for CrimeLife Tycoon: research tycoon retention, plan the merge into Crimelife City, build new systems | prompt only |
+| `Tycoon/2026-11-17 Compound Floor Plan.md` | not recorded | A new tycoon floor plan and builder artifact on a 361 × 300 plot, inspired by a yard-compound screenshot, keeping the HQ blueprint's rooms; then a 3D view | [[2026-11-17 Compound Floor Plan]] |
 
 Related: [[Docs Index]], [[Batch Log]], [[Reference MOC]].
