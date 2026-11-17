@@ -31,6 +31,7 @@ local Heist = ServerScriptService.Heist
 local ComponentRegistry = require(Heist.ComponentRegistry)
 local AccessBarrier = require(Heist.Components.AccessBarrier)
 local LocationServer = require(Heist.Services.LocationServer)
+local FleeingManager = require(Heist.Components.FleeingManager)
 
 local RobbableObject = require(ReplicatedStorage.SharedSystems.RobbableObject)
 local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
@@ -90,6 +91,37 @@ do
 		string.format("[SlowFoodsServer] expected exactly 2 SlowFoodsSupplyBox parts, found %d", #supplyBoxes))
 end
 
+-- Heist layers 2026-11-17: the fleeing Manager, his spawner, his escape point and the storage safe.
+local MANAGER_TAG = "SlowFoodsManager"
+local KEY_ATTRIBUTE = "SlowFoodsKey"
+local NO_KEY_MESSAGE = "You need the manager's key."
+do
+	local managerSpawners = 0
+	for _, spawner in ipairs(CollectionService:GetTagged("NPCSpawner")) do
+		if spawner:GetAttribute("NPCTemplate") == "Manager" then managerSpawners += 1 end
+	end
+	assert(managerSpawners == 1,
+		string.format("[SlowFoodsServer] expected exactly 1 Manager NPCSpawner, found %d", managerSpawners))
+	assert(ReplicatedStorage.RestaurantShared.ModelTemplates:FindFirstChild("Manager"),
+		"[SlowFoodsServer] RestaurantShared.ModelTemplates.Manager is missing")
+	local markers = workspace:FindFirstChild("SlowFoodsMarkers")
+	local escapePoint = markers and markers:FindFirstChild("ManagerEscapePoint")
+	assert(escapePoint and escapePoint:IsA("BasePart"), "[SlowFoodsServer] SlowFoodsMarkers.ManagerEscapePoint is missing")
+	assert(workspace.SlowFoods:FindFirstChild("StorageSafe"), "[SlowFoodsServer] Workspace.SlowFoods.StorageSafe is missing")
+end
+
+-- One key per run: the player who caught the Manager. Cleared on Seal, Rearm, death and leave.
+local keyHolder: Player? = nil
+local keyDiedConn: RBXScriptConnection? = nil
+local function clearKey()
+	if keyDiedConn then keyDiedConn:Disconnect() keyDiedConn = nil end
+	if keyHolder then keyHolder:SetAttribute(KEY_ATTRIBUTE, nil) end
+	keyHolder = nil
+end
+local function hasKey(player): boolean
+	return keyHolder ~= nil and player == keyHolder
+end
+
 -- The shared skeleton: Net.setup, Forfeit, BankInstance, zones/ZoneService,
 -- AlarmEffects (cloned into the Restaurant zone) and DuffelBagAttachment.
 -- Connects nothing yet -- see Start() at the bottom.
@@ -101,6 +133,7 @@ local location = LocationServer.new({
 	zoneTag = T.SlowFoodsZone,
 	markerFolder = "SlowFoodsMarkers",
 	exitCFrame = function() return exitSpawn.CFrame end,
+	onPlayerRemoving = function(player) if player == keyHolder then clearKey() end end,
 })
 
 local bank = location.bank
@@ -128,6 +161,30 @@ local cashierSpawnManager = NPCSpawnManager.new({
 	controllerClass = NPCReactionAnimator,
 })
 bank:RegisterComponent(cashierSpawnManager)
+
+-- Heist layers 2026-11-17: the Manager flees on the alarm; whoever catches him gets the key.
+local managerSpawnManager = NPCSpawnManager.new({
+	template = ReplicatedStorage.RestaurantShared.ModelTemplates.Manager,
+	npcTag = MANAGER_TAG,
+	spawnerTemplateValue = "Manager",
+	npcParent = workspace.SlowFoods,
+	controllerClass = FleeingManager,
+	controllerDeps = {
+		bank = bank,
+		config = Config,
+		escapePoint = workspace.SlowFoodsMarkers.ManagerEscapePoint,
+		onKeyTaken = function(player)
+			clearKey()
+			keyHolder = player
+			player:SetAttribute(KEY_ATTRIBUTE, true)
+			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+			if humanoid then keyDiedConn = humanoid.Died:Connect(clearKey) end
+			net:Toast(player, "You took the manager's key.")
+		end,
+	},
+})
+bank:RegisterComponent(managerSpawnManager)
+bank:RegisterComponent({ Seal = clearKey, Rearm = clearKey })
 
 -- Cash registers aren't bound through the generic registry: they need extra
 -- deps (promptTemplate, onRefused) that would otherwise have to be threaded
@@ -177,6 +234,20 @@ for _, model in ipairs(CollectionService:GetTagged(T.SlowFoodsSupplyBox)) do
 	table.insert(supplyObjects, supply)
 end
 
+-- Heist layers 2026-11-17: the key holder's "Use Key" prompt on the storage-room door (wired below
+-- the door; built first so the door's onSolved can hide it).
+local useKeyPrompt = Instance.new("ProximityPrompt")
+useKeyPrompt.Name = "UseKeyPrompt"
+useKeyPrompt.ActionText = "Use Key"
+useKeyPrompt.ObjectText = "Storage Room"
+useKeyPrompt.HoldDuration = 0
+useKeyPrompt.KeyboardKeyCode = Enum.KeyCode.F
+useKeyPrompt.GamepadKeyCode = Enum.KeyCode.ButtonY
+useKeyPrompt.MaxActivationDistance = 10
+useKeyPrompt.RequiresLineOfSight = false
+useKeyPrompt.Enabled = false
+useKeyPrompt.Parent = workspace.SlowFoods.LockedDoor["ProximityPart Handle"]
+
 -- LockedDoor lockpicking (spec addendum, 2026-09-2X): one persistent,
 -- non-consumable door, already manually placed by the project owner
 -- (workspace.SlowFoods.LockedDoor) -- no tag needed, referenced directly by
@@ -196,8 +267,43 @@ local lockedDoor = LockedDoor.new(workspace.SlowFoods.LockedDoor, {
 	-- ending. Matches this location's own BroadcastState literal exactly.
 	location = "SlowFoods",
 	openCFrame = CFrame.new(76.727, 5.000, 1691.862) * CFrame.Angles(0, math.rad(-90), 0), -- city (phase 3 G12); Robbery: CFrame.new(131.888, 6.062, -293.044) * CFrame.Angles(0, math.rad(180), 0)
+	onSolved = function() useKeyPrompt.Enabled = false end,
 })
 bank:RegisterComponent(lockedDoor)
+
+-- Heist layers 2026-11-17: "Use Key" on the storage-room door, shown to everyone while the door
+-- is closed in an Active run, accepted only from the key holder (key F: the lockpick keeps E).
+useKeyPrompt.Triggered:Connect(function(player)
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then return end
+	if (root.Position - useKeyPrompt.Parent.Position).Magnitude > useKeyPrompt.MaxActivationDistance then return end
+	if not hasKey(player) then
+		net:Toast(player, NO_KEY_MESSAGE)
+		return
+	end
+	if lockedDoor:Open(player) then useKeyPrompt.Enabled = false end
+end)
+bank:RegisterComponent({
+	OnSessionStart = function() useKeyPrompt.Enabled = true end,
+	Seal = function() useKeyPrompt.Enabled = false end,
+})
+
+-- The storage safe: open from session start, robbable only by the key holder, paid over the
+-- bag cap through AddBonus.
+local storageSafe = RobbableObject.new(workspace.SlowFoods.StorageSafe, {
+	bank = bank,
+	promptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobSafePrompt,
+	amount = Config.ManagerSafeAmount,
+	payWith = "bonus",
+	isBlocked = function(player) return not hasKey(player) end,
+	blockedReason = "no_key",
+	onRefused = function(player, reason)
+		if reason == "no_key" then net:Toast(player, NO_KEY_MESSAGE) else notifyRefused(player, reason) end
+	end,
+	playRobSound = function(part) part.SafeRobSound:Play() end,
+})
+bank:RegisterComponent(storageSafe)
 
 do
 	local manifest = registry:Manifest()

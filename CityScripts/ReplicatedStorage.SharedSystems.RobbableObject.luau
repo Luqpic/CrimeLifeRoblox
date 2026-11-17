@@ -92,6 +92,9 @@ function RobbableObject.new(model: Model, deps)
 		-- "carrying_supplies"), and onRobbed(player) after a successful rob. Both optional.
 		blockedReason = deps.blockedReason or "carrying_supplies",
 		onRobbed = deps.onRobbed,
+		-- Heist layers 2026-11-17 (Task 3): "bonus" pays through bank:AddBonus (over the bag cap,
+		-- the SlowFoods storage safe); anything else keeps bank:TryAddDuffel.
+		payWith = deps.payWith,
 		-- Opt-in (spec addendum, 2026-09-17): when true, OnSessionStart resets
 		-- Robbed but does NOT clone the prompt/enable the highlight -- the
 		-- caller becomes responsible for calling :Unlock() itself once whatever
@@ -132,7 +135,12 @@ function RobbableObject:_tryRob(player)
 		return
 	end
 
-	local ok, reason = self.bank:TryAddDuffel(player, self.amount)
+	local ok, reason
+	if self.payWith == "bonus" then
+		ok, reason = self.bank:AddBonus(player, self.amount)
+	else
+		ok, reason = self.bank:TryAddDuffel(player, self.amount)
+	end
 	if not ok then
 		-- Rejected (e.g. cap exceeded): the object is NOT marked robbed and
 		-- its prompt stays live, so the player can retry later (e.g. after

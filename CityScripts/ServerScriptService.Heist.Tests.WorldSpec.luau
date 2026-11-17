@@ -45,7 +45,8 @@ return function()
 		-- Grew from 7 to 9 (spec addendum, 2026-09-2X): NewsStation's own 2
 		-- NewsWorker NPCSpawner placeholders (this file has 2 live rigs, not 3
 		-- like elsewhere -- confirmed live at conversion time).
-		expect.equal(#spawners, 9, "total spawners (2 Bank Clerk + 3 SlowFoods Cashier + 2 Gas2Go Cashier + 2 NewsWorker)")
+		-- Heist layers 2026-11-17: + 1 SlowFoods Manager.
+		expect.equal(#spawners, 10, "total spawners (2 Bank Clerk + 3 SlowFoods Cashier + 1 SlowFoods Manager + 2 Gas2Go Cashier + 2 NewsWorker)")
 		local counts = {}
 		for _, spawner in ipairs(spawners) do
 			local value = spawner:GetAttribute("NPCTemplate")
@@ -54,6 +55,7 @@ return function()
 		end
 		expect.equal(counts.BankClerk, 2, "two BankClerk spawners")
 		expect.equal(counts.Cashier, 3, "three SlowFoods Cashier spawners")
+		expect.equal(counts.Manager, 1, "one SlowFoods Manager spawner")
 		expect.equal(counts.Gas2GoCashier, 2, "two Gas2Go Cashier spawners")
 	end)
 
@@ -62,7 +64,7 @@ return function()
 			local value = spawner:GetAttribute("NPCTemplate")
 			if value == "BankClerk" then
 				expect.truthy(spawner:IsDescendantOf(workspace.Bank), spawner:GetFullName() .. " under Workspace.Bank")
-			elseif value == "Cashier" then
+			elseif value == "Cashier" or value == "Manager" then
 				expect.truthy(spawner:IsDescendantOf(workspace.SlowFoods), spawner:GetFullName() .. " under Workspace.SlowFoods")
 			elseif value == "Gas2GoCashier" then
 				expect.truthy(spawner:IsDescendantOf(workspace.Gas2Go), spawner:GetFullName() .. " under Workspace.Gas2Go")
@@ -935,6 +937,33 @@ return function()
 				expect.truthy(anchor ~= nil and anchor:IsA("BasePart"),
 					folderName .. ".StatusBillboardAnchor is a BasePart -- Getaway measures from its .Position")
 			end
+		end
+	end)
+
+	-- Heist layers 2026-11-17 (Task 3): the SlowFoods Manager layer's world pieces.
+	suite:test("SlowFoods Manager template, escape point and storage safe exist and are wired right", function(expect)
+		local CollectionService = game:GetService("CollectionService")
+		local template = game.ReplicatedStorage.RestaurantShared.ModelTemplates:FindFirstChild("Manager")
+		expect.truthy(template ~= nil, "RestaurantShared.ModelTemplates.Manager exists")
+		if template then
+			local humanoid = template:FindFirstChildOfClass("Humanoid")
+			expect.truthy(humanoid ~= nil and template:FindFirstChild("HumanoidRootPart") ~= nil, "a real rig")
+			expect.equal(humanoid and humanoid.DisplayName, "Manager", "overhead name Manager")
+			expect.truthy(CollectionService:HasTag(template, "Witness") and CollectionService:HasTag(template, "Invulnerable"), "keeps Witness and Invulnerable")
+			expect.falsy(CollectionService:HasTag(template, "SlowFoodsManager"), "the template itself is never tagged")
+		end
+		local escape = workspace.SlowFoodsMarkers:FindFirstChild("ManagerEscapePoint")
+		expect.truthy(escape ~= nil and escape:IsA("BasePart"), "SlowFoodsMarkers.ManagerEscapePoint is a BasePart")
+		if escape then
+			expect.truthy(escape.Anchored and not escape.CanCollide and escape.Transparency == 1, "anchored, invisible, non-colliding")
+		end
+		local safe = workspace.SlowFoods:FindFirstChild("StorageSafe")
+		expect.truthy(safe ~= nil and safe:IsA("Model"), "Workspace.SlowFoods.StorageSafe is a Model")
+		if safe then
+			expect.falsy(CollectionService:HasTag(safe, "BankSafe"), "not tagged BankSafe")
+			expect.truthy(safe:FindFirstChildOfClass("Highlight") ~= nil, "has a Highlight")
+			local sound = safe:FindFirstChild("SafeRobSound", true)
+			expect.truthy(sound ~= nil and sound.Parent:FindFirstChildOfClass("ParticleEmitter") ~= nil, "SafeRobSound beside a ParticleEmitter")
 		end
 	end)
 

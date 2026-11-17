@@ -47,6 +47,13 @@ Config.RegisterRobAmount = 2000
 
 Config.HeartbeatRate = 10
 
+-- Heist layers 2026-11-17: the fleeing Manager. Studs from him a participant may hold "Take Key"
+-- (server re-measured), the storage-safe lump (paid over the bag cap through AddBonus), and the
+-- "Take Key" hold in seconds (server timed).
+Config.ManagerKeyRange = 10
+Config.ManagerSafeAmount = 3000
+Config.ManagerKeyHold = 1
+
 -- Sound asset ID, documentation only (spec addendum, 2026-09-09) -- matching
 -- HeistShared.Config.Sounds' convention. RegisterRobSound itself is a
 -- STATIC pre-placed Sound instance on each register's attach part (same

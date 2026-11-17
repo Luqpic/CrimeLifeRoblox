@@ -549,3 +549,22 @@ Task 2 (component hooks, `Batch: heist layers component hooks`). Same columns; o
 The 12 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (12 / 12). City suites 262 / 262 / 0; heist 649 passed / 1 failed (9 new; the failure is the Zone "real occupancy sweep" timing). Play: `NotifyBroadcastHijacked("Tester")` from a temporary server Script -> client card `Body.Text` = `<b>Tester</b> hijacked the News Station broadcast!`, AlarmBox visible, card 420 x 122. A participant at 15,000 + `AddBonus` 2,500 = 17,500 (cap 15,000) pushed through `SendDuffel("Bank", ...)`: `AmountText` "17,500 / 15,000", `BarFill` Size {1,0},{1,0}, 268 px of its 268 px track. After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 3 (SlowFoods manager chase, `Batch: SlowFoods manager chase`). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.SlowFoodsServer` (Script) | 10,278 / 2040003535 | 15,074 / 1990621141 | Second `NPCSpawnManager` (template `Manager`, tag `SlowFoodsManager`, controller `FleeingManager`, escape point `SlowFoodsMarkers.ManagerEscapePoint`); key holder = player attribute `SlowFoodsKey`, one per run, cleared on Seal, Rearm, death (`Humanoid.Died`) and leave (`onPlayerRemoving`); "Use Key" prompt (key F / ButtonY, hold 0, 10 studs, server re-measured) on `LockedDoor`'s handle, enabled at session start, off on Seal / open / lockpick solve (`onSolved`), non-holder toast "You need the manager's key."; `StorageSafe` `RobbableObject` (RobSafePrompt, `ManagerSafeAmount`, `payWith = "bonus"`, `isBlocked` = not the key holder, `blockedReason = "no_key"`); boot asserts for the Manager spawner (exactly 1), template, escape point and safe. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.RestaurantShared.Config` (ModuleScript) | 3,701 / 2765807960 | 4,029 / 202853836 | `ManagerKeyRange = 10`, `ManagerSafeAmount = 3000`, `ManagerKeyHold = 1`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.SharedSystems.RobbableObject` (ModuleScript) | 12,614 / 2576670976 | 12,918 / 1220821837 | Dep `payWith`: `"bonus"` pays through `bank:AddBonus`; any other value keeps `TryAddDuffel` (default path unchanged, pinned). Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Components.FleeingManager` (ModuleScript) | none | 8,682 / 3380317797 | New: the Manager controller (`new/OnSessionStart/Seal/Destroy/.model`, `state`, `TryTakeKey`), server-timed "Take Key" hold, pathing (GuardPost pattern, AgentRadius 1), hidden at the escape point until Rearm. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.FleeingManagerSpec` (ModuleScript) | none | 7,893 / 714939718 | New: 11 cases. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.RobbableObjectSpec` (ModuleScript) | 23,855 / 526984950 | 25,490 / 1551121651 | 3 cases: default refuses over the cap, `payWith = "bonus"` pays over it once, bonus refuses a non-participant. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.WorldSpec` (ModuleScript) | 50,282 / 3545750290 | 52,330 / 3965556520 | Spawners 9 -> 10 (+1 Manager under SlowFoods); 1 case: Manager template (DisplayName, Witness + Invulnerable, untagged), ManagerEscapePoint, StorageSafe (no BankSafe tag, Highlight, SafeRobSound beside a ParticleEmitter). Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,662 / 4031934301 | 2,721 / 162300076 | `FleeingManagerSpec` registered. Attribute appended. |
+
+Studio objects (not scripts): `RestaurantShared.ModelTemplates.Manager` (clone of Cashier: Humanoid DisplayName "Manager", DisplayDistanceType Subject, NameDisplayDistance 60, WalkSpeed 8; tags Witness, Invulnerable), `Workspace.SlowFoods.NPCSpawners.ManagerSpawner` (clone of CashierSpawner1, `NPCTemplate = "Manager"`, at (94.7, 1.5, 1714)), `Workspace.SlowFoodsMarkers.ManagerEscapePoint` (2x1x2, invisible, at (150, 1.5, 1785)), `Workspace.SlowFoods.StorageSafe` (clone of a Bank safe, BankSafe tag removed, its two SurfaceGuis left out, at (62.5, 2.625, 1706.5) against the storage room's south wall facing the room).
+
+The 8 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (8 / 8). City suites 262 / 262 / 0; heist 664 passed / 1 failed (15 new; the failure is the Zone "real occupancy sweep" timing). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

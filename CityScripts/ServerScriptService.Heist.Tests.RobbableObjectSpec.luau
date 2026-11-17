@@ -73,6 +73,7 @@ return function()
 			isBlocked = overrides.isBlocked,
 			blockedReason = overrides.blockedReason,
 			onRobbed = overrides.onRobbed,
+			payWith = overrides.payWith,
 		})
 		bank:RegisterComponent(object)
 		return bank, object, model, refusals, soundCalls
@@ -584,6 +585,45 @@ return function()
 		object:Unlock()
 		expect.truthy(object._prompt ~= nil, "re-armed after the next OnSessionStart")
 		expect.falsy(model:GetAttribute("Robbed"), "Robbed reset")
+		model:Destroy()
+	end)
+
+	-- Heist layers 2026-11-17 (Task 3): payWith.
+	suite:test("by default a rob over the cap is refused (TryAddDuffel)", function(expect)
+		local now = select(1, makeClock())
+		local bank, object, model, refusals = makeBankAndObject(now)
+		bank:TryStart("p1")
+		bank:AddParticipant("p1")
+		bank:TryAddDuffel("p1", Config.DuffelCap)
+		object:_tryRob("p1")
+		expect.equal(bank:GetDuffel("p1"), Config.DuffelCap, "bag unchanged")
+		expect.equal(refusals[1] and refusals[1].reason, "cap_exceeded", "cap_exceeded")
+		expect.falsy(model:GetAttribute("Robbed"), "not robbed")
+		model:Destroy()
+	end)
+
+	suite:test("payWith = bonus pays over the cap through AddBonus, once", function(expect)
+		local now = select(1, makeClock())
+		local bank, object, model, refusals = makeBankAndObject(now, { payWith = "bonus" })
+		bank:TryStart("p1")
+		bank:AddParticipant("p1")
+		bank:TryAddDuffel("p1", Config.DuffelCap)
+		object:_tryRob("p1")
+		object:_tryRob("p1")
+		expect.equal(bank:GetDuffel("p1"), Config.DuffelCap + AMOUNT, "cap + amount")
+		expect.equal(#refusals, 0, "no refusal")
+		expect.truthy(model:GetAttribute("Robbed"), "robbed")
+		cancelBounce(object)
+		model:Destroy()
+	end)
+
+	suite:test("payWith = bonus refuses a non-participant through onRefused", function(expect)
+		local now = select(1, makeClock())
+		local bank, object, model, refusals = makeBankAndObject(now, { payWith = "bonus" })
+		bank:TryStart("p1")
+		object:_tryRob("p9")
+		expect.equal(refusals[1] and refusals[1].reason, "not_participant", "not_participant")
+		expect.falsy(model:GetAttribute("Robbed"), "not robbed")
 		model:Destroy()
 	end)
 
