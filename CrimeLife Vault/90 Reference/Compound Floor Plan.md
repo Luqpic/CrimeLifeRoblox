@@ -24,6 +24,11 @@ The drawing set the developer's hired builder works from for the CrimeLife tycoo
 - **Bunker** (under the west wing and the yard): Generator Room, Interrogation, Gold Refinery, Vault, Blast Corridor, Weapon Cache, Cells C1–C3.
 - **Money lines:** Foundry (G), Printers (F2), Chop Shop (G), Gold Refinery (B1). The unlock order runs stages 0 to 8. Prices are not set.
 
+## How it gets bought and built (2026-11-17)
+
+- **No buttons.** CrimeLife reuses Outbreak Tycoon's build mechanics: everything is bought from the BUILD menu and drops into place. The plot has no button pads or price boards. The builder makes one model per purchase, sorted by floor (Ground, Upper, Roof, Bunker, Outside) and section, splits each into a few sub-models for the drop-in, and marks a camera spot per purchase.
+- **Build in order, never remove.** No temporary roof caps and no early fence. Each floor's structure includes its ceiling slab, which is the next floor's floor. Upper-floor walls stand on the slab edge. The base plate edge marks the plot until the perimeter wall is bought.
+
 ## Changes from the HQ blueprint
 
 - Four stacked levels (B1, F1, F2, F3) on a 200 × 200 footprint became a flatter ring around a yard, following the developer's reference screenshot.

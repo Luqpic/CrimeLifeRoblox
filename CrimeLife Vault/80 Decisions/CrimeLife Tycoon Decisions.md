@@ -20,6 +20,8 @@ The developer's answers, quoted:
 - Yard: "Open hangout / spawn", "Training / fight pit".
 - "And I need a 3d view of it."
 
+Later the same day, quoted: "we won't be using buttons since we are reusing OBT's build mechanics" and "no need to do temporary caps as in buy this to remove that, just go with the flow, ensure to structure the build like that". So purchases come from the BUILD menu (no plot buttons or pads), and no purchase deletes or swaps another: each floor's ceiling slab is the next floor's floor, and there is no early fence.
+
 Claude's rulings (not yet confirmed by the developer), each with its cost if wrong:
 - **Ruling: Weapon Shop, Display Armory and Tailor move to the ground floor;** the old F3 rooms move to F2. Two floors cannot hold the old four. Cost if wrong: the builder swaps rooms between levels.
 - **Ruling: F2 west (x 4–56, z 80–150) is a spare slot** with walls and floor only. Cost if wrong: one room to assign.

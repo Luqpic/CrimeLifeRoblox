@@ -46,7 +46,7 @@ nav a b{color:var(--muted);font-weight:500;margin-right:4px}
 .tb .meta div:nth-child(2n){border-right:0}
 .tb .meta b{display:block;font:500 .95rem var(--f-mono);margin-top:2px}
 @media (max-width:760px){.tb{grid-template-columns:1fr}.tb .meta{border-left:0;border-top:2px solid var(--ink)}}
-.panel{background:var(--sheet);border:1px solid var(--rule);padding:20px;display:grid;gap:12px;min-width:0}
+.panel{background:var(--sheet);border:1px solid var(--rule);padding:20px;display:grid;gap:12px;min-width:0;align-content:start}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
 ul.rules{margin:0;padding-left:18px;display:grid;gap:6px}
 .legend{display:flex;flex-wrap:wrap;gap:8px 16px}
@@ -165,16 +165,29 @@ html{scroll-behavior:smooth}
  <p>A north-south cut through the yard (looking east) shows how the levels stack. The yard is open to the sky, and the bunker sits underneath it.</p>
  <div class="plan"><svg id="cut" viewBox="-14 -74 340 108" role="img" aria-label="Section through the compound"></svg></div>
  <h3>Unlock stages</h3>
- <p class="lbl">Order for the scripter. Prices are set later.</p>
+ <p class="lbl">The order the BUILD menu offers them in. Prices are set later.</p>
  <div class="stages" id="stages"></div>
- <div class="panel">
-  <h3>Rules so every stage looks finished</h3>
-  <ul class="rules">
-   <li><b>Temporary caps.</b> Until F2 is bought, the ground floor wears a flat roof cap with a parapet. Buying F2 deletes the cap.</li>
-   <li><b>Early boundary.</b> A low chain-link fence marks the plot line from stage 0. The concrete wall, gate and towers in stage 8 replace it.</li>
-   <li><b>Empty rooms still read as rooms.</b> Each room ships with its floor finish and ceiling lights as part of its structure. Furniture and machines come as separate buttons.</li>
-   <li><b>Button pads.</b> Each room gets one button-pad strip just inside its main door, on the deck side.</li>
-  </ul>
+ <div class="grid2">
+  <div class="panel">
+   <h3>How it gets bought</h3>
+   <p>CrimeLife reuses Outbreak Tycoon's build mechanics. There are <b>no buttons or button pads</b> on the plot. Players buy everything from the BUILD menu, and each purchase drops into place.</p>
+   <ul class="rules">
+    <li><b>One model per purchase,</b> named after what it is (Scrap Foundry Structure, Foundry Droppers, Bar Furniture). Sort them by floor (Ground, Upper, Roof, Bunker, Outside) and section (Economy, Structure, Interior, Weapons, Decoration, Facilities).</li>
+    <li><b>Split each purchase into a few sub-models,</b> such as floor, walls and fit-out. The drop-in animation lowers them in layer by layer.</li>
+    <li><b>Mark a camera spot per purchase</b> with an invisible anchored part where the menu camera should frame it from.</li>
+    <li><b>Nothing extra on the plot:</b> no pads, signs or price boards for purchases.</li>
+   </ul>
+  </div>
+  <div class="panel">
+   <h3>Build in order, never remove</h3>
+   <p>Each purchase only adds to what's already there. Nothing is deleted, swapped or capped.</p>
+   <ul class="rules">
+    <li><b>Floor, walls, ceiling.</b> Each floor's structure includes its ceiling slab, and that slab is the next floor's floor. The ground floor is roofed from the start, and the upper floor builds straight on top of it. The upper floor's ceiling is the Roof Terrace floor.</li>
+    <li><b>Exterior walls come with each floor's structure.</b> Upper-floor walls stand on the slab edge, so there is no parapet on the ground slab to get in the way.</li>
+    <li><b>No early fence.</b> The base plate edge marks the plot until the perimeter wall is bought.</li>
+    <li><b>Empty rooms still read as rooms.</b> A room's structure brings its floor finish, walls and lights. Furniture and machines are separate purchases.</li>
+   </ul>
+  </div>
  </div>
 </section>
 </div>
@@ -226,7 +239,7 @@ const SHEETS=[
   R('Core',r(4,150,56,190),'core','Stair (16 wide, half landing) and freight lift (16 × 16). Same footprint from B1 to the roof.'),
   R('Tailor',r(4,190,56,228),'social','14 outfit mannequins on the walls, a tailor NPC, a mirror and a changing booth.'),
   R('Weapon Shop',r(4,228,100,280),'weapon','Counter across the north half and wall racks on the west and south walls. Door into Reception.'),
-  R('Reception',r(100,228,160,280),'social','Front-company desk, cash collector, the 24-wide double glass entrance on the south wall and an open arch north to the yard. Holds the structure pads for the shell.'),
+  R('Reception',r(100,228,160,280),'social','Front-company desk, cash collector, the 24-wide double glass entrance on the south wall and an open arch north to the yard.'),
   R('Display Armory',r(160,228,216,280),'weapon','Glass cases and lit wall racks showing owned weapons. Doors to Reception and the deck.'),
   R('Chop Shop',r(216,80,268,130),'vehicle','Money line 3. Car lift by the east roll-up (cars drive in from the lane), 2 strip bays, parts conveyor to a crusher.'),
   R('Garage Bays 1–2',r(216,130,268,200),'vehicle','Two parking bays with roll-up doors onto the lane. Tool walls and tyre stacks.'),
@@ -243,7 +256,7 @@ const SHEETS=[
   F('Stair',8,152,24,188),F('Lift',34,162,50,178),
   F('Outfits',6,194,10,224),F('Counter',10,236,96,242),F('Racks',6,246,10,276),
   F('Desk',112,250,148,256),F('Cases',166,246,210,252),
-  F('Car lift',224,94,250,118),F('Crusher',220,82,236,90),
+  F('Car lift',236,104,262,128),F('Crusher',218,116,230,128),
   F('Bay 1',226,134,262,160),F('Bay 2',226,168,262,194),F('Turntable',226,206,250,230),
   F('Fight pit',118,122,154,158),F('Benches',84,132,92,176),F('Benches',180,132,188,176),
  ],
@@ -268,7 +281,7 @@ const SHEETS=[
   R('Weapon Workshop',r(160,228,216,280),'weapon','Benches, vices and parts bins. A glass wall looks into the range\'s firing line.'),
   R('Exec Hall',r(216,80,268,140),'exec','Boss reception: secretary desk, trophy wall, waiting chairs. Leads north into the Penthouse.'),
   R('Lounge',r(216,140,268,200),'exec','Crew lounge: sofas, pool table, TV wall and windows over the lane.'),
-  R('Meeting Office',SE,'exec','Long table for 10 and a map wall. Glass on the cut corner looks at the gate.',{lx:240,lz:236,cut:1}),
+  R('Meeting Office',SE,'exec','Long table for 10 and a map wall. Glass on the cut corner looks at the gate.',{lx:242,lz:214,cut:1}),
   R('Gallery',RING,'circ','Balcony ring over the deck, with a railing on the yard side. Players watch the fight pit from here.',{lx:136,lz:89}),
   R('Yard (open below)',OCT,'outdoor','',{hide:1}),
   R('Skybridge',r(268,54,300,66),'circ','12-wide covered bridge over the drive lane to the Watchtower, 20 clear underneath.',{nodim:1,nolabel:1}),
@@ -279,7 +292,7 @@ const SHEETS=[
   F('Desk',236,44,262,54),F('Sofa',176,64,206,72),
   F('Stair',8,152,24,188),F('Lift',34,162,50,178),
   F('Targets',6,232,10,276),F('Booths',146,232,154,276),
-  F('Benches',166,264,210,276),F('Pool',228,158,256,172),F('Table',226,214,248,250),
+  F('Benches',166,264,210,276),F('Pool',228,158,256,172),F('Table',220,232,236,262),
  ],
  conv:[[[14,52],[104,52],[124,52],[124,60]]],
  doors:[D(80,80,92,80),D(134,80,146,80),D(184,80,196,80),D(112,48,112,60),D(268,54,268,66),D(230,80,242,80),
@@ -312,17 +325,17 @@ const SHEETS=[
   R('Cells C1–C3',r(140,162,216,228),'secure','3 cells with bar doors, about 25 wide each, off the corridor.'),
  ],
  fx:[...[62,80,98,116,134].map((x,i)=>F('F'+(i+1),x,84,x+12,96)),F('Gold stack',172,100,204,130),F('Gens',10,90,48,112),
-  F('C1',142,170,164,226),F('C2',167,170,189,226),F('C3',192,170,214,226),F('Racks',64,170,132,176),F('Crates',64,200,110,222),
+  F('C1',142,190,164,226),F('C2',167,190,189,226),F('C3',192,190,214,226),F('Racks',64,170,132,176),F('Crates',64,200,110,222),
   F('Stair',8,152,24,188),F('Lift',34,162,50,178),F('Table',20,204,40,214)],
  conv:[[[68,102],[140,102],[160,102],[160,110]]],
  doors:[D(56,150,56,160),D(56,104,56,116),D(56,200,56,212),D(96,146,108,146),D(175,146,191,146,'roll'),D(92,162,104,162),D(147,162,159,162),D(172,162,184,162),D(197,162,209,162)]},
 ];
 
 const STAGES=[
- ['0','Plot, Reception and Yard','Chain-link fence, Reception shell, yard grass with the spawn pad, deck ring. Temporary flat roof cap.'],
+ ['0','Plot, Reception and Yard','Reception, the yard grass with the spawn pad, and the deck ring. The ground slab comes with it.'],
  ['1','Scrap Foundry','Money line 1, plus Dispatch and the Warehouse.'],
  ['2','Bar + Stage and Tailor','The social rooms on the ground floor.'],
- ['3','Upper floor and Printers','F2 shell and gallery (deletes the roof cap), Counterfeit Printers and Cash Counting (money line 2).'],
+ ['3','Upper floor and Printers','Upper floor shell and gallery built on the ground floor\'s ceiling slab, Counterfeit Printers and Cash Counting (money line 2).'],
  ['4','Weapons','Weapon Shop, Display Armory, Weapon Workshop and Shooting Range.'],
  ['5','Garage','Chop Shop (money line 3), Bays 1–2 and Showroom with Bay 3.'],
  ['6','Executive suite','Exec Hall, Lounge, Meeting Office and Boss Penthouse.'],
@@ -342,10 +355,21 @@ function grid(){let s='';
  for(let z=0;z<=H;z+=50)s+=`<text class="gtx" x="-3" y="${z+1}" font-size="3.2" text-anchor="end">${z}</text>`;
  return s}
 
-function label(x,z,w,name,dim){
- const fs=Math.max(2.8,Math.min(5.4,(w-4)/(name.length*.6)));
- return `<text class="rn" x="${x}" y="${z}" font-size="${fs.toFixed(2)}" text-anchor="middle">${esc(name)}</text>`+
-  (dim?`<text class="rd" x="${x}" y="${z+fs*.95}" font-size="${(fs*.68).toFixed(2)}" text-anchor="middle">${dim}</text>`:'')}
+// Room label = name + size line. Box is estimated from character counts; (x,z) is the box centre.
+const lfs=(w,name)=>Math.max(2.8,Math.min(5.4,(w-4)/(name.length*.6)));
+const lbox=(x,z,fs,name,dim)=>{const w=Math.max(name.length*fs*.6,dim?dim.length*fs*.68*.62:0)+1,h=fs*(dim?2:1.1)+.6;return[x-w/2,z-h/2,x+w/2,z+h/2]};
+const hit=(a,b)=>a[0]<b[2]&&b[0]<a[2]&&a[1]<b[3]&&b[1]<a[3];
+// Try the preferred spot, then spots spiralling out inside the room's bbox, until clear of fixtures and other labels.
+function place(x0,z0,fs,name,dim,room,blocked){
+ const inside=b=>b[0]>=room[0]+.8&&b[2]<=room[2]-.8&&b[1]>=room[1]+.8&&b[3]<=room[3]-.8;
+ for(let rad=0;rad<=Math.max(room[2]-room[0],room[3]-room[1]);rad+=2){
+  for(let a=0;a<(rad?Math.max(8,rad*2):1);a++){const t=a/(rad?Math.max(8,rad*2):1)*Math.PI*2,x=x0+Math.cos(t)*rad,z=z0+Math.sin(t)*rad,b=lbox(x,z,fs,name,dim);
+   if(inside(b)&&!blocked.some(o=>hit(b,o)))return[x,z,b]}}
+ return[x0,z0,lbox(x0,z0,fs,name,dim)]}
+function label(x,z,fs,name,dim){
+ const top=z-fs*(dim?.95:.45)+fs*.72;
+ return `<text class="rn" x="${x}" y="${top.toFixed(2)}" font-size="${fs.toFixed(2)}" text-anchor="middle">${esc(name)}</text>`+
+  (dim?`<text class="rd" x="${x}" y="${(top+fs*1.2).toFixed(2)}" font-size="${(fs*.68).toFixed(2)}" text-anchor="middle">${dim}</text>`:'')}
 
 function svgFor(s){
  let o=`<svg viewBox="-12 -10 ${W+20} ${H+22}" role="img" aria-label="${esc(s.title)} plan">`+grid();
@@ -364,9 +388,11 @@ function svgFor(s){
  (s.doors||[]).forEach(d=>{o+=`<line class="gap" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="1.8"/>`;
   o+=`<line class="${d.t=='roll'?'roll':'dr'}" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="${d.t=='roll'?.9:.35}"/>`});
  (s.ghostLabel||[]).forEach(([x,z,t])=>o+=`<text x="${x}" y="${z}" font-size="2.6" text-anchor="middle" class="rd">${t}</text>`);
- s.rooms.forEach(rm=>{if(rm.nolabel)return;const[a,b,c,d]=bbox(rm.p),w=c-a,h=d-b;
-  const x=rm.lx??a+w/2,z=rm.lz??b+h/2;
-  o+=label(x,z,rm.lx?60:w,rm.n,rm.nodim?'':`${w} × ${h}`)});
+ const blocked=(s.fx||[]).map(f=>{const[a,b,c,d]=bbox(f.p);return[a-.5,b-.5,c+.5,d+.5]}).concat((s.pads||[]).map(bbox));
+ s.rooms.forEach(rm=>{if(rm.nolabel)return;const[a,b,c,d]=bbox(rm.p),w=c-a,h=d-b,dim=rm.nodim?'':`${w} × ${h}`;
+  const fs=lfs(rm.lx?60:w,rm.n),room=rm.lx?[rm.lx-34,rm.lz-14,rm.lx+34,rm.lz+14]:[a,b,c,d];
+  const[x,z,box]=place(rm.lx??a+w/2,rm.lz??b+h/2,fs,rm.n,dim,room,blocked);blocked.push(box);
+  o+=label(x,z,fs,rm.n,dim)});
  // north arrow + scale
  o+=`<g transform="translate(${W-2},${H+12})"><text x="-40" y="1" font-size="3" text-anchor="end">0</text><rect x="-39" y="-1.5" width="20" height="3" fill="var(--ink)"/><rect x="-19" y="-1.5" width="20" height="3" fill="none" stroke="var(--ink)" stroke-width=".4"/><text x="3" y="1" font-size="3">40 studs</text></g>`;
  o+=`<g transform="translate(-6,${H+12})"><path d="M0,-4 L2.5,3 L0,1.5 L-2.5,3Z" fill="var(--ink)"/><text x="5" y="2" font-size="3.2">N ↑ (−Z)</text></g>`;
