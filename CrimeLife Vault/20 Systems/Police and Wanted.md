@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, police, wanted, npc-ai, heists, hud]
-updated: 2026-11-17
+updated: 2026-11-18
 sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "70 Batches/2026-11-17 Police Slow Fill.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-17-police-and-wanted.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CityScripts/ReplicatedStorage.Wanted.Constants.luau"]
 ---
 
@@ -63,6 +63,7 @@ Measured end to end on 2026-11-17 (`CityMerge/police/final-run.md`): SlowFoods 1
 - Building a full round of 10 officers makes one server step of about 120 ms.
 
 ## History
+- 2026-11-17: a heavy-loot carrier counts as robbing (`CarryGetaway` registers `addActiveRobbery` for a carry near its location); the NewsStation broadcast raises every participant to at least 3 stars (`BroadcastHeatFloor`) and alerts its guards (`GuardPost:Alert()`). [[2026-11-17 Heist Layers]]
 - 2026-11-17: NewsWorker tagged `Invulnerable` (it keeps `Witness`): witnessed-hurt heat now comes from guards only. [[2026-11-17 Known Issues Pass]]
 - 2026-11-17: built in six tasks: heat and alarms; police squads on the enemy AI; witnesses and NewsStation guards; the star meter; the quest givers become crooked cops; closing run. [[2026-11-17 Police and Wanted]]
 - 2026-11-17: the slow fill fixed: many cheap samples, a per-round path-check budget. [[2026-11-17 Police Slow Fill]]

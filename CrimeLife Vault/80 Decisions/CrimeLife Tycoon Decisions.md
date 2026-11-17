@@ -1,13 +1,36 @@
 ---
 type: decision
 tags: [decision, tycoon, merge, crimelife-tycoon]
-updated: 2026-11-17
+updated: 2026-11-18
 sources: [".superpowers/sdd/2026-11-17-known-issues-pass/progress.md", ".superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
 ---
 
 # CrimeLife Tycoon Decisions
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
+
+## 2026-11-17: heist signature layers
+
+The developer's calls: approach A (one signature layer per location, built mostly from existing pieces) and the four layers as proposed; SlowFoods uses its storage room, the Bank layer goes in open space already in the Bank; "proceed until you finish" while away, so everything below is the controller's call unless marked. On 2026-11-18, mid-batch, the developer gave a standing instruction: **reuse assets already in the game (gold, money, props) instead of building from parts.** It is applied from Task 6 on; the earlier tasks were already clone-first. Evidence and numbers: [[2026-11-17 Heist Layers]].
+
+Rulings the spec asked the developer to check (the developer has not confirmed them):
+1. **The key opens the storage-room door at once and the safe;** others can still lockpick the door. Cost if wrong: one prompt.
+2. **Layer cash rides in the bag over the cap** (`AddBonus`), since the 4000 SlowFoods cap would refuse any lump. Cost if wrong: the bag can read over its cap; the HUD handles it.
+3. **Heavy loot outlives the timer and the supplier refuses it** (otherwise the supplier is a getaway-free cash-out). Cost if wrong: a carrier ejected by the timer still banks outside.
+4. **Numbers:** safe 3000, ATM rip 9000, broadcast 6000 each, box cash 1500, gold bar 8000, carry speed 12, broadcast 45 s. Cost if wrong: Config lines.
+5. **The broadcast pays every participant at the desk and pauses rather than resets** when the desk is left. Cost if wrong: one rule in `BroadcastDesk:Update`.
+6. **Heavy-loot carriers count as robbing for the police** (`addActiveRobbery`). Cost if wrong: one registration.
+
+Rulings made during the run (from `.superpowers/sdd/2026-11-17-heist-layers/progress.md`):
+- **Execute on `main`,** as every CrimeLife batch: the developer's established practice, no worktree for a Studio place. Cost if wrong: none (nothing pushed).
+- **Models:** Opus for Tasks 1 to 6 (shared contracts and Studio building), Sonnet for Task 7 and the task reviews, Opus for the final review (Fable was out of credits that day). Cost if wrong: spend.
+- **The Manager flees out the front door** (escape point (150, 1.5, 1785)): the restaurant has no back or side exit (measured; Play pathfinding to every point behind it returned NoPath), and the spec assumed one. Cost if wrong: one marker to move if a back door is built.
+- **The Manager's overhead is `Humanoid.DisplayName`** (`DisplayDistanceType` Subject), not a BillboardGui: engine-drawn, nothing to maintain. Cost if wrong: one BillboardGui to author if it clashes with the nameplate look.
+- **Keep the `EquipService` carry guard:** the spec requires "cannot shoot" and Play showed a hotbar swap firing a gun during a carry. One server equip path; no cost found.
+- **Keep the ATM rip refusing while the bag holds Gas2Go loot:** the same one-loot-kind rule as the barrels; it makes register bag against ATM carry a real choice. Cost if wrong: one `isBlocked` line.
+- **The broadcast desk stands in the lobby corner (-674, 4.1, 1002.5),** about 16 studs from `MasterComputer` across the counter: behind the counter is furniture and `GuardPost2`'s spot. Cost if wrong: one model to move.
+- **The carrier fix must leave the base obby exactly as before** (review of Task 6 rejected the pad nudge that changed it for everyone): carrier-only ledges via collision groups, shown only on carriers' clients, added until capped trials land 9 of 10 or better at every jump. The spec's anti-goal "base flow exactly as today" is binding. Cost if wrong: a small client script and two collision groups to maintain.
+- **Implementer rulings kept:** Use Key and Rip Out ATM on key F (two E prompts on one part show only one under `OnePerButton`); Manager WalkSpeed 8 (from the catch arithmetic against player WalkSpeed 25); layer modules (`FleeingManager`, `ATMRipOut`, `BroadcastDesk`, `DepositBoxes`) are their own components for testability; hands-full gold drops at the box with the normal re-pickup prompt, usable by anyone; the deposit-box wall is built from parts because no suitable asset exists, while the gold bar reuses the HQ `GoldB` mesh.
 
 ## 2026-11-17: the compound floor plan
 

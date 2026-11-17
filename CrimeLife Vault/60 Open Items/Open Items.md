@@ -1,7 +1,7 @@
 ---
 type: open
 tags: [open-items, bugs, watch-list]
-updated: 2026-11-17
+updated: 2026-11-18
 sources: [".superpowers/sdd/2026-11-17-known-issues-pass/progress.md", ".superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/*.md (Status lines and Notes)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/*.md (Status lines and Notes)", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-persistence-phase-3-design.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md"]
 ---
 
@@ -19,6 +19,7 @@ Harvested on 2026-11-14 (city items added the same day; 2026-11-15 items from [[
 - **Publish the 49 viewmodel KeyframeSequences**: the Studio tooling cannot upload animations (2026-09-20). [[FPS-Viewmodel-KeyframeSequence-Export]]
 - **Upload icons for the eight new guns** (2026-09-24). [[FPS-Eight-New-Pistols-And-Shotguns]]
 - **Share the sound assets that fail "not authorized"** in the Creator Dashboard: about 9 weapon sounds (2026-09-18) and about 10 sounds (2026-09-24); the logs do not say whether these overlap. [[FPS-Figma-1to1-Image-Export-And-Font-Fix]] [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
+- **Save state after the heist layers (2026-11-18).** `Roblox Games/Crimelife city.rbxl` was last written Nov 17 16:56 (`stat`), before every commit of [[2026-11-17 Heist Layers]] (first Nov 17 19:24, last Nov 18 01:51). Nothing from that batch (four layers, carrier ledges, the new modules and templates, the edited scripts) is on disk; no word to save was given. The scripts are mirrored in `CityScripts/`.
 
 ### City map (2026-11-14)
 - **Set `Workspace.ModelStreamingBehavior` to `Legacy`** in the Properties panel: it is not scriptable, so it is not confirmed (2026-11-14). [[2026-11-14 City Baseline and Cleanup]]
@@ -76,6 +77,18 @@ All from [[2026-11-17 Police and Wanted]]; system: [[Police and Wanted]].
 - **A reset after banking clears the wanted level** (death clears heat by design, and a reset is a death): the developer to decide whether a reset should keep it. Until then it is a cheap escape.
 - **A full round of 10 officers makes one server step of about 120 ms** (building the rigs; measured 2026-11-17). Spread the builds over frames if it shows in a playtest. [[2026-11-17 Police Slow Fill]]
 - **Deferred minors, still true:** the `start()` filter test needs a real player, so that part is proven in Play only; the alarm registration lines in `LocationServer` and `HeistServer` are proven by Play only; an adopted officer can push a squad over its target until the next dispatcher tick (1 s), when the surplus leaves (the cap is unaffected); the star is a text glyph, not art; five or more simultaneous heist cards reach the meter at 1080 wide (computed); heist modals (`HeistModals`) are not in `UI.Panels`, so a centred modal can cover the meter on a small screen; `WantedSeen` casts the seen rays on every 2 Hz step, also inside the search window; the drain after leaving sight read 6.8 s, not 8 (2 Hz stepping); the hidden `dialog` labels on the givers still hold the authoring text "LEVEL 1 QUEST" (overwritten before shown); Bank guards stand 3 studs above their posts (kept as they were); `Cashier`, `BankClerk` and (since 2026-11-17) `NewsWorker` are `Invulnerable`, so "hurting a heist civilian" now means guards only; `PoliceDispatcher.debug` and its spawn log stay as a test aid (off by default).
+
+### Heist layers leftovers (2026-11-17)
+All from [[2026-11-17 Heist Layers]].
+- **No getaway widget for heavy loot** (the ATM and the gold bar): the widget keys off the duffel, so carriers see only the pickup toast and the "Banked" toast. Product call.
+- **Gas2Go ATM vanished once** after a death mid-rip; not reproduced in 3 tries. There is no rebuild of a destroyed ATM (a boot-time clone in `ServerStorage` would cover it). Watch in a real playtest.
+- **Carrier ledges (Bank obby):** they keep `CanQuery`, so a raycast or `Mouse.Target` can hit them; collision groups registered later (`EnemyRig` "Enemy") collide with `CarrierLedge` by default; trials were scripted, not human; the z 2472 jump was 10/10 scripted, the inbound jump at base speed was not walked.
+- **A hands-full gold bar** dropped at the box despawns after the usual 20 s; the gold carrier's death and leave are not pinned in a spec; the fallback paths are tested with fakes only.
+- **Test gaps:** no automated test for `SlowFoodsServer` key, door and safe wiring, the NewsStation heat, alert and payout wiring, or two players racing a rip; the `CarryGetawaySpec` leaves 6 anchors and characters in `Workspace`.
+- **Per-player state not cleared everywhere:** `_holdBegan` entries for leavers persist until the next stop (`FleeingManager`), is cleared only at `_arm` (`ATMRipOut`), and not on death (`BroadcastDesk`); `LockedDoor:Destroy` does not clear its `activeDoorByPlayer` entry.
+- **Edges:** `SupplyObject:GiveTo` returns true even when `CarryState:PickUp` refused (`DepositBoxes` checks `GetCarried` itself); `AddBonus` accepts NaN and huge amounts (as `TryAddDuffel`); a re-picked carry outside the radius banks at once; `Crouching` stand-up is uncapped for one frame; a Manager can be shoved; `Rearm` resets an ATM that an old rip may still carry; the "Use Key" prompt and the broadcast prompt show for non-participants (silent refusal); the `has_duffel` toast says "supplies"; the desk and its OFF AIR billboard are always visible; one extra toast at go-live.
+- **Small:** `NotificationClient` waits for `BroadcastHijacked` with no timeout; one Manager run-time sample (14.66 s); `CarryState`'s comment on its re-equip lock is optimistic (`EquipService` now closes it).
+- **Needs a person:** every layer played by hand, two players in a crew, a leaver mid-broadcast, whether the Manager catch window (about 15 s against player WalkSpeed 25) feels right, and the payout numbers (3000, 9000, 6000, 1500, 8000).
 
 ### Known issues pass leftovers (2026-11-17)
 All from [[2026-11-17 Known Issues Pass]].

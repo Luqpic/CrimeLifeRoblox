@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, ui, notifications]
-updated: 2026-11-16
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md"]
 ---
 
@@ -39,6 +39,7 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - Writing the same attribute from Server then Client `execute_luau` in one session threw `Unable to cast Font to Font` and ended Play.
 
 ## History
+- 2026-11-17: `Net` remote `BroadcastHijacked` and a `NotificationClient` listener show a city-wide card "<name> hijacked the News Station broadcast!" on the existing heist template. [[2026-11-17 Heist Layers]]
 - 2026-11-16 (city): Robbery's `NotificationGui` renamed `HeistNotificationGui`, its stack moved clear of the city's. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: kill toast titled "KILLED <Name>". [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-24: icons on both toast lines (`message` accepts `Line`). [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]

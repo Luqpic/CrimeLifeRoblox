@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, robbery, puzzles, ui]
-updated: 2026-11-16
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/NewsStation-Hacking-Randomize-Word-Button.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Figma-Slices-Imported-To-Studio.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/RobberySystem/Performance-Optimization-And-Unification.md"]
 ---
 
@@ -39,6 +39,7 @@ The obstacles inside each robbery ([[Robbery Heists and Getaway]]): lockpicking 
 - Breach / completion screens need their own artwork: boxes and buttons are baked into the panel.
 
 ## History
+- 2026-11-17: `LockedDoor` gained `onSolved`, `objectText`, `canAttempt`, `Open(player)` and one live lockpick attempt per player across all doors (the Bank's 8 deposit boxes use them); `RobbableObject` gained `blockedReason`, `onRobbed`, `Close`, `payWith`; `MasterComputer` gained `onBreached`. [[2026-11-17 Heist Layers]]
 - 2026-11-16 (city): puzzles imported with the heists; focus mode dims the city cash display; the NewsStation safe now refuses attempts closer than the prompt's hold. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-19: re-trigger guard on `LockedDoor` and `MasterComputer`; GUI fades; focus mode with FOV/blur and shared button effects; close buttons via `UI.Effects.bindClose`. [[Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades]] [[Shared-UI-Effects-FOV-Blur-And-Sounds]] [[Close-Button-Unified-With-FPS]]
 - 2026-09-18: lockpick arcs match the hit test; breach panel; safe keypad boxes normalised; puzzles on Figma slices. [[UI-Bug-Fixes-Notification-HUD-Lockpick-Titles]] [[Figma-Slices-Imported-To-Studio]] [[Slice-Transparency-And-Anchor-Fixes]]

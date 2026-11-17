@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, movement, stamina, camera, fps]
-updated: 2026-11-17
+updated: 2026-11-18
 sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md"]
 ---
 
@@ -47,6 +47,7 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-17: character attribute `CarrySpeedCap` (12, `Movement.Constants`) set by `CarryState` for heavy loot: `Animate2`, `SprintAuthority` and `Crouching` cap WalkSpeed at it and grant no sprint; clearing it hands back 20. Measured sprint 38 uncapped, 12 capped. [[2026-11-17 Heist Layers]]
 - 2026-11-17: `Animate2` backward clamp keys on input, not velocity: the 20 / 25.83 `WalkSpeed` swing against a wall is gone. [[2026-11-17 Known Issues Pass]]
 - 2026-09-20: every landing is a dead stop; soft floor (12) and sprint detection deleted. [[FPS-All-Landings-Dead-Stop]]
 - 2026-09-19: sprint landing dead stop with shared ramp; landing camera jolt traced to the lean divisor (first fix, frame-time clamp, kept but was not the cause); dead fall/climb animation assets replaced. [[FPS-Sprint-Landing-Dead-Stop]] [[FPS-Landing-Camera-Jolt]] [[FPS-Landing-Jolt-Root-Cause]] [[FPS-Fall-Animation-Dead-Asset]]
