@@ -105,6 +105,8 @@ All from [[2026-11-17 Police and Wanted]]; system: [[Police and Wanted]].
 
 ## Open bugs
 
+- **Police squads fill slowly where spawn spots are scarce** (2026-11-17, after the final review fix): at the city spawn a 5-star squad brought 1 officer in 60 s; at the Bank exit all 10 arrived in 26 s. The fix found by the re-review: a per-player budget of path checks shared across a spawn round (raycasts capped), so a successful search keeps going and an unreachable player still costs a fixed amount. Robbery alarms, the main source of heat, fill normally. [[2026-11-17 Police and Wanted]] -> [[Police and Wanted]]
+
 - **Re-slotting a held weapon leaves a second copy** with a full magazine: `SetLoadoutSlotRequest` clears the old slot, does not destroy the held Tool and grants a fresh one (not a FIX: the weapon is owned) (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Weapons and Blaster]]
 - **A skin choice can be stored for a weapon the player does not own** (`EquipSkinRequest`, `BuySkinRequest` check the weapon exists, not ownership); nothing is granted (2026-11-15). [[2026-11-15 FPS Hardening In City]] -> [[Cosmetics and Skins]]
 - **One burst after idle is accepted by the server rate of fire:** any claimed timestamp from the last second of server time passes, so about 12 AK47 shots at 600 rpm or 1 swing of a 30 rpm weapon go through before the cap holds (2026-11-15). [[2026-11-15 FPS Hardening In City]]
