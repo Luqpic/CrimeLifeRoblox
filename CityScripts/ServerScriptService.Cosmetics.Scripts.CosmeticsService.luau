@@ -11,6 +11,7 @@ local Palettes = require(ReplicatedStorage.Cosmetics.Palettes)
 local SkinApplier = require(ReplicatedStorage.Cosmetics.SkinApplier)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
+local UpgradeConfig = require(ReplicatedStorage.Weapons.UpgradeConfig)
 local ProfileGateway = require(ServerScriptService.Persistence.Scripts.ProfileGateway)
 
 local CosmeticsService = {}
@@ -40,6 +41,13 @@ function CosmeticsService.ownsPalette(player: Player, key: string): boolean
 		return player:GetAttribute(SpraypaintConstants.ownedAttributeFor(key)) == true
 	end
 	return true
+end
+
+-- A skin is stored and charged per weapon, so a weapon the player does not own is refused outright:
+-- without this a forged request names any weapon in the armoury and writes a profile key for it. The
+-- same WeaponOwned_<name> attribute UpgradeRequest checks. Shared with SpraypaintService's buy handler.
+function CosmeticsService.ownsWeapon(player: Player, weaponName: string): boolean
+	return player:GetAttribute(UpgradeConfig.ownedAttributeFor(weaponName)) == true
 end
 
 function CosmeticsService.equippedKeyFor(player: Player, weaponName: string): string
@@ -113,6 +121,9 @@ function CosmeticsService.handleEquipRequest(player: Player, weaponName: unknown
 	-- arbitrary client-supplied string could guarantee neither.
 	local tool = ServerStorage.Weapons:FindFirstChild(weaponName)
 	if not tool or not tool:IsA("Tool") then
+		return
+	end
+	if not CosmeticsService.ownsWeapon(player, weaponName) then
 		return
 	end
 	if not CosmeticsService.ownsPalette(player, paletteKey) then

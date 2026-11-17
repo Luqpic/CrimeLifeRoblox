@@ -1,0 +1,49 @@
+-- Spraypaint earn rates and the names Spraypaint state is stored under.
+--
+-- Data only. Rates live here rather than inline so they can be tuned from one place without touching
+-- the service that awards them -- these figures are a play-testing starting point, not a balance claim.
+local Constants = {}
+
+-- The balance replicates as a player attribute, matching Level, XP and the kill counters. One scalar
+-- for the whole player -- reverted from a per-weapon map plus a shared-bucket fallback (see
+-- ProfileGateway.migrate's v2 -> v3 step). No leaderstats column: Cash is public because it is the
+-- combat economy, and a second column for a cosmetic currency clutters the player list for everyone
+-- in the server.
+Constants.ATTRIBUTE = "Spraypaint"
+
+-- Set by the server once the saved balance is restored; the HUD treats every change before it as a seed.
+Constants.RESTORED_ATTRIBUTE = "SpraypaintRestored"
+
+-- The spray-can icon, white so ImageColor3 can tint it (see FPS-Weaponry-Category-Icons.md). One owner
+-- for the id: the shop's balance badge, the Skins card's price labels and the purchase burst all read
+-- it from here.
+Constants.ICON_ASSET_ID = "rbxassetid://76994955461263"
+
+-- Keyed by the Faction attribute the enemy rigs already carry. Police are worth more because EnemyAI
+-- gives them per-type accuracy and damage overrides that make them the harder target.
+Constants.KILL_SPRAYPAINT = {
+	Criminal = 2,
+	Police = 5,
+}
+
+Constants.LEVEL_SPRAYPAINT = 25
+
+-- Anything that is not a recognised NPC faction is worth nothing, and that includes nil.
+--
+-- This is the anti-farming rule, not a defensive nicety: a player's own character carries no Faction
+-- attribute, so PvP kills arrive here as nil and must stay worthless. KillStatsService and CashService
+-- both already exclude PvP for the same reason.
+function Constants.spraypaintForFaction(faction: unknown): number
+	if typeof(faction) ~= "string" then
+		return 0
+	end
+	return Constants.KILL_SPRAYPAINT[faction] or 0
+end
+
+-- Ownership of a bought palette, mirroring the WeaponOwned_* convention already in the place.
+-- Sanitised because SetAttribute throws on a name containing anything outside [A-Za-z0-9_].
+function Constants.ownedAttributeFor(paletteKey: string): string
+	return "SkinOwned_" .. (string.gsub(paletteKey, "[^%w_]", "_"))
+end
+
+return Constants

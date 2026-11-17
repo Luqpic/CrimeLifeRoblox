@@ -53,6 +53,9 @@ function SpraypaintService.hydrate(player: any, profile: any?)
 	for paletteKey in profile.Data.skinsOwned do
 		player:SetAttribute(Constants.ownedAttributeFor(paletteKey), true)
 	end
+	-- Last, so a client sees the restored balance before it: that is a seed, not a gain to announce.
+	-- The same flag-after-restore order QuestService uses for QuestsRestored.
+	player:SetAttribute(Constants.RESTORED_ATTRIBUTE, true)
 end
 
 -- Guarded rather than trusted: a negative grant would be a silent deduction, and the callers are
@@ -190,6 +193,11 @@ end
 -- Named (rather than inline in the remote connection) so this seam the test suite can call directly,
 -- matching the precedent CosmeticsService.handleEquipRequest already set.
 function SpraypaintService.handleBuySkinRequest(player: Player, paletteKey: unknown, weaponName: unknown)
+	-- Before the charge, not after: handleBuyRequest spends, so a weapon the player does not own (or that
+	-- does not exist) must be refused while nothing has been taken.
+	if typeof(weaponName) ~= "string" or not CosmeticsService.ownsWeapon(player, weaponName) then
+		return
+	end
 	if not SpraypaintService.handleBuyRequest(player, paletteKey) then
 		return
 	end

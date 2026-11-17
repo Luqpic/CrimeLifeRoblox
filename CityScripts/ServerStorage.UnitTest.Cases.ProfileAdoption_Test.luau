@@ -131,6 +131,7 @@ return function(t)
 		local profile = Gateway.loadForKey("adopt-buy-equip-" .. os.clock())
 		Gateway._bind(player, profile)
 
+		player:SetAttribute("WeaponOwned_Crowbar", true)
 		SpraypaintService.grant(player, 1500, "test")
 		SpraypaintService.handleBuySkinRequest(player, "Cobalt", "Crowbar")
 
@@ -146,6 +147,7 @@ return function(t)
 		local profile = Gateway.loadForKey("adopt-equip-" .. os.clock())
 		Gateway._bind(player, profile)
 
+		player:SetAttribute("WeaponOwned_Crowbar", true)
 		CosmeticsService.handleEquipRequest(player, "Crowbar", freeKey)
 		expect.equal(profile.Data.equippedSkin.Crowbar, freeKey)
 

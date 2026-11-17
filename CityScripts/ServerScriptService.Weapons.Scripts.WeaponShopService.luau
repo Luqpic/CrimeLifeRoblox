@@ -429,12 +429,12 @@ setLoadoutSlotRequest.OnServerEvent:Connect(function(player: Player, weaponName:
 
 		slots[slotIndex] = weaponName
 
+		-- A weapon moving between slots keeps the Tool the player already has, held (in the character) or
+		-- in the Backpack: it is neither destroyed nor granted again, so the magazine, reload state and
+		-- equip state all carry over. Looking only in the Backpack missed a held Tool and handed out a
+		-- second copy, which the player could then drop, sell or fire alongside the first.
 		local backpack = player:FindFirstChildOfClass("Backpack")
-		if backpack then
-			local existing = backpack:FindFirstChild(weaponName)
-			if existing then
-				existing:Destroy() -- defensive: should not exist yet, but never duplicate
-			end
+		if backpack and not findLiveTool(player, weaponName) then
 			grantWeapon(player, weaponName, backpack)
 		end
 	end

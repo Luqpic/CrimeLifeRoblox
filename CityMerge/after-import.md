@@ -441,3 +441,20 @@ World (not scripts): `Workspace.HQ` (Folder, 58,277 descendants, 23 scripts, 21 
 The three sources exported to `CityScripts/`; on-disk Adler-32 equals the place (3 / 3). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 2 (re-slot copy, skin ownership, join toast). Same columns; old = the place before this task (first export: none on disk).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Weapons.Scripts.WeaponShopService` (Script) | 18,779 / 654312028 | 19,042 / 2603572961 | Moving a weapon between slots keeps the live Tool (held or in the Backpack) instead of granting a second one. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Cosmetics.Scripts.CosmeticsService` (ModuleScript) | 7,185 / 2805852613 | 7,807 / 1500760674 | `ownsWeapon`; `EquipSkinRequest` refuses a weapon the player does not own. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Spraypaint.Scripts.SpraypaintService` (ModuleScript) | 14,428 / 741528517 | 14,939 / 478840120 | `BuySkinRequest` refuses an unowned or unknown weapon before the charge; `hydrate` sets `SpraypaintRestored` last. Attribute set. |
+| 2026-11-17 | `ReplicatedStorage.Spraypaint.Constants` (ModuleScript) | 2,179 / 2067918910 | 2,338 / 1366304406 | `RESTORED_ATTRIBUTE` = "SpraypaintRestored". Attribute set. First export. |
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.SpraypaintHud` (LocalScript) | 4,345 / 1480707121 | 5,000 / 2462626152 | Changes before `SpraypaintRestored` re-seed the baseline: no join-time toast; a real gain after it toasts once. Attribute set. First export. |
+| 2026-11-17 | `ServerStorage.UnitTest.Cases.CosmeticsOwnership_Test` | 5,901 / 3272276246 | 6,650 / 1084816824 | Stand-ins own Crowbar; owned/unowned skin case (+1). First export. |
+| 2026-11-17 | `ServerStorage.UnitTest.Cases.ProfileAdoption_Test` | 19,046 / 4287975109 | 19,148 / 3943199417 | Two stand-ins own Crowbar before a skin request. |
+| 2026-11-17 | `ServerStorage.UnitTest.Cases.SkinOwnership_Test` (new) | none | 2,346 / 79508782 | Three cases: owned weapon bought and equipped, unowned refused (nothing stored or charged), non-string or unknown weapon refused before the charge (+3). |
+
+The eight sources exported to `CityScripts/`; on-disk Adler-32 equals the place (8 / 8). City suites 262 / 262 / 0; heist 620 passed / 1 failed (Zone sweep only). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
