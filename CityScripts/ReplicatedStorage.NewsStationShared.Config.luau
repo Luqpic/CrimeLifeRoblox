@@ -54,7 +54,10 @@ Config.GuardSpawnLift = 0
 Config.GuardActivationRange = 60
 Config.GuardSightRange = 120
 Config.GuardFireInterval = 0.9
-Config.GuardDamage = 0
+-- Fix round 1: per shot, the Police template's DamageOverride (12), as at the Bank.
+Config.GuardDamage = 12
+-- Fix round 1: a guard killed while no robbery is Active is back at its post this many seconds after it died.
+Config.GuardRespawnSeconds = 60
 
 -- Debug stays mutable so integration runs can shorten the lifecycle, same
 -- pattern as every other location's own Config.

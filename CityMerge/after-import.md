@@ -347,3 +347,18 @@ New: `ServerScriptService.Wanted.Sight` 2,769 / 2676598123 (the line-of-sight pr
 The ten sources exported to `CityScripts/`; on-disk Adler-32 equals the place (10 / 10). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 3 fix round 1 (2026-11-17, guards that bite, only at robbers). Same columns; "old" is the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Heist.Components.GuardPost` (ModuleScript) | 10,998 / 1315880415 | 12,166 / 1323913687 | `GuardPost.mayTarget(bank, player)` = participant or `WantedStars >= 1`; `selectTarget` takes an optional predicate and `Update` passes `mayTarget` (Bank and NewsStation alike: bystanders are not shot). `_handleDeath` records `_diedAt`; `Update` outside an Active session calls `_respawnIfDue`: a posted guard dead `config.GuardRespawnSeconds` is replaced at its post. Attribute appended "; targets only a participant or a wanted player (mayTarget), posted guard dead outside a session respawns after config.GuardRespawnSeconds (police and wanted Task 3 fix round 1)". |
+| 2026-11-17 | `ReplicatedStorage.HeistShared.Config` (ModuleScript) | 14,070 / 180119306 | 14,266 / 3018040884 | `GuardDamage` 0 -> 12, the `Police` template's `DamageOverride` (EnemyRig writes it over the Mateba's 60). Attribute (new) "GuardDamage 0 -> 12, the Police template's DamageOverride (police and wanted Task 3 fix round 1)". |
+| 2026-11-17 | `ReplicatedStorage.NewsStationShared.Config` (ModuleScript) | 5,452 / 3133755255 | 5,681 / 3212811427 | `GuardDamage` 0 -> 12; `GuardRespawnSeconds` 60. Attribute appended "; GuardDamage 12, GuardRespawnSeconds 60 (police and wanted Task 3 fix round 1)". |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.GuardSpec` (ModuleScript) | 9,721 / 3536925508 | 12,206 / 1737840580 | Two cases: bystander / participant / wanted bystander targeting; posted respawn at 60 s, none while Active. No attribute (test). |
+
+Changed new sources (not deviations): `Wanted.Sight` 2,769 / 2676598123 -> 2,811 / 600028089 (`ignore` may be a list); `Wanted.Witnesses` 2,173 / 111339273 -> 2,363 / 1749821196 (every witness's body left out of the rays); case `Witnesses_Test` 3,002 / 3079264878 -> 4,154 / 3584903647 (a second witness in the line of view, real probe).
+
+The seven sources exported to `CityScripts/`; on-disk Adler-32 equals the place (7 / 7). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

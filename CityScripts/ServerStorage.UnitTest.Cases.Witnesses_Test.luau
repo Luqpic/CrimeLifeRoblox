@@ -73,6 +73,32 @@ return function(t)
 		expect.equal(Witnesses.guardSees(Vector3.new(10, 0, 0)), false)
 	end)
 
+	-- Fix round 1: the real Sight probe, 5,000 studs above the map. A second witness's body standing
+	-- between the first witness and the crime does not hide it (witnesses are left out of each other's rays).
+	t.test("a second witness standing in the line of view does not hide the crime", function()
+		local base = Vector3.new(0, 5000, 0)
+		local first = witness(base)
+		-- Dead, so only the first one can see: its body is still a witness's body, left out of the rays.
+		local second = witness(base + Vector3.new(10, 0, 0), false, 0)
+		local body = Instance.new("Part")
+		body.Name = "Body"
+		body.Anchored = true
+		body.Size = Vector3.new(2, 12, 8) -- wider and taller than every probe point
+		body.CFrame = CFrame.new(base + Vector3.new(10, 0, 0))
+		body.Parent = second
+		for _, m in { first, second } do
+			for _, p in m:GetDescendants() do
+				if p:IsA("BasePart") then p.Anchored = true end
+			end
+			m.Parent = workspace
+		end
+		reset({ first, second })
+		deps.inSight = saved.inSight
+		local ok, result = pcall(Witnesses.sees, base + Vector3.new(30, 0, 0))
+		deps.inSight = function() return clear end
+		expect.equal(ok and result, true)
+	end)
+
 	t.test("(restore deps)", function()
 		reset({})
 		for k, v in saved do deps[k] = v end

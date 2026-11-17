@@ -274,5 +274,63 @@ return function()
 		marker:Destroy()
 	end)
 
+	-- Police and wanted Task 3 fix round 1: guards shoot only robbers and wanted players.
+	suite:test("a visible bystander is not targeted; a participant is; a wanted bystander is", function(expect)
+		local function standIn(stars)
+			return { GetAttribute = function(_, name) if name == "WantedStars" then return stars end return nil end }
+		end
+		local bystander, robber, wanted = standIn(nil), standIn(0), standIn(1)
+		local bank = activeBank()
+		bank:AddParticipant(robber)
+		local function may(player) return GuardPost.mayTarget(bank, player) end
+		local near = { player = bystander, position = Vector3.new(5, 0, 0), visible = true }
+		expect.equal(GuardPost.selectTarget(Vector3.zero, { near }, 120, may), nil, "the bystander alone: nobody")
+		expect.equal(GuardPost.selectTarget(Vector3.zero, {
+			near, { player = robber, position = Vector3.new(50, 0, 0), visible = true },
+		}, 120, may), robber, "the participant, past the nearer bystander")
+		expect.equal(GuardPost.selectTarget(Vector3.zero, {
+			near, { player = wanted, position = Vector3.new(60, 0, 0), visible = true },
+		}, 120, may), wanted, "a wanted bystander")
+	end)
+
+	suite:test("GuardsAlwaysPosted: a guard dead outside a session is back at its post after GuardRespawnSeconds, not during one", function(expect)
+		local marker = tempMarker()
+		local clock = 100
+		local spawned = 0
+		local postedConfig = { GuardsAlwaysPosted = true, GuardSpawnLift = 0, GuardRespawnSeconds = 60, Tags = {},
+			GuardActivationRange = 60, GuardSightRange = 120, GuardFireInterval = 0.9, GuardDamage = 12 }
+		local bank = BankInstance.new({ config = Config, now = function() return 1000 end })
+		local post = GuardPost.new(marker, {
+			config = postedConfig, bank = bank,
+			now = function() return clock end,
+			spawnGuard = function()
+				spawned += 1
+				local model = Instance.new("Model")
+				Instance.new("Humanoid").Parent = model
+				local root = Instance.new("Part")
+				root.Name = "HumanoidRootPart"
+				root.Parent = model
+				model.PrimaryPart = root
+				model.Parent = workspace
+				return model
+			end,
+		})
+		post:_handleDeath()
+		clock = 159
+		post:Update()
+		expect.equal(spawned, 1, "still dead at 59 s")
+		clock = 160
+		post:Update()
+		expect.equal(spawned, 2, "back at 60 s")
+		expect.truthy(post:IsAlive(), "alive again")
+		bank:TryStart("starter")
+		post:_handleDeath()
+		clock = 500
+		post:Update()
+		expect.equal(spawned, 2, "no respawn while the session is Active")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
 	return suite:run()
 end

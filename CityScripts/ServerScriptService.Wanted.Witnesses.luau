@@ -31,13 +31,16 @@ Witnesses._deps = {
 }
 
 local function anySees(position: Vector3, range: number, guardsOnly: boolean): boolean
-	for _, model in Witnesses._deps.tagged() do
+	local witnesses = Witnesses._deps.tagged()
+	for _, model in witnesses do
 		local humanoid = model:FindFirstChildOfClass("Humanoid")
 		local head = model:FindFirstChild("Head")
 		if humanoid and humanoid.Health > 0 and head and head:IsA("BasePart")
 			and (not guardsOnly or model:GetAttribute("WitnessRole") == "Guard")
 			and (head.Position - position).Magnitude <= range
-			and Witnesses._deps.inSight(head.Position, position, model) == true
+			-- Every witness's body is left out of the rays (fix round 1): a clerk standing in the line of view
+			-- does not hide a crime from the guard behind it.
+			and Witnesses._deps.inSight(head.Position, position, witnesses) == true
 		then
 			return true
 		end

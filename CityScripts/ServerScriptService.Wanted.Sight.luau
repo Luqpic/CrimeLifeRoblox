@@ -5,7 +5,7 @@
 -- legs, root and head (SIGHT_PROBE_HEIGHTS) and left and right of its root across the line of view
 -- (SIGHT_PROBE_SIDE), so a pole or a lamp post hides none of it. Characters (players, police, gang enemies)
 -- and non-colliding parts never block; parts at least SEE_THROUGH_TRANSPARENCY transparent (glass) do not
--- either. `ignore` (the witness's own model) is left out of the rays too.
+-- either. `ignore` (an instance or a list: the witnesses' own models) is left out of the rays too.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -51,7 +51,7 @@ local function blocked(from: Vector3, to: Vector3, params: RaycastParams): boole
 	return true -- ponytail: more panes than SIGHT_RECASTS counts as cover
 end
 
-function Sight.inSight(eye: Vector3, position: Vector3, ignore: Instance?): boolean
+function Sight.inSight(eye: Vector3, position: Vector3, ignore: (Instance | { Instance })?): boolean
 	local params = Sight.params()
 	if ignore then
 		params:AddToFilter(ignore)

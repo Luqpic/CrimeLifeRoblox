@@ -28,10 +28,17 @@ function GuardPost.assignCover(guardPosition: Vector3, coverPoints, claimed): (n
 	return bestIndex, bestPosition
 end
 
-function GuardPost.selectTarget(guardPosition: Vector3, candidates, sightRange: number)
+-- Police and wanted Task 3 fix round 1: a guard shoots only a participant of its location's robbery or a
+-- wanted player (WantedStars >= 1); bystanders are left alone, at the Bank and NewsStation alike.
+function GuardPost.mayTarget(bank, player): boolean
+	return bank:IsParticipant(player) or (player:GetAttribute("WantedStars") or 0) >= 1
+end
+
+-- `mayTarget` (optional): candidates it refuses are skipped.
+function GuardPost.selectTarget(guardPosition: Vector3, candidates, sightRange: number, mayTarget: ((any) -> boolean)?)
 	local best, bestDistance = nil, math.huge
 	for _, candidate in ipairs(candidates) do
-		if candidate.visible then
+		if candidate.visible and (mayTarget == nil or mayTarget(candidate.player)) then
 			local distance = (candidate.position - guardPosition).Magnitude
 			if distance <= sightRange and distance < bestDistance then
 				best, bestDistance = candidate.player, distance
@@ -145,6 +152,7 @@ end
 function GuardPost:_handleDeath()
 	if self._deathReported then return end
 	self._deathReported = true
+	self._diedAt = self.now()
 	local ok, err = pcall(self.onGuardDied)
 	if not ok then warn("[GuardPost] onGuardDied failed: " .. tostring(err)) end
 end
@@ -227,8 +235,23 @@ function GuardPost:_candidates()
 	return candidates
 end
 
+-- Fix round 1: a posted guard dead while no session is Active is back at its post GuardRespawnSeconds after
+-- it died (otherwise a guard killed between robberies would stay dead until the next Rearm).
+function GuardPost:_respawnIfDue()
+	if not self:_alwaysPosted() or not self._deathReported or not self._diedAt then return end
+	if self.now() - self._diedAt < (self.config.GuardRespawnSeconds or math.huge) then return end
+	self:_despawn()
+	self._spawnedThisSession = false
+	self._diedAt = nil
+	self._activated = false
+	self:OnSessionStart()
+end
+
 function GuardPost:Update()
-	if self.bank:GetState() ~= "Active" then return end
+	if self.bank:GetState() ~= "Active" then
+		self:_respawnIfDue()
+		return
+	end
 	if not self:IsAlive() then return end
 
 	local root = self._guard.PrimaryPart
@@ -249,7 +272,9 @@ function GuardPost:Update()
 
 	self:_moveToCover()
 
-	local target = GuardPost.selectTarget(root.Position, candidates, self.config.GuardSightRange)
+	local target = GuardPost.selectTarget(root.Position, candidates, self.config.GuardSightRange, function(player)
+		return GuardPost.mayTarget(self.bank, player)
+	end)
 	if not target then return end
 
 	local now = self.now()
