@@ -17,6 +17,7 @@ The developer is hiring a builder for the tycoon place and asked for a new floor
 - New reference note [[Compound Floor Plan]]. Decisions added to [[CrimeLife Tycoon Decisions]]. Prompt filed under [[Original Prompts]].
 - Follow-up (version 4): room labels no longer overlap. The size line had sat on the room name on every sheet, and 8 names sat on fixture labels. Labels now get more line spacing and move to a clear spot inside their room. Fixtures were moved in the Chop Shop, Meeting Office and Cells. Button pads, temporary roof caps and the early fence were removed from the page in favour of OBT's BUILD menu and a build-in-order rule.
 - Follow-up (version 5): the developer noted that the builder is new and does not know Outbreak Tycoon. The page now explains the build system from scratch: what the player sees, and what it means for the build (finished in place, one Model per purchase, layered sub-models, a `CameraPoint` part, nothing on the floor).
+- Follow-up: the standalone file is pinned to light mode (`data-theme="light"`). Dragging the 3D view did nothing when the file was opened on its own. Root cause: `#m3msg` sets `display:grid`, which beats the `hidden` attribute, so the empty message box covered the canvas and took every pointer event. The published artifact hid the problem because its skeleton adds `[hidden]{display:none!important}`. The page now carries that rule itself. Checked: before the fix a drag sent 0 events to the canvas; after it the model orbits.
 - No Studio or game change.
 
 ## Decisions

@@ -29,6 +29,7 @@
  --k-util:#2a2b28; --k-circ:#152534; --k-secure:#3a2a1b; --k-core:#2a3b4c; --k-outdoor:#142519; --k-tower:#34475a; --k-road:#22313f; --k-spare:#10202e; --k-fx:#0e1c28cc;
  color-scheme:dark}
 *{box-sizing:border-box}
+[hidden]{display:none!important} /* #m3msg sets display:grid; without this it covers the 3D canvas when opened as a plain file */
 body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 64px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .wrap{max-width:1180px;margin:0 auto;display:grid;gap:28px}
