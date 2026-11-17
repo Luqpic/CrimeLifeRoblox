@@ -45,6 +45,9 @@ local LocationServer = require(Heist.Services.LocationServer)
 -- own posts, built by this script's registry exactly as HeistServer builds the Bank's.
 local GuardPost = require(Heist.Components.GuardPost)
 local WantedConstants = require(ReplicatedStorage.Wanted.Constants)
+-- Broadcast takeover (heist layers 2026-11-17).
+local BroadcastDesk = require(Heist.Components.BroadcastDesk)
+local WantedService = require(ServerScriptService.Wanted.WantedService)
 
 -- NewsStation carries its OWN tag table, unlike SlowFoods/Gas2Go which both
 -- read HeistConfig.Tags. The weapon tag is the exception -- there is no
@@ -146,6 +149,7 @@ end
 local oilHazards = {}
 local guardPosts = {}
 local masterComputer
+local broadcastDesk
 local lastNewsStationSafeSubmit = {}
 local fadeLightSphere
 
@@ -179,10 +183,12 @@ local location = LocationServer.new({
 		for _, post in ipairs(guardPosts) do
 			post:Update()
 		end
+		broadcastDesk:Update()
 	end,
 	-- Per-player state the shared skeleton doesn't know about.
 	onPlayerRemoving = function(player)
 		masterComputer:Forget(player)
+		broadcastDesk:Forget(player)
 		recentLaserHit[player] = nil
 		lastNewsStationSafeSubmit[player] = nil
 	end,
@@ -309,9 +315,38 @@ bank:RegisterComponent(lockedDoor)
 -- shape as the Bank's own SafeCode/Safe pairing, just with the code source
 -- being MasterComputer itself rather than a dedicated SafeCode instance
 -- (there is no separate physical code-combination display here to own).
+-- Broadcast takeover (heist layers 2026-11-17): the first breach arms the desk; one "Go Live" puts
+-- the station on air for Config.BroadcastSeconds of air time held by participants at the desk.
+broadcastDesk = BroadcastDesk.new(workspace.NewsStation.BroadcastDesk, {
+	bank = bank,
+	config = Config,
+	onLive = function(player)
+		net:NotifyBroadcastHijacked(player.Name)
+		for _, participant in ipairs(bank:GetParticipants()) do
+			local heat = WantedService.getHeat(participant)
+			if heat < Config.BroadcastHeatFloor then
+				WantedService.addHeat(participant, Config.BroadcastHeatFloor - heat, "broadcast")
+			end
+			net:Toast(participant, string.format("You're live! Hold the desk for %d seconds.", Config.BroadcastSeconds))
+		end
+		for _, post in ipairs(guardPosts) do
+			post:Alert()
+		end
+	end,
+	onComplete = function(players)
+		for _, player in ipairs(players) do
+			if bank:AddBonus(player, Config.BroadcastPayout) then
+				net:Toast(player, string.format("Broadcast complete: %d added to your bag.", Config.BroadcastPayout))
+			end
+		end
+	end,
+})
+bank:RegisterComponent(broadcastDesk)
+
 masterComputer = MasterComputer.new(workspace.NewsStation.MasterComputer, {
 	bank = bank,
 	net = net,
+	onBreached = function() broadcastDesk:Arm() end,
 })
 bank:RegisterComponent(masterComputer)
 

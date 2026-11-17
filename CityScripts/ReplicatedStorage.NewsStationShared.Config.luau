@@ -59,6 +59,16 @@ Config.GuardDamage = 6
 -- Fix round 1: a guard killed while no robbery is Active is back at its post this many seconds after it died.
 Config.GuardRespawnSeconds = 60
 
+-- Broadcast takeover (heist layers 2026-11-17): after a MasterComputer breach, "Go Live" at the
+-- BroadcastDesk; BroadcastSeconds of air time counted while a living participant is within
+-- BroadcastRange studs (pauses, never resets); every participant at the desk then gets
+-- BroadcastPayout into the bag. Going live raises each participant to at least
+-- BroadcastHeatFloor wanted stars.
+Config.BroadcastSeconds = 45
+Config.BroadcastRange = 12
+Config.BroadcastPayout = 6000
+Config.BroadcastHeatFloor = 3
+
 -- Debug stays mutable so integration runs can shorten the lifecycle, same
 -- pattern as every other location's own Config.
 Config.Debug = { FastLifecycle = false }

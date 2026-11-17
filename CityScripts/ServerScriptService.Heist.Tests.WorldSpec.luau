@@ -967,5 +967,28 @@ return function()
 		end
 	end)
 
+	-- Heist layers 2026-11-17 (Task 5): the NewsStation broadcast desk.
+	suite:test("NewsStation BroadcastDesk stands in the Newsroom near the MasterComputer with its Highlight and billboard", function(expect)
+		local desk = workspace.NewsStation:FindFirstChild("BroadcastDesk")
+		expect.truthy(desk ~= nil and desk:IsA("Model"), "Workspace.NewsStation.BroadcastDesk is a Model")
+		if not desk then return end
+		expect.truthy(desk:FindFirstChildOfClass("Highlight") ~= nil, "has a Highlight")
+		local billboard = desk:FindFirstChildWhichIsA("BillboardGui", true)
+		expect.truthy(billboard ~= nil and billboard:FindFirstChildWhichIsA("TextLabel", true) ~= nil, "a BillboardGui with a TextLabel")
+		local zone = workspace.NewsStationZones:FindFirstChild("NewsroomZone")
+		local p = zone and zone.CFrame:PointToObjectSpace(desk:GetPivot().Position)
+		expect.truthy(p and math.abs(p.X) <= zone.Size.X / 2 and math.abs(p.Y) <= zone.Size.Y / 2 and math.abs(p.Z) <= zone.Size.Z / 2,
+			"inside NewsroomZone")
+		local distance = (desk:GetPivot().Position - workspace.NewsStation.MasterComputer:GetPivot().Position).Magnitude
+		expect.truthy(distance <= 25, string.format("within 25 studs of the MasterComputer (%.1f)", distance))
+		for _, d in ipairs(desk:GetDescendants()) do
+			if d:IsA("BasePart") then
+				expect.truthy(d.Anchored, d.Name .. " anchored")
+			elseif d:IsA("LuaSourceContainer") then
+				expect.truthy(false, "no script inside: " .. d:GetFullName())
+			end
+		end
+	end)
+
 	return suite:run()
 end

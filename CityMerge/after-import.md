@@ -588,3 +588,20 @@ Studio objects (not scripts): `ReplicatedStorage.Gas2GoShared.PromptTemplates` (
 The 9 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (9 / 9). City suites 262 / 262 / 0; heist 675 passed / 1 failed (11 new; the failure is the Zone "real occupancy sweep" timing). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 5 (NewsStation broadcast takeover, `Batch: NewsStation broadcast takeover`). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.NewsStationServer` (Script) | 20,609 / 4028888056 | 22,014 / 1247793448 | Builds `Heist.Components.BroadcastDesk` on `Workspace.NewsStation.BroadcastDesk` (registered on the bank before the MasterComputer); MasterComputer `onBreached` -> `desk:Arm()`; `onLive` -> `net:NotifyBroadcastHijacked(name)`, each participant below `BroadcastHeatFloor` gets `WantedService.addHeat(p, floor - heat, "broadcast")` and a toast, every guard post `:Alert()`; `onComplete` -> `bank:AddBonus(p, BroadcastPayout)` + toast; `Update` in `heartbeatExtras`, `Forget` in `onPlayerRemoving`. Attribute appended. |
+| 2026-11-17 | `ReplicatedStorage.NewsStationShared.Config` (ModuleScript) | 5,669 / 538875747 | 6,179 / 2656520198 | `BroadcastSeconds = 45`, `BroadcastRange = 12`, `BroadcastPayout = 6000`, `BroadcastHeatFloor = 3`. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Components.BroadcastDesk` (ModuleScript) | none | 7,440 / 306373648 | New: states locked / armed / live / done; "Go Live" prompt (hold 1, server-timed, range `BroadcastRange`); air time counts while a living participant is within range (pauses, never resets); at `BroadcastSeconds` the participants in range go to `onComplete`; Seal ends it unpaid; billboard text OFF AIR / GO LIVE / LIVE m:ss / AIRED. Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.BroadcastDeskSpec` (ModuleScript) | none | 8,505 / 4013410658 | New: 9 cases (config values, locked until Arm, go live once, refusals, pause not reset, completion payees once, two payees, Seal while live, server-timed hold). Attribute set. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.WorldSpec` (ModuleScript) | 52,330 / 3965556520 | 53,808 / 2928575922 | 1 case: `NewsStation.BroadcastDesk` has a Highlight and a BillboardGui with a TextLabel, stands inside NewsroomZone within 25 studs of the MasterComputer, all parts anchored, no script inside. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,775 / 2345635765 | 2,833 / 1650630827 | `BroadcastDeskSpec` registered. Attribute appended. |
+
+Studio objects (not scripts): `Workspace.NewsStation.BroadcastDesk` (Model, pivot at the computer): `Desk` (clone of the MasterComputer's 13-part desk, at (-674, 4.125, 1002.5), length along x, in the lobby corner against the west wall in front of the big screen, about 16 studs from the MasterComputer through the counter), `Computer` (clone of the `ClipNews Building.Computer` at (-670.2, 6.6, 994.0), on the desk facing the lobby), `Highlight` (red, off until armed), `LiveBillboard` (BillboardGui on `Computer.Part`, 160 x 44, 3.5 studs up, MaxDistance 80) with `LiveLabel` (TextLabel, red GothamBold on a dark rounded panel). No uploads.
+
+The 6 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (6 / 6). City suites 262 / 262 / 0; heist 686 passed / 0 failed (10 new; the Zone "real occupancy sweep" passed this run). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published
