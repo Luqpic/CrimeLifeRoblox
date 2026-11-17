@@ -49,7 +49,7 @@ sources: ["CrimeLifeRoblox/CityScripts/ServerScriptService.Wanted.PoliceDispatch
 
 ## Left open
 - Building 10 officers in one round makes one server step of about 120 ms. Spreading the builds over frames would remove it if it shows up in a playtest.
-- NOT saved (no word to save this run). NOT published.
+- NOT saved by Claude (no word to save this run); the developer's save at 15:04 put it on disk (read back after a Studio restart, [[2026-11-17 Known Issues Pass]]). NOT published.
 
 ## Links
 [[Police and Wanted]] [[Open Items]] [[2026-11-17 Police and Wanted]]

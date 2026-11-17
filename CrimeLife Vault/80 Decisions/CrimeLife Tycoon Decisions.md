@@ -19,7 +19,7 @@ The developer's answers, quoted from the plan:
 - Old city prompts: "CrimeLife face everywhere".
 - On the tycoon: "Nevermind, skip the tycoon. I want to spend more time sharpening what's outside of the tycoon right now."
 
-No word to save: the place was not saved this run.
+No word to save: Claude did not save the place this run; the file was written once mid-run (15:04, after Task 2), so Tasks 3, 4 and the fix wave are unsaved.
 
 Claude's rulings (the controller's, each with its cost if wrong):
 - **Ruling: baselines are city 258 / 258 / 0 plus the new cases, heist 620 / 1 (Zone only)**, because the plan's numbers predate police. Cost if wrong: none, a stricter bar.
@@ -43,7 +43,7 @@ The developer's answers, quoted exactly:
 - Escape: "Break sight, then cool down".
 - Banking while wanted: "No, you still have to escape".
 - The shape: "when you rob the bigger robbery systems like Bank, and NewsStation, there's like security guards, and when you trigger the alarm, there's polices as well. Polices initially aren't there in the robbery buildings but appear once you start robbing. Security guards only exist in bank and newsstation. Armed Police appear when you have high wanted level".
-- On the design: "Looks right, write the design. And apply it until the end as I will sleep now". No word on saving: the place was not saved this run.
+- On the design: "Looks right, write the design. And apply it until the end as I will sleep now". No word on saving: Claude did not save the place that run (the developer's later save at 15:04 put the police work on disk).
 
 Accepted with the playback: SlowFoods and Gas2Go alarms bring fewer police; police and gangs ignore each other; a server cap of about 24 officers.
 
