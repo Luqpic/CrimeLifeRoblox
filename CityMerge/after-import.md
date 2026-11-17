@@ -362,3 +362,14 @@ Changed new sources (not deviations): `Wanted.Sight` 2,769 / 2676598123 -> 2,811
 The seven sources exported to `CityScripts/`; on-disk Adler-32 equals the place (7 / 7). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 3 fix round 2 (2026-11-17, guard damage tuned for the Bank). Same columns; "old" is the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ReplicatedStorage.HeistShared.Config` (ModuleScript) | 14,266 / 3018040884 | 14,301 / 3575820392 | `GuardDamage` 12 -> 6 (four guards at 12 killed a robber in the open in 2.3 s). Attribute appended "; GuardDamage 12 -> 6 (police and wanted Task 3 fix round 2)". |
+| 2026-11-17 | `ReplicatedStorage.NewsStationShared.Config` (ModuleScript) | 5,681 / 3212811427 | 5,669 / 538875747 | `GuardDamage` 12 -> 6, as at the Bank. Attribute appended "; GuardDamage 12 -> 6 (police and wanted Task 3 fix round 2)". |
+
+The two sources exported to `CityScripts/`; on-disk Adler-32 equals the place (2 / 2). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

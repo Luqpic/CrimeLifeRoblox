@@ -68,9 +68,10 @@ Config.LaserDamageFraction = 0.25 -- fraction of MaxHealth per hit
 Config.LaserDamageCooldown = 0.75 -- seconds of post-hit invulnerability
 
 -- Guards
--- Police and wanted Task 3 fix round 1 (2026-11-17): per shot, the Police template's DamageOverride (12;
--- EnemyRig writes it over the Mateba's own 60). Was 0, so guards fired and hurt nobody.
-Config.GuardDamage = 12
+-- Police and wanted Task 3 (2026-11-17): was 0, so guards fired and hurt nobody. Fix round 1 set the Police
+-- template's DamageOverride (12); fix round 2 halved it to 6: four guards at 12 killed a robber in the open
+-- in 2.3 s.
+Config.GuardDamage = 6
 Config.GuardFireInterval = 0.9
 Config.GuardSightRange = 120
 Config.GuardActivationRange = 60
