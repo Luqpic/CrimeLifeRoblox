@@ -1044,10 +1044,12 @@ local function buildGrid()
 		card:WaitForChild("NameLabel").Text = entry.Name
 
 		local priceOrOwned = card:WaitForChild("PriceOrOwned") :: TextLabel
-		if isOwned(entry.Name) then
+		-- A gamepass weapon whose pass is owned reads OWNED like any owned card (it is free to claim).
+		local pass = gamepassFor(entry)
+		if isOwned(entry.Name) or (pass and ownsGamepass(pass)) then
 			priceOrOwned.Text = "OWNED"
 			priceOrOwned.TextColor3 = Color3.fromRGB(120, 220, 140)
-		elseif gamepassFor(entry) then
+		elseif pass then
 			priceOrOwned.Text = "GAMEPASS"
 			priceOrOwned.TextColor3 = GAMEPASS_COLOR
 		elseif entry:GetAttribute("Price") then

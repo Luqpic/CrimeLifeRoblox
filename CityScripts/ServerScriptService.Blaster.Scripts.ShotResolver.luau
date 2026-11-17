@@ -417,15 +417,25 @@ local function explode(shooter: Player | Model, weapon: Tool, position: Vector3,
 	local shooterIsPlayer = shooter:IsA("Player")
 	local shooterCharacter = if shooterIsPlayer then (shooter :: Player).Character else shooter
 
-	-- Engine Explosion for the flash and bang only, replicated to every client. BlastPressure 0 and no
-	-- joint breaking: its own physics would fling the living and tear rigs apart outside every rule here.
-	local blast = Instance.new("Explosion")
-	blast.Position = position
-	blast.BlastRadius = radius
-	blast.BlastPressure = 0
-	blast.DestroyJointRadiusPercent = 0
-	blast.ExplosionType = Enum.ExplosionType.NoCraters
-	blast.Parent = Workspace
+	-- The flash only: a particle burst (Blaster.Objects.RPGBlast), not an engine Explosion, whose own
+	-- bang cannot be turned off and played under the weapon's Impact sound below. Damage, knockback and
+	-- credit are all done by hand further down, as before. The emitter is switched on for a moment
+	-- rather than Emit()ted, because a property change replicates to every client.
+	local blastTemplate = ReplicatedStorage.Blaster.Objects:FindFirstChild("RPGBlast")
+	if blastTemplate then
+		local blast = blastTemplate:Clone()
+		blast.Position = position
+		blast.Parent = Workspace
+		local flash = blast:FindFirstChildOfClass("ParticleEmitter")
+		if flash then
+			flash.Rate = 60
+			flash.Enabled = true
+			task.delay(0.25, function()
+				flash.Enabled = false
+			end)
+		end
+		Debris:AddItem(blast, 2)
+	end
 
 	-- The weapon's own impact sound (Sounds.Impact), played where the round landed. Hosted on an
 	-- Attachment in Terrain, which never moves or streams out, so it is heard in 3D by everyone in range.

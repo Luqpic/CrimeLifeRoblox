@@ -458,3 +458,19 @@ Task 2 (re-slot copy, skin ownership, join toast). Same columns; old = the place
 The eight sources exported to `CityScripts/`; on-disk Adler-32 equals the place (8 / 8). City suites 262 / 262 / 0; heist 620 passed / 1 failed (Zone sweep only). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 3 (weapon descriptions, reload readout, dry fire, RPG, muzzles). Same columns; old = the place before this task (first export: none on disk).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ReplicatedStorage.Blaster.Scripts.GuiController` (ModuleScript) | 6,182 / 2060541739 | 6,623 / 3610573378 | A shotgun (`isShotgun`) shows its shell count rising through the shell-by-shell reload instead of a static dash; magazine weapons keep the dashes. `playDryFire` plays the new child Sound `DryFire`. Attribute set. First export. |
+| 2026-11-17 | `ReplicatedStorage.Blaster.Scripts.BlasterController` (ModuleScript) | 18,342 / 3161426517 | 18,826 / 1436954061 | A trigger press the client's own fire-rate cooldown holds back (`self.shooting`) plays the dry-fire cue, once per press, not for Auto fire or melee. Attribute set. First export. |
+| 2026-11-17 | `ServerScriptService.Blaster.Scripts.ShotResolver` (ModuleScript) | 37,258 / 1179613095 | 37,622 / 1129572665 | The RPG blast's flash is a particle burst cloned from `Blaster.Objects.RPGBlast` instead of an engine `Explosion` (whose bang cannot be silenced); damage, Tagged/Damaged/Eliminated and knockback unchanged. Attribute appended. |
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.WeaponaryShopController` (LocalScript) | 54,037 / 193228620 | 54,188 / 3423576501 | A gamepass weapon's grid card reads OWNED (owned colour) once the pass is owned, instead of GAMEPASS. Attribute appended. |
+| 2026-11-17 | `ServerScriptService.Weapons.Scripts.WeaponShopService` (Script) | 19,042 / 2603572961 | 19,057 / 135750645 | `CATALOG_ATTRIBUTES` carries `Description`, so the shop's detail card can show it (the catalog copied only listed attributes). Attribute appended. |
+
+Instances (not scripts): `Description` on all 38 `ServerStorage.Weapons` Tools; `MuzzleAttachment` moved and given a `FlashEmitter` on the Glock 17, Benelli M4 and Spas 12; new `ReplicatedStorage.Blaster.Scripts.GuiController.DryFire` (Sound) and `ReplicatedStorage.Blaster.Objects.RPGBlast` (Part). Details: `CityMerge/known-issues/weapons.md`.
+
+The five sources exported to `CityScripts/`; on-disk Adler-32 equals the place (5 / 5). City suites 262 / 262 / 0; heist 620 passed / 1 failed (Zone sweep only). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

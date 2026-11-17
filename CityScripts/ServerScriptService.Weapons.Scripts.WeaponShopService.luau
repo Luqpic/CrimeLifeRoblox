@@ -34,7 +34,7 @@ end
 local catalogFolder = Instance.new("Folder")
 catalogFolder.Name = "Catalog"
 
-local CATALOG_ATTRIBUTES = { "Category", "Price", "Gamepass", "damage", "rateOfFire", "magazineSize", "range", "ShopViewRotation" }
+local CATALOG_ATTRIBUTES = { "Category", "Price", "Gamepass", "damage", "rateOfFire", "magazineSize", "range", "ShopViewRotation", "Description" }
 
 for _, template in WEAPONS_FOLDER:GetChildren() do
 	-- Category, not Price: every weapon has a Category, only sellable ones have a Price. Keying
