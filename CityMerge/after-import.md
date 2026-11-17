@@ -317,3 +317,15 @@ New sources changed (not deviations): `ReplicatedStorage.Wanted.Constants` 2,416
 The nine sources re-exported to `CityScripts/`; on-disk Adler-32 equals the place (9 / 9). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 2 fix round 2 (2026-11-17: the robbery keeps a participant "seen" only near the robbery). Same columns; old = the latest value above (Getaway: the place before this round).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `ServerScriptService.Heist.Services.Getaway` (ModuleScript) | 5,204 / 51305358 | 5,734 / 2317195041 | `Getaway:IsNear(player)`: inside the building (the injected `isInsideBuilding`) or horizontally closer than `escapeDistance` to the anchor (its own `horizontalDistance`); no character = not near. Attribute (new) "Getaway:IsNear(player): inside or within escapeDistance of the anchor (police and wanted Task 2 fix round 2)". |
+| 2026-11-17 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 19,943 / 2011283273 | 20,074 / 3295735053 | The active-robbery check also needs `self.getaway:IsNear(player)`. Attribute appended "; the active-robbery check also needs getaway:IsNear (police and wanted Task 2 fix round 2)". |
+| 2026-11-17 | `ServerScriptService.HeistServer` (Script) | 49,108 / 1930538091 | 49,256 / 1964564583 | The Bank's active-robbery check moved below `Getaway.new` and also needs `getaway:IsNear(player)` (Lobby, Vault or BankVaultZone, or within EscapeDistance). Attribute appended "; the active-robbery check also needs getaway:IsNear, registered after the getaway is built (police and wanted Task 2 fix round 2)". |
+
+Case changed (not a deviation): `ServerStorage.UnitTest.Cases.WantedService_Test` 13,189 / 1203546623 -> 15,457 / 1908116138 (3 cases). `Getaway` exported to `CityScripts/` for the first time. The four sources' on-disk Adler-32 equals the place (4 / 4). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

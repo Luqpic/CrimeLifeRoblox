@@ -380,6 +380,65 @@ return function(t)
 		expect.equal(after, false)
 	end)
 
+	-- Fix round 2: the robbery keeps a participant "seen" only near the robbery, through the location's own
+	-- Getaway (Getaway:IsNear = inside the building, or horizontally closer than EscapeDistance to the anchor).
+	-- The registered check is the one LocationServer and HeistServer register: Active and participant and near.
+	local Getaway = require(ServerScriptService.Heist.Services.Getaway)
+	local function robberyAt(p, inside: boolean, position: Vector3)
+		local getaway = Getaway.new({
+			escapeDistance = 200,
+			getAnchorPosition = function() return Vector3.new(0, 80, 0) end,
+			isInsideBuilding = function() return inside end,
+			getDuffel = function() return 0 end,
+			onEscaped = function() end,
+			getPlayers = function() return {} end,
+			getPosition = function() return position end,
+		})
+		return WantedService.addActiveRobbery(function(player)
+			return player == p and getaway:IsNear(player)
+		end)
+	end
+
+	t.test("an active robbery: a participant inside the building counts as seen", function()
+		local p = standIn()
+		local conn = robberyAt(p, true, Vector3.new(500, 0, 0))
+		local active = saved.activeRobbery(p)
+		conn:Disconnect()
+		expect.equal(active, true)
+	end)
+
+	t.test("an active robbery: a participant at EscapeDistance + 1 (outside) does not", function()
+		local p = standIn()
+		local conn = robberyAt(p, false, Vector3.new(201, 0, 0))
+		local far = saved.activeRobbery(p)
+		conn:Disconnect()
+		conn = robberyAt(p, false, Vector3.new(199, 0, 0))
+		local near = saved.activeRobbery(p)
+		conn:Disconnect()
+		expect.equal(far, false)
+		expect.equal(near, true)
+	end)
+
+	t.test("a participant who banked and stands 300 studs away drains after the search window", function()
+		deps.searchSeconds = Constants.SEARCH_SECONDS
+		deps.activeRobbery = saved.activeRobbery
+		local p = standIn()
+		local conn = robberyAt(p, false, Vector3.new(300, 0, 0))
+		clock = 13000
+		WantedService.onAlarm("SlowFoods", { p })
+		local at27_5
+		for i = 1, 56 do
+			clock = 13000 + i * 0.5
+			WantedService._step()
+			if clock == 13027.5 then at27_5 = WantedService.getHeat(p) end
+		end
+		conn:Disconnect()
+		deps.searchSeconds = 0
+		deps.activeRobbery = function(player) return robbing[player] == true end
+		expect.equal(at27_5, 1)
+		check(p, 0) -- at 13028
+	end)
+
 	end)
 	for key, value in saved do deps[key] = value end
 	deps.searchSeconds, deps.activeRobbery = saved.searchSeconds, saved.activeRobbery

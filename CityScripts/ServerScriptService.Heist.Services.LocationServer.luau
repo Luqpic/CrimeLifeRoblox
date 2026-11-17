@@ -381,9 +381,10 @@ function LocationServer:Start()
 	local bank, zoneService, net = self.bank, self.zoneService, self.net
 	local conns = self._connections
 
-	-- Police and wanted (fix round 1): a participant of this location's Active session counts as seen.
+	-- Police and wanted (fix rounds 1-2): a participant of this location's Active session counts as seen
+	-- while still at the robbery (inside, or within EscapeDistance of the anchor: Getaway:IsNear).
 	table.insert(conns, require(ServerScriptService.Wanted.WantedService).addActiveRobbery(function(player)
-		return bank:GetState() == "Active" and bank:IsParticipant(player)
+		return bank:GetState() == "Active" and bank:IsParticipant(player) and self.getaway:IsNear(player)
 	end))
 
 	table.insert(conns, bank.StateChanged:Connect(function(state)
