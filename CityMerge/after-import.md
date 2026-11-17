@@ -403,3 +403,15 @@ World (not scripts): `Workspace.Quests.<giver>.Head.gui.name.Text` only (model n
 The one source exported to `CityScripts/` for the first time; on-disk Adler-32 equals the place (1 / 1). After: 1 enabled SpawnLocation, no temporary object.
 
 NOT saved / NOT published
+
+Task 5 fix round 1 (2026-11-17, crooked-cop ranks and the under-level line). Same columns; "old" is the latest value above.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-17 | `StarterPlayer.StarterPlayerScripts.QuestDialogueController` (LocalScript) | 9,190 / 404181644 | 9,176 / 4006366522 | Under-level line "Not yet, kid. Make a name for yourself first." -> "Not yet, kid. Earn a rep first.". Attribute unchanged. |
+
+World (not scripts): `Workspace.Quests["Level 1 Quest"].Head.gui.name.Text` "GUARD DOYLE - LV 1" -> "OFC. DOYLE - LV 1"; `Workspace.Quests["Level 10 Quest"].Head.gui.name.Text` "GUARD PIKE - LV 10" -> "OFC. PIKE - LV 10".
+
+The one source re-exported to `CityScripts/`; on-disk Adler-32 equals the place (1 / 1). After: 1 enabled SpawnLocation, no temporary object.
+
+NOT saved / NOT published

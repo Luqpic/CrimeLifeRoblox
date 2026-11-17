@@ -146,7 +146,7 @@ local function wireQuestNpc(questId: string, quest)
 			responses = { "Understood" }
 			mode = "InProgress"
 		elseif level < quest.requiredLevel then
-			text = "Not yet, kid. Make a name for yourself first."
+			text = "Not yet, kid. Earn a rep first."
 			responses = { "Okay" }
 			mode = "UnderLevel"
 		else
