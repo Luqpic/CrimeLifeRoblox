@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, quests, dialogue, npc]
-updated: 2026-11-15
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-System-Level1-KillThugs.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Billboard-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Billboard-Input-And-Toast-Duration.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Police and Wanted.md", ".superpowers/sdd/2026-11-17-police-and-wanted/task-5-report.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-System-Level1-KillThugs.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Billboard-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Billboard-Input-And-Toast-Duration.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md"]
 ---
 
 # Quests and Dialogue
@@ -13,7 +13,7 @@ sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Syste
 Six quest givers in the FPS place, gated at levels 1, 10, 20, 35, 50 and 70, each ask for kills of one enemy type and pay cash and XP on hand-in. Players talk to them through a billboard dialogue with numbered replies; a Quests button opens a log. Quests are repeatable. The same dialogue engine also runs the Robbery place's Illegal Supplier.
 
 ## Where it lives
-- `ReplicatedStorage.Quests.QuestConfig`: every quest (giver, required level, target enemy name, count, rewards, giver lines). Single source. In the city also `MAX_INTERACT_DISTANCE` (30 studs), `withinReach`, `restore` and `RESTORED_ATTRIBUTE`.
+- `ReplicatedStorage.Quests.QuestConfig`: every quest (giver, required level, target enemy name, count, rewards, `description`). Single source of quest data. The spoken lines are not here: they are templates in `QuestDialogueController`, shared by all six givers and filled from `QuestConfig` (found 2026-11-17). In the city also `MAX_INTERACT_DISTANCE` (30 studs), `withinReach`, `restore` and `RESTORED_ATTRIBUTE`.
 - `ReplicatedStorage.Quests.Remotes` (`AcceptQuestRequest`, `TurnInQuestRequest`).
 - `ServerScriptService.Quests.Scripts.QuestService`: server authority on quest state, kill counting, payout; in the city also the save mirror and the hydrator (sets the player attribute `QuestsRestored` last).
 - `ReplicatedStorage.DialogModule` (+ `sounds` `tick`, `tick2`): the conversation engine. Byte-identical copy in the Robbery place since 2026-09-19.
@@ -31,7 +31,7 @@ Six quest givers in the FPS place, gated at levels 1, 10, 20, 35, 50 and 70, eac
 - Camera FOV goes through `CameraAuthority` ([[Camera Authority]]); the conversation releases its claim and clears the reply billboard on end, walk-away or death.
 - Hand-in: a `QUEST COMPLETE` toast with the quest name ([[Notifications]]), queued while a panel is open. Quests button badge counts finished-but-unclaimed quests from completion counts (`Quest_<id>_Completions` attributes).
 - Log entries show a `CLAIM` (acid) or `ACTIVE` pill and a progress column.
-- Givers wear law-enforcement outfits by tier: Security (1, 10), Police (20, 35), SWAT (50, 70).
+- Givers wear law-enforcement outfits by tier: Security (1, 10), Police (20, 35), SWAT (50, 70); in the city they are crooked cops (below).
 - Supplier: offer / explainer / decline; selling with nothing carried is refused by the server and answered in dialogue.
 
 ## In the city
@@ -47,6 +47,13 @@ Measured 2026-11-15 ([[2026-11-15 FPS Hardening In City]]):
 - Progress and completions are saved (`quests`, `questCompletions`, [[Persistence and Saves]]) and restored on join. Level 1 turn-in: cash 350 to 875, because the 100 XP crossed a level and the 25 level-up bonus came with the 500 reward.
 - `QuestFeedbackController` shows QUEST COMPLETE only for completions seen after the `QuestsRestored` attribute is set; earlier changes only seed the count.
 - Kills for a test: `TakeDamage` then fire `ServerScriptService.Blaster.Events.Eliminated` from a server Script; the Shoot remote is now rate-limited ([[Weapons and Blaster]]).
+
+## The givers are crooked cops (city, 2026-11-17)
+[[2026-11-17 Police and Wanted]]. The developer: "A criminal; givers go rogue". Claude's call: crooked cops (they keep their uniforms; no new art). Quests, rewards, levels, model names and `npcName` are unchanged; the player's replies are unchanged.
+- **Nameplates** (`Workspace.Quests.<model>.Head.gui.name.Text`): `OFC. DOYLE - LV 1`, `OFC. PIKE - LV 10`, `SGT. MARSH - LV 20`, `LT. GRADY - LV 35`, `CPT. VOSS - LV 50`, `CHIEF HARLAN - LV 70`.
+- **Lines** (`QuestDialogueController`, one shared set): offer "Off the books: {description} Cash, no questions."; repeat "Back again? {description} Same envelope."; in progress "Keep it quiet. {progress}/{target} {enemies} cleared so far."; ready "Clean work -- {target} {enemies} gone. Your envelope's ready."; completed "Those {enemies} won't be missed. Not a word, ever."; under level "Not yet, kid. Earn a rep first."; accept quip "You never heard it from me."; turn-in quip "Count it later. And we never met."
+- **Fit** was computed, not read live (viewport 1 x 1): every line at 24 px or more, every name on one line at 21 px. The lines were never seen typed in a real conversation (pressing E needs a person).
+- Uniformed police who hunt you and uniformed crooked cops who pay you both exist; the lines make the difference ([[Police and Wanted]]).
 
 ## Extend it
 - New quest: one entry in `QuestConfig` (target enemy name inside the quest, never hard-coded in lines) plus a giver in `Workspace.Quests` with the same billboard, prompt and `NPCprompt` tag.
@@ -64,6 +71,7 @@ Measured 2026-11-15 ([[2026-11-15 FPS Hardening In City]]):
 - The five later givers were placed in a line at temporary positions on 2026-09-16; no log records them being moved.
 
 ## History
+- 2026-11-17 (city): the givers become crooked cops: new nameplates with ranks and new lines in `QuestDialogueController`; quests unchanged. [[2026-11-17 Police and Wanted]]
 - 2026-11-15: city: accept and turn-in need the giver within 30 studs; quest progress saved and restored; no replayed completion toast on rejoin. [[2026-11-15 FPS Hardening In City]]
 - 2026-11-15: ported into the city as an exact copy; the six givers moved to the city sidewalk by the spawn; pressing E still needs a person. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: givers dressed by tier from the enemy templates' uniforms; talking to one not verified. [[FPS-Quest-Givers-Law-Enforcement-Outfits]]

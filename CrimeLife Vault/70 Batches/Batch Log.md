@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [batch, moc]
-updated: 2026-11-16
+updated: 2026-11-17
 sources: ["git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-17 | City | [[2026-11-17 Police and Wanted]] | Wanted level 0 to 5 stars (heist alarms, hits on police, witnessed crimes), police squads by stars on the enemy AI (cap 24, Armed from 3 stars), break sight to drain 8 s per star after a 20 s search window, death clears and forfeits the haul, banking keeps the stars; 3 NewsStation guards, guards 6 per shot at robbers and wanted players; the star meter; quest givers become crooked cops; loop proven in Play, 10 police held 125 s, five clean Plays, city 251 / 251, heist 620 / 1 (`Zone` timing); not saved |
 | 2026-11-16 | City | [[2026-11-16 Robbery Systems Into City]] | The four heists (Bank, SlowFoods, Gas2Go, NewsStation) imported and placed at the city's buildings (Bank vault 147.75 studs underground, art quarantined), Robbery cash bridged onto `leaderstats.Cash`, load-order and remote audits (supplier reach, removed character forfeits the bag, purchase confirmed with retries, safe pacing), cooldowns 1200 / 600; city 193 / 193 tests, heist 615 / 1 (`Zone` timing), five clean Plays, SlowFoods banked once; final review fixes (heist NPCs `Invulnerable`, `safePlayerAdded` in four scripts, no stale false over a confirmed gamepass), heist 616 / 1 |
 | 2026-11-15 | City | [[2026-11-15 FPS Hardening In City]] | Remote ownership audit (14 handlers, 4 fixes: quest reach, canonical hit keys, server rate of fire, NaN level), quest progress saved, 4 ScreenGuis to Sibling and 6 left Global, `Lean` line 41, `workspace.FX`, preview script off; 171 / 171 tests, five clean Plays |
 | 2026-11-15 | City | [[2026-11-15 FPS Systems Into City]] | FPS systems ported into the city as an exact copy (199 script hashes equal, 147 / 147 tests in both places), two deviations, enemies and quest givers placed; tycoon building brought forward as a static preview on Plot3; Crimelife City becomes the primary place |

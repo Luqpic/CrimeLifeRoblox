@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, luau, scripting, signals]
-updated: 2026-11-16
-sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "70 Batches/Robbery System/Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-New-Guns-Missing-MuzzleAttachment-Fix.md", "70 Batches/FPS System/FPS-Enemy-Search-State-Spin-Fix.md", "70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "OBT Vault/50 Engine Traps/Luau and Scripting Traps.md (generic traps)"]
+updated: 2026-11-17
+sources: [".superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md", ".superpowers/sdd/2026-11-17-police-and-wanted/task-2-report.md", ".superpowers/sdd/2026-11-17-police-and-wanted/task-4-report.md", "docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "70 Batches/Robbery System/Puzzle-Prompt-Guard-Cash-Logo-And-GUI-Fades.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-New-Guns-Missing-MuzzleAttachment-Fix.md", "70 Batches/FPS System/FPS-Enemy-Search-State-Spin-Fix.md", "70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "OBT Vault/50 Engine Traps/Luau and Scripting Traps.md (generic traps)"]
 ---
 
 # Luau and Scripting Traps
@@ -69,6 +69,15 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 
 ### A Script's hydrators register at server start, not on require
 - Scripts (unlike ModuleScripts) cannot be required by tests, and their hydrators throw on a table stand-in. [[Unit Test Runner]], [[FPS-Persistence-Phase-3]].
+
+### A plugin-context `execute_luau` holds its own module copies
+- **Symptom:** heat set with `require(ServerScriptService.Wanted.WantedService).addHeat(...)` from a server `execute_luau` showed on the star meter but never drained; `EnemyAI.getLive()` from the same call listed no enemies while 30 were alive.
+- **Cause:** the Studio MCP runs `execute_luau` in its own (plugin) context, so `require` returns a separate copy of the module with its own state. The game's scripts share another copy. Attributes are on real instances, so they are shared; module tables are not. Measured: 0 runner steps through the patched copy.
+- **Fix:** drive state through the game's own paths (a real trigger, a remote, a `BindableEvent`), or create a temporary server `Script` that requires the module (it shares the game's copy) and writes results into a `StringValue`; destroy both after. Running a test suite from `execute_luau` is fine, because the suite builds its own state. [[2026-11-17 Police and Wanted]]
+
+### `Humanoid.Died` does not fire for a bare test rig
+- **Symptom:** a stand-in character for a death test never fired `Died`: not for a bare Model with a Humanoid, and not for one with a body on `Health = 0` within 1.5 s.
+- **Fix:** weld a root and a head to the Humanoid's model and call `ChangeState(Enum.HumanoidStateType.Dead)`; that fires it. [[2026-11-17 Police and Wanted]] (Task 1)
 
 ### A ModuleScript's hooks connect only when something requires it
 - `PersistenceRunner` exists for that reason: one line that requires `ProfileGateway` and calls `start()`.

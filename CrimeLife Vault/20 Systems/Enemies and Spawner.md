@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, enemies, npc-ai, fps]
-updated: 2026-11-15
-sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
 ---
 
 # Enemies and Spawner
@@ -15,7 +15,7 @@ In the FPS place and, since 2026-11-15, in the city (an exact copy; see "In the 
 Keeps a criminal-side enemy population alive around the map: each spawn point tops up its own enemy type to a per-type cap, the AI patrols, detects, chases, shoots or swings, searches when it loses a living target, and reacts to stun. Kills feed quests, leveling, cash drops and the kill toast.
 
 ## Where it lives
-- `ServerScriptService.Enemy.Scripts.EnemySpawner`, `ServerScriptService.Enemy.Scripts.EnemyAI`.
+- `ServerScriptService.Enemy.Scripts.EnemySpawner`, `ServerScriptService.Enemy.Scripts.EnemyAI`, `ServerScriptService.Enemy.Scripts.EnemyRig` (city, 2026-11-17: `build` and `place`, the rig half of the spawner, shared with the police dispatcher).
 - `ReplicatedStorage.Enemy.Constants` (`MAX_CONCURRENT_ENEMIES_PER_TYPE`, recoil-decay constants), `ReplicatedStorage.Enemy.AimConfig`, `ReplicatedStorage.Enemy.templateConfig` (per-type accuracy ceiling and recoil overrides).
 - `ServerStorage.EnemyTemplates.*`: nine rigs (see below), each with its weapon Tool inside.
 - `Workspace.EnemySpawns`: six `<Type>Spawner` parts, each with an `EnemyType` `StringValue` child.
@@ -23,7 +23,7 @@ Keeps a criminal-side enemy population alive around the map: each spawn point to
 - Hit resolution and line of sight: `ServerScriptService.Blaster.Scripts.ShotResolver`, `ReplicatedStorage.Blaster.Utility.findOwningHumanoid` / `castRays` (see [[Weapons and Blaster]]).
 
 ## How it works
-- **Roster (as of 2026-09-17).** Spawning, all criminal-side: Thug (Crowbar), Offender (was Criminal), Disrupters (was Armed Criminal, AKM), Smuggler (PB pistol), Bandits (Mossberg 590), Saboteur (FN P-90). Kept but not spawning: Security (Baton), Police, Armed Police; their outfits now dress the quest givers ([[Quests and Dialogue]]). Health, speed and accuracy of the three newest are placeholders on the difficulty curve, not balance.
+- **Roster (as of 2026-09-17).** Spawning, all criminal-side: Thug (Crowbar), Offender (was Criminal), Disrupters (was Armed Criminal, AKM), Smuggler (PB pistol), Bandits (Mossberg 590), Saboteur (FN P-90). Kept but not spawning from `EnemySpawns`: Security (Baton), Police, Armed Police; their outfits dress the quest givers ([[Quests and Dialogue]]). In the city since 2026-11-17 Police and Armed Police spawn from the police dispatcher for wanted players only ([[Police and Wanted]]). Health, speed and accuracy of the three newest are placeholders on the difficulty curve, not balance.
 - **Spawner.** A spawn point is considered only while its own type is below `MAX_CONCURRENT_ENEMIES_PER_TYPE` = 5 (six points, so 30 alive at most). Top-up every `TOP_UP_INTERVAL` = 2.5 s. A rig is placed at a random offset within `SPAWN_SCATTER_RADIUS` = 22 studs, radius sampled through a square root so the disc fills evenly. Rigs go into the `EnemyCharacter` collision group, which does not collide with itself (still collides with world and players; weapon raycasts unaffected).
 - Every spawned rig is renamed `Enemy`, keeps its type in the `EnemyTemplate` attribute (shown on the kill toast and nameplate), and has **all its scripts destroyed on spawn**. `EnemyGUI` is attached afterwards for that reason. Roblox's own name/health display is off on all templates.
 - **Damage and aim.** Each template carries `DamageOverride` (set to 20% of its weapon's stock damage on 2026-09-11; the shared config otherwise forces a debug value of 3). Melee types carry `EngageRangeFraction`. Ranged enemies accumulate and decay recoil from their weapon's own recoil attributes; Armed Police / Armed Criminal (now Disrupters) have extra accuracy-ceiling and recoil overrides.
@@ -38,6 +38,13 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - `EnemySpawner` reads `point.Position` on every spawn and ignores orientation; the rig appears at the position plus a random scatter within 22 studs, plus 3 studs up. A point is skipped while any living player is within 60 studs. Cap 5 alive per type, top-up every 2.5 s.
 - The AI patrols to random points within 70 studs of the spawn point's position at spawn time, with `PathfindingService` (agent radius 2, height 5, can jump); an unreachable target fails and is retried. So a point needs walkable ground for about 22 studs and ideally 70 around it, and must not sit where a patrol reaches a plot or a quest giver.
 - Where the six points stand now: [[City Map and Plots]]. The positions are provisional. In the run from the city spawn all 30 enemies came up (5 per type) and 5 of 6 types moved; one Thug stuck at about (215, 5, 2485) against `Building_15`.
+
+## Police on the AI (city, 2026-11-17)
+[[2026-11-17 Police and Wanted]]. The gangs pass none of these, so their code path is unchanged (measured: 30 alive, 5 per type, 0 with a filter, in every Play of the closing run).
+- `EnemyAI.new(..., config)` takes `config.targetFilter(player): boolean` (consulted in `_findVisibleTarget`, `_targetHumanoid` and `onDamagedBy`: a refused target is dropped mid-fight and an unwanted shooter is not retaliated against) and `config.preferTarget` (a player chosen over the nearest when visible).
+- `EnemyAI:canSee(character)` (strict boolean, the AI's own `hasLineOfSight` from the eyes), `EnemyAI:investigate(position)` (Patrol and Search only; the AI's own Chase wins on sight), `EnemyAI.getLive()` (live instances, from `activeEnemies`), `EnemyAI._players()` (a test seam).
+- `EnemyRig.build(template, label)` and `EnemyRig.place(character, weapon, cframe, parent)` are the old `trySpawn` body, moved verbatim; the spawner keeps its points, caps and counts. Police are built with the same two calls into `Workspace.Police`.
+- `CityMergeDeviation` on `EnemyAI` and `EnemySpawner`; rows in `CityMerge/after-import.md`.
 
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
@@ -55,6 +62,7 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - A staging folder of downloaded outfit assets was left in `ServerStorage` (2026-09-16), to remove once outfits were seen on spawned enemies; whether it was removed is not recorded.
 
 ## History
+- 2026-11-17 (city): target filter, preferred target, `canSee`, `investigate`, `getLive` on `EnemyAI`; `EnemyRig` extracted; Police and Armed Police spawn for wanted players. [[2026-11-17 Police and Wanted]]
 - 2026-11-15: ported into the city as an exact copy; the six points moved onto the city's roads. [[2026-11-15 FPS Systems Into City]]
 - 2026-09-24: overhead health bar gains a white Health icon; kill toast names the enemy from `EnemyTemplate`. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]] [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-22: per-type cap 10 -> 5 (60 -> 30 alive, plateau measured); missed-shot tracers capped at 150 studs. [[FPS-Miss-Tracers-And-Spawn-Cap]]

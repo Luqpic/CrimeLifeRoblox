@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, ui, hud]
-updated: 2026-11-15
-sources: ["CLAUDE.md (Instance tree, Systems, Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md … Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Close-Button-Unified-With-Robbery.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-UltimateUIPack-Effects-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md"]
+updated: 2026-11-17
+sources: ["70 Batches/2026-11-17 Police and Wanted.md", ".superpowers/sdd/2026-11-17-police-and-wanted/task-4-report.md", "CLAUDE.md (Instance tree, Systems, Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md … Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Close-Button-Unified-With-Robbery.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-UltimateUIPack-Effects-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md"]
 ---
 
 # HUD and UI Shell
@@ -24,6 +24,7 @@ The frame every screen sits in: the five HUD buttons (weaponary, player card, qu
 - `StarterGui."Custom Inventory"`: the HUD button column and hotbar ([[Inventory and Hotbar]]).
 - `ReplicatedStorage.Blaster.Scripts.GuiController`: ammo / weapon-name HUD (desktop: middle-right).
 - City, `ZIndexBehavior = Sibling` (one line after `Instance.new("ScreenGui")`, each script marked `CityMergeDeviation`): `StarterPlayerScripts.PromptUiController`, `AdminLevelController`, `DamageDirectionIndicator`, `ReplicatedStorage.UI.CashBurst`. Audit: `CityMerge/phase2b/zindex-audit.md`; tool: `CityMerge/phase2b/paint-order.luau`.
+- City, 2026-11-17: `StarterPlayer.StarterPlayerScripts.WantedHud` builds the `WantedHud` star meter in code ([[Police and Wanted]]).
 - Robbery place: `StarterPlayerScripts.UiButtonEffects` (focus mode), `Modules.PropertyAuthority`, `Modules.CameraAuthority`.
 
 ## How it works
@@ -35,6 +36,14 @@ The frame every screen sits in: the five HUD buttons (weaponary, player card, qu
 - **Fades:** `UiTransitionBinder` fades the HUD chrome and the four panel frames; combat elements fade faster than chrome.
 - **Art:** Figma `iRetcvpbMMD190DJA9Mwrm`, page "02 · Redesign", exported via REST `/v1/images` at 4x. Icons whitened so `ImageColor3` can tint them (accent `#CBF23C`). Panel titles are baked into banner images in real Archivo Black; re-centring a title is a re-export.
 - **Fonts:** only the Roblox catalogue resolves; Archivo/Barlow do not. Dynamic Archivo Black -> `Montserrat Heavy`, Barlow Semi Condensed 600/500 -> `RobotoCondensed SemiBold/Medium`.
+
+## The star meter (city, 2026-11-17)
+[[2026-11-17 Police and Wanted]]. `WantedHud` (LocalScript) builds a ScreenGui in code: `ZIndexBehavior = Sibling`, `ResetOnSpawn = false`, `ScreenInsets = CoreUISafeInsets`, its own `UIScale` of 1 (so `UIScaleController` leaves it alone).
+- A 148 x 36 `UITheme` plate (`Color.panel` at 0.15, `UICorner` 8, `UIStroke` in `Color.line`) with five U+2605 text glyphs in `UITheme.Font.Display`: filled `Color.gold`, empty `Color.muted` at 0.55. No star slice exists and nothing was uploaded.
+- Each star is a `ClipsDescendants` frame whose width maps the fraction over the glyph's ink: `round((24 - ink) / 2 + fraction * ink)`, ink = measured `TextBounds.X` (16.5).
+- While `WantedSeen`: the stroke turns `Color.danger` and pulses (transparency 0.8 to 0, thickness 1 to 2.5). While `WantedDraining`: the next star to go blinks. Hidden at 0 heat and while a `UI.Panels` panel is open.
+- Position: top centre, `(0.5, +160, 0, 6)` left-anchored (desktop: right of the heist column, clear of the chat bar); when the viewport's smaller side is under `Blaster.Constants.UI_SMALL_SCREEN_THRESHOLD` 500, `(0.5, -160, 0, 6)` right-anchored (clear of the heist cards). Re-placed on every `ViewportSize` change and on a camera swap (nil-safe `CurrentCamera`).
+- Measured at 1080 x 659 during a real robbery: 0 overlaps with 40 drawn elements and 98 heist and HUD elements; 844 x 390 computed, not measured. From the fifth simultaneous heist card at 1080 wide, the cards reach the meter (computed).
 
 ## Extend it
 - A new panel: register with `UI.Panels` (its own close function), use `Effects.bindClose()`, raise `MenuFovBlur`, route camera through [[Camera Authority]]. Reuse `WeaponCard` for card templates (cosmetics spec).
@@ -52,6 +61,7 @@ The frame every screen sits in: the five HUD buttons (weaponary, player card, qu
 - `ReplicatedStorage.UI.Theme` was dead code and was deleted on 2026-09-18 (its asset registry survives in the Figma change logs). Styling lives on instances.
 
 ## History
+- 2026-11-17 (city): the `WantedHud` star meter. [[2026-11-17 Police and Wanted]]
 - 2026-11-15 (city): four ScreenGuis flipped to `Sibling` where the paint order is unchanged; six left `Global` with counts recorded. [[2026-11-15 FPS Hardening In City]]
 - 2026-09-23: ammo/weapon HUD moved bottom-right to middle-right (`AnchorPoint (1,0.5)`); touch layout untouched. [[Notification-Card-Fix-And-Weapon-HUD-Move]]
 - 2026-09-19: close buttons unified on `Effects.bindClose()` (five sizes/shapes/behaviours -> one 36px slice). [[Close-Button-Unified-With-Robbery]] / [[Close-Button-Unified-With-FPS]]

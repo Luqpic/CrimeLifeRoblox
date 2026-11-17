@@ -1,13 +1,45 @@
 ---
 type: decision
 tags: [decision, tycoon, merge, crimelife-tycoon]
-updated: 2026-11-16
-sources: [".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
+updated: 2026-11-17
+sources: [".superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", ".superpowers/sdd/2026-11-16-robbery-systems-into-city/progress.md", "CrimeLifeRoblox/CityMerge/phase3/classification.md", ".superpowers/sdd/2026-11-15-fps-systems-into-city/progress.md", "The developer's request and answers in the 2026-11-14 planning session", "CrimeLife Vault/90 Reference/Tycoon Market Research 2026-11.md", "CrimeLife Vault/90 Reference/Four Places Survey 2026-11-14.md"]
 ---
 
 # CrimeLife Tycoon Decisions
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
+
+## 2026-11-17: police and the wanted level
+
+Recorded in [[2026-11-17 Police and Wanted]]; the system is [[Police and Wanted]]; the design is `docs/superpowers/specs/2026-11-17-police-and-wanted-design.md`.
+
+The developer's answers, quoted exactly:
+- Player role: "A criminal; givers go rogue".
+- Heat from: "Heist alarms", "Shooting police", "Crimes in public" (not from attacking players).
+- What police do: "Escalate in stars".
+- Caught: "Die, lose the haul".
+- Escape: "Break sight, then cool down".
+- Banking while wanted: "No, you still have to escape".
+- The shape: "when you rob the bigger robbery systems like Bank, and NewsStation, there's like security guards, and when you trigger the alarm, there's polices as well. Polices initially aren't there in the robbery buildings but appear once you start robbing. Security guards only exist in bank and newsstation. Armed Police appear when you have high wanted level".
+- On the design: "Looks right, write the design. And apply it until the end as I will sleep now". No word on saving: the place was not saved this run.
+
+Accepted with the playback: SlowFoods and Gas2Go alarms bring fewer police; police and gangs ignore each other; a server cap of about 24 officers.
+
+Claude's calls in the design (section 5, open to correction): alarm levels Gas2Go 1, SlowFoods 1, NewsStation 2, Bank 3; +0.25 per police hit, +1 per kill; +0.5 for a witnessed NPC kill, +0.25 for hurting a heist civilian; witnesses are police, guards and heist civilians within 120 studs; seen within 150; 8 s per star unseen; squads 2 / 4 / 4+2 / 4+4 / 4+6 by stars, armed from 3; police leave when heat is 0; 3 NewsStation guards; police kills pay as any enemy; the givers become crooked cops (they keep their uniforms, no new art).
+
+Claude's rulings during the build (from `.superpowers/sdd/2026-11-17-police-and-wanted/progress.md`; the developer has not confirmed them), each with its cost if wrong:
+- **Ruling: hits on one officer within `HIT_MERGE_WINDOW` 0.1 s count once** (one blast or swing is one hit; a killing hit is hit plus kill, +1.25). Cost if wrong: heat per shotgun blast lower than per pellet.
+- **Ruling: Bank alarm heat goes to participants at trigger time only;** latecomers through the gauntlet get none. Cost if wrong: a second robber unhunted.
+- **Ruling: hurting a guard in a witness's sight is a public crime (+0.25):** guards are security. Cost if wrong: small extra heat.
+- **Ruling: no `Damaged` from bleed ticks; events from a dead or departed attacker are ignored; the drain step is guarded by `pcall`.** Cost if wrong: bleed damage on police adds no extra heat.
+- **Ruling (design section 9): a player in an active robbery counts as seen; a 20 s search window follows any heat rise before the drain; officers head to the believed position; each prefers its own squad's player.** The first run showed police spawn out of sight, so the 1-star robber drained at 8 s before the first officers arrived (34 s). Cost if wrong: escapes take about 20 s longer than the 8 s per star rule implied.
+- **Ruling: the active-robbery bypass applies only inside the location's zones or within its `EscapeDistance` (horizontal) of the anchor;** beyond that the search window and drain apply (`Getaway:IsNear`). Cost if wrong: a robber lingering just outside 200 studs drains normally.
+- **Ruling: `GuardDamage` at Bank and NewsStation = the police pistol's 12 per shot** (the 0 came over from the Robbery place). Superseded below. Cost if wrong: one number per Config.
+- **Ruling: guards target only that robbery's participants and players with 1+ star,** not any visible player. Cost if wrong: a guard ignores a non-robber who attacks it while not wanted.
+- **Ruling: witness rays ignore models tagged `Witness`; posted guards killed outside a session respawn at their post after 60 s.** Cost if wrong: none.
+- **Ruling: `GuardDamage` 6 per shot at both locations** (Bank in the open about 24 hp/s, cover matters; one NewsStation guard about 6 hp/s). The 12 ruling made the Bank unplayable in the open (dead in 2.3 s). Cost if wrong: one number, tune in playtests.
+- **Ruling: the Security givers' nameplates read `OFC. DOYLE` / `OFC. PIKE`, and the under-level line is "Not yet, kid. Earn a rep first."** ("GUARD" read honest). Cost if wrong: wording.
+- **Ruling: the controller's read of the one-line diff and the six live nameplates stands as Task 5's re-review.** Cost if wrong: a wording slip.
 
 ## 2026-11-17: the tycoon is parked
 

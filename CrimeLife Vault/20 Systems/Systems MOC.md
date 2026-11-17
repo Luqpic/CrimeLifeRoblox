@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [moc, system]
-updated: 2026-11-16
+updated: 2026-11-17
 sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md"]
 ---
 
@@ -40,6 +40,7 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 ## World and NPCs
 
 - [[Enemies and Spawner]]: enemy types, spawner, AI.
+- [[Police and Wanted]]: wanted stars, police squads, witnesses, Bank and NewsStation guards, the star meter (city, 2026-11-17).
 - [[Quests and Dialogue]]: quest givers, dialogue replies, quest log.
 - [[Movement and Stamina]]: sprint, stamina, landings, lean.
 
