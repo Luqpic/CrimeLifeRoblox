@@ -34,6 +34,10 @@ local Getaway = require(Heist.Services.Getaway)
 local AlarmEffects = require(Heist.Services.AlarmEffects)
 local DuffelBagAttachment = require(Heist.Services.DuffelBagAttachment)
 local RobbableObject = require(ReplicatedStorage.SharedSystems.RobbableObject)
+local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
+local DepositBoxes = require(Heist.Components.DepositBoxes)
+local DepositBoxLoot = require(ReplicatedStorage.HeistShared.DepositBoxLoot)
+local CarryGetaway = require(Heist.Services.CarryGetaway)
 local Net = require(Heist.Services.Net)
 -- Global singleton, shared with SlowFoodsServer/Gas2GoServer/SuppliesServer
 -- (spec addendum, 2026-09-19) -- see CarryState's own header for why this
@@ -626,6 +630,48 @@ do
 	end
 end
 
+-- Heist layers 2026-11-17 (Task 6): the vault's deposit boxes (Heist.Components.DepositBoxes), shut
+-- until the vault door opens (the latch in the heartbeat below). One box a run may hold the gold
+-- bar: a start-hidden SupplyObject handed to the solver, slowed, bank-only, banked by goldGetaway.
+local goldBar = SupplyObject.new(workspace.BankVault.GoldBar, {
+	bank = bank,
+	-- Never armed (startHidden): the bar only appears through GiveTo or a drop.
+	promptTemplate = heistShared.PromptTemplates.PickUpGoldBarPrompt,
+	repickupPromptTemplate = heistShared.PromptTemplates.PickUpGoldBarPrompt,
+	cashOutAmount = Config.GoldBarValue,
+	bankOnly = true,
+	speedCap = require(ReplicatedStorage.Movement.Constants).CARRY_SPEED_CAP,
+	startHidden = true,
+	onRefused = notifyRefused,
+	isBlocked = function(player) return carryState:IsCarrying(player) end,
+	onPickup = function(player, bar)
+		carryState:PickUp(player, heistShared.ModelTemplates.GoldBarTool, bar)
+	end,
+})
+bank:RegisterComponent(goldBar)
+
+local depositBoxes
+do
+	local boxModels = {}
+	for i = 1, Config.DepositBoxCount do
+		boxModels[i] = workspace.BankVault.DepositBoxes["DepositBox" .. i]
+	end
+	depositBoxes = DepositBoxes.new(boxModels, {
+		bank = bank,
+		net = net,
+		config = Config,
+		carryState = carryState,
+		goldBar = goldBar,
+		now = now,
+		roll = function(count)
+			local forced = Config.Debug.DepositBoxContents
+			if forced then return table.clone(forced) end
+			return DepositBoxLoot.roll(Random.new(), count, Config.GoldBarChance)
+		end,
+	})
+	bank:RegisterComponent(depositBoxes)
+end
+
 -- The one client -> server signal in this system (see Net's own REMOTE_NAMES
 -- comment for why this doesn't violate spec 6.8). A 0.5s per-player debounce
 -- guards against network-level spam/automation only -- NOT a gameplay
@@ -858,6 +904,21 @@ local getaway = Getaway.new({
 	onEscaped = bankBag,
 })
 
+-- Heist layers 2026-11-17 (Task 6): the gold bar banks GoldBarValue once its carrier is out of the
+-- building (same isInsideBank) and EscapeDistance from the same anchor as the bag.
+local goldGetaway = CarryGetaway.new({
+	escapeDistance = Config.EscapeDistance,
+	anchor = bankAnchor,
+	isInsideBuilding = isInsideBank,
+	matches = function(carried) return carried == goldBar end,
+	value = Config.GoldBarValue,
+	carryState = carryState,
+	currency = currency,
+	net = net,
+	getPlayers = function() return Players:GetPlayers() end,
+	addActiveRobbery = require(ServerScriptService.Wanted.WantedService).addActiveRobbery,
+})
+
 -- Police and wanted (fix rounds 1-2): a participant of the Bank's Active session counts as seen while still
 -- at the robbery (Lobby, Vault or BankVaultZone, or within EscapeDistance of the anchor: Getaway:IsNear).
 require(game:GetService("ServerScriptService").Wanted.WantedService).addActiveRobbery(function(player)
@@ -981,6 +1042,7 @@ Players.PlayerRemoving:Connect(function(player)
 	-- Same cleanup LocationServer:ForgetPlayer does: without it Getaway's
 	-- fired-once latch keeps a strong reference to the departed Player.
 	getaway:Forget(player)
+	goldGetaway:Forget(player)
 	duffelBagAttachment:Forget(player)
 	recentTriggerAttempt[player] = nil
 	duffelFullNotified[player] = nil
@@ -1038,6 +1100,7 @@ task.spawn(function()
 		-- adjacent to the zone pass it reads, and keeps its fired-once latch
 		-- re-arming every tick rather than only while Active.
 		getaway:Step()
+		goldGetaway:Step()
 
 		if bank:GetState() == "Active" then
 			for _, player in ipairs(zoneService:GetOccupants("Vault")) do
@@ -1069,6 +1132,7 @@ task.spawn(function()
 				for _, atm in ipairs(atmObjects) do atm:Unlock() end
 				for _, register in ipairs(bankRegisterObjects) do register:Unlock() end
 				for _, safe in ipairs(safeObjects) do safe:Unlock() end
+				depositBoxes:Unlock()
 			end
 		end
 	end

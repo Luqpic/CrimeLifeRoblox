@@ -116,6 +116,14 @@ Config.BankRegisterRobAmount = 2000
 -- session (once per safe) with the same code.
 Config.SafeRobAmount = 5000
 
+-- Heist layers 2026-11-17 (Task 6): the vault's deposit boxes. Each box is a short lockpick; at
+-- most one gold bar per run (GoldBarChance), the rest two thirds cash (DepositBoxCash into the bag,
+-- over the cap) and one third empty. The gold bar is carried out and banked 200 studs clear.
+Config.DepositBoxCount = 8
+Config.DepositBoxCash = 1500
+Config.GoldBarChance = 0.5
+Config.GoldBarValue = 8000
+
 -- Supplies Robbery (spec addendum, 2026-09-19): SlowFoods/Gas2Go-only
 -- side mechanic -- picking up a supply object starts a Carry State (see
 -- SharedSystems.CarryState/SupplyObject) with no immediate payout; the
@@ -267,7 +275,9 @@ Config.Tags = table.freeze({
 })
 
 -- Debug stays mutable so integration runs can shorten the lifecycle.
-Config.Debug = { FastLifecycle = false }
+-- DepositBoxContents (heist layers Task 6): false, or a list of "cash"/"empty"/"gold" the next
+-- session's boxes use instead of a roll (Play checks only).
+Config.Debug = { FastLifecycle = false, DepositBoxContents = false }
 
 local FAST = { SessionDuration = 10, CooldownDuration = 20 }
 

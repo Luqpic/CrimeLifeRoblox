@@ -47,6 +47,8 @@ local SPECS = {
 	"FleeingManagerSpec", -- heist layers 2026-11-17 (Task 3)
 	"Gas2GoRipSpec", -- heist layers 2026-11-17 (Task 4)
 	"BroadcastDeskSpec", -- heist layers 2026-11-17 (Task 5)
+	"DepositBoxLootSpec", -- heist layers 2026-11-17 (Task 6)
+	"DepositBoxesSpec", -- heist layers 2026-11-17 (Task 6)
 }
 
 return function()

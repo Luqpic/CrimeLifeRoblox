@@ -990,5 +990,41 @@ return function()
 		end
 	end)
 
+	-- Heist layers 2026-11-17 (Task 6): the Bank vault's deposit boxes and gold bar.
+	suite:test("Bank vault has 8 deposit boxes in VaultZone, a hidden-start GoldBar, its carry tool and prompt", function(expect)
+		local HC = require(game.ReplicatedStorage.HeistShared.Config)
+		local boxes = workspace.BankVault:FindFirstChild("DepositBoxes")
+		expect.truthy(boxes ~= nil and boxes:IsA("Model"), "Workspace.BankVault.DepositBoxes is a Model")
+		if not boxes then return end
+		local zone = workspace.HeistZones.VaultZone
+		for i = 1, HC.DepositBoxCount do
+			local box = boxes:FindFirstChild("DepositBox" .. i)
+			expect.truthy(box ~= nil and box:IsA("Model"), "DepositBox" .. i .. " is a Model")
+			if box then
+				expect.truthy(box.PrimaryPart ~= nil and box.PrimaryPart.Name == "Hinge", "DepositBox" .. i .. " pivots on its Hinge")
+				local handle = box:FindFirstChild("ProximityPart Handle")
+				expect.truthy(handle ~= nil and handle:IsA("BasePart"), "DepositBox" .. i .. " has a ProximityPart Handle")
+				local p = zone.CFrame:PointToObjectSpace(box:GetPivot().Position)
+				expect.truthy(math.abs(p.X) <= zone.Size.X / 2 and math.abs(p.Z) <= zone.Size.Z / 2, "DepositBox" .. i .. " inside VaultZone")
+			end
+		end
+		expect.equal(boxes:FindFirstChild("DepositBox" .. (HC.DepositBoxCount + 1)), nil, "no ninth box")
+		local bar = workspace.BankVault:FindFirstChild("GoldBar")
+		expect.truthy(bar ~= nil and bar:IsA("Model") and bar:FindFirstChildOfClass("Highlight") ~= nil, "GoldBar Model with a Highlight")
+		local tool = game.ReplicatedStorage.HeistShared.ModelTemplates:FindFirstChild("GoldBarTool")
+		expect.truthy(tool ~= nil and tool:IsA("Tool") and tool:GetAttribute("IsSupplyCarryTool") == true and tool:FindFirstChild("Handle") ~= nil,
+			"GoldBarTool is a carry Tool with a Handle")
+		local prompt = game.ReplicatedStorage.HeistShared.PromptTemplates:FindFirstChild("PickUpGoldBarPrompt")
+		expect.truthy(prompt ~= nil and prompt:IsA("ProximityPrompt"), "PickUpGoldBarPrompt template")
+		expect.equal(workspace.BankVault:FindFirstChild("PlaceWhatYouWawnt"), nil, "placeholder quarantined")
+		-- The carrier route out of the vault: a ledge beside the obby pillar so a slowed carrier reaches the moving platform.
+		local ledge = workspace.BankVault:FindFirstChild("CarrierLedge")
+		expect.truthy(ledge ~= nil and ledge:IsA("Model"), "BankVault.CarrierLedge is a Model")
+		if ledge then
+			local p = ledge:GetBoundingBox().Position
+			expect.truthy((p - Vector3.new(1361.8, -95.25, 2511)).Magnitude < 0.5, "CarrierLedge beside the moving platform's far end")
+		end
+	end)
+
 	return suite:run()
 end

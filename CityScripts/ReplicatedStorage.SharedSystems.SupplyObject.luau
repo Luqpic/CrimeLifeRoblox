@@ -175,7 +175,7 @@ function SupplyObject.new(model: Model, deps)
 	countdownLabel.Text = ""
 	countdownLabel.Parent = countdownGui
 
-	return setmetatable({
+	local self = setmetatable({
 		model = model,
 		part = part,
 		highlight = highlight,
@@ -234,6 +234,10 @@ function SupplyObject.new(model: Model, deps)
 		_implosionScaleValue = nil,
 		_implosionConn = nil,
 	}, SupplyObject)
+	-- Heist layers 2026-11-17 (Task 6): a startHidden object is hidden from boot too, not only
+	-- from its first OnSessionStart (the parts' authored look is already cached above).
+	if self.startHidden then self:_setVisible(false) end
+	return self
 end
 
 function SupplyObject:_teardownPrompt()
