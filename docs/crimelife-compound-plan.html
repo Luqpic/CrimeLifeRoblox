@@ -126,9 +126,9 @@ html{scroll-behavior:smooth}
  <div class="lead">
   <span class="lbl">Tycoon base · Drawing set for the builder</span>
   <h1>Crimelife Compound</h1>
-  <p>The new Crimelife tycoon base. It replaces the old 2023 build and the earlier tower-style HQ blueprint. It's a walled compound that looks like a scrap-and-logistics company from the street. The rooms wrap around an open central <b>Yard</b> with a player spawn and a fight pit. A drive lane runs down the east side, and a skybridge links the main building to a Watchtower.</p>
+  <p>The new Crimelife tycoon base. It replaces the old 2023 build and the earlier tower-style HQ blueprint. It's a walled compound that looks like a sleek, modern logistics company from the street. The rooms wrap around an open central <b>Yard</b> with a player spawn and a fight pit. A drive lane runs down the east side, and a skybridge links the main building to a Watchtower.</p>
   <p>It keeps every room from the old blueprint. It moves to a flatter layout with a ground floor, an upper floor, a roof terrace and a bunker under the yard. Use the reference screenshot for mood and massing only: the ring of rooms around a yard, the cut-off corner, the bridged tower. Don't copy it one to one.</p>
-  <p class="lbl">Style: semi-low-poly industrial. Chunky shapes, a few strong details per room.</p>
+  <p class="lbl">Style: modern industrial. Clean, sharp and well kept, never run-down or scrappy.</p>
  </div>
  <div class="meta">
   <div><span class="lbl">Plot</span><b>361 × 300 studs</b></div>
@@ -164,6 +164,18 @@ html{scroll-behavior:smooth}
  <div class="panel">
   <h3>Legend</h3>
   <div class="legend" id="legend"></div>
+ </div>
+ <div class="panel">
+  <h3>Look and materials</h3>
+  <p>Think of a high-end logistics headquarters or a modern warehouse office, not a junkyard. Clean lines, big flat surfaces and a few sharp details per room.</p>
+  <ul class="rules">
+   <li><b>Walls:</b> smooth light-grey concrete, with dark charcoal metal cladding panels on the upper floor.</li>
+   <li><b>Frames and trims:</b> matte black steel window frames, door frames, railings and roof edges.</li>
+   <li><b>Glass:</b> large floor-to-ceiling panels at the entrance, the cut corner, the Penthouse and the gallery.</li>
+   <li><b>Accents:</b> warm wood on the yard deck and terrace, warm-white LED strip lights under roof edges and along the gallery.</li>
+   <li><b>Colour:</b> greys, charcoal and black with one accent colour (safety yellow) on doors, bollards and markings.</li>
+   <li><b>Avoid:</b> rust, broken parts, piles of junk, mismatched scrap panels and graffiti.</li>
+  </ul>
  </div>
  <div class="panel">
   <h3>Four money lines</h3>
@@ -248,10 +260,10 @@ const SHEETS=[
 {id:'S00',title:'Site plan',lv:'Ground · Y 0',
  intro:'The building sits against the north and west sides of the plot. A 32-wide drive lane runs down the east side from the gate to the north service lane, and the garage bays open onto it. East of the lane are the Watchtower, parking and the gatehouse. The skybridge (dashed) crosses the lane at F2 height.',
  rooms:[
-  R('Service lane',r(2,2,268,36),'road','Scrap pile next to the Foundry intake door, plus dumpsters. Joins the east drive lane.'),
+  R('Service lane',r(2,2,268,36),'road','Scrap intake bay: neat steel bins and a covered skip next to the Foundry intake door. Joins the east drive lane.'),
   R('East drive lane',r(268,2,300,298),'road','32-wide road from the gate to the service lane. Garage bays, Chop Shop and Showroom open onto it. Cars pass under the skybridge (20 clear).',{lz:250}),
   R('East lot',r(300,2,359,298),'outdoor','',{hide:1,nolabel:1}),
-  R('Front walk',r(2,280,268,298),'outdoor','Footpath from the gate to the glass entrance. Pole sign "Southside Scrap & Logistics" by the gate. Planters and lamp posts.'),
+  R('Front walk',r(2,280,268,298),'outdoor','Footpath from the gate to the glass entrance. Lit pylon sign "Southside Logistics" by the gate. Concrete planters and slim lamp posts.'),
   R('HQ building',BLD,'core','Ground + F2 + roof terrace + bunker. See S-01 to S-04.',{lz:62,lx:136}),
   R('Yard',OCT,'outdoor','Open to the sky. See S-01.'),
   R('Watchtower',r(300,44,356,104),'tower','Main tower, 60 tall. Guard post on the ground, skybridge landing at F2, top deck at Y 56 with a searchlight and a guard NPC.'),
@@ -261,7 +273,7 @@ const SHEETS=[
   R('T2',r(343,2,359,18),'tower','',{hide:1,nodim:1}),
   R('T3',r(2,282,18,298),'tower','',{hide:1,nodim:1}),
  ],
- fx:[F('Scrap pile',196,8,236,30),F('Bins',150,8,170,22),F('Bay',306,124,330,140),F('Bay',306,142,330,158),F('Bay',306,160,330,176),F('Bay',332,124,354,140),F('Bay',332,142,354,158),F('Bay',332,160,354,176),F('Sign',250,284,262,292)],
+ fx:[F('Scrap bins',196,8,236,30),F('Bins',150,8,170,22),F('Bay',306,124,330,140),F('Bay',306,142,330,158),F('Bay',306,160,330,176),F('Bay',332,124,354,140),F('Bay',332,142,354,158),F('Bay',332,160,354,176),F('Sign',250,284,262,292)],
  ghost:[r(268,54,300,66)],ghostLabel:[[284,51,'Skybridge (F2)']],
  perimeter:{gate:[268,300]},
  doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(268,92,268,116,'roll'),D(268,131,268,155,'roll'),D(268,175,268,199,'roll'),D(268,204,268,228,'roll')],
@@ -273,7 +285,7 @@ const SHEETS=[
  rooms:[
   R('Bar + Stage',r(4,36,112,80),'social','Stage with the Crime Band at the west end, bar counter along the north wall, booths along the south wall, stools, bartender NPCs.'),
   R('Dispatch',r(112,36,168,80),'util','Loading area: pallets of "product", a desk and a clipboard. Door east into the Foundry.'),
-  R('Scrap Foundry',r(168,36,268,80),'money','Money line 1. Droppers D1–D6 along the north wall (Stainless → Diamond). The conveyor runs east along Z 58 to the moulder and part collector. Leave a parallel lane for Conveyor 2.0. The roll-up scrap intake on the north wall faces the scrap pile. Scrap-worker NPCs.'),
+  R('Scrap Foundry',r(168,36,268,80),'money','Money line 1. Droppers D1–D6 along the north wall (Stainless → Diamond). The conveyor runs east along Z 58 to the moulder and part collector. Leave a parallel lane for Conveyor 2.0. The roll-up scrap intake on the north wall faces the scrap bins. Scrap-worker NPCs.'),
   R('Warehouse',r(4,80,56,150),'util','The "legit" storage room: 3 shelf rows, crates and a forklift.'),
   R('Core',r(4,150,56,190),'core','Stair (16 wide, half landing) and freight lift (16 × 16). Same footprint from B1 to the roof.'),
   R('Tailor',r(4,190,56,228),'social','14 outfit mannequins on the walls, a tailor NPC, a mirror and a changing booth.'),
