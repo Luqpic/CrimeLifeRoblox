@@ -15,3 +15,5 @@ Follow-up after the first publish: "And I need a 3d view of it". Then "Yes, file
 Follow-up: "Can you ensure the text label doesn't overlay with the other texts below it, also I'd liek to note that we won't be using buttons since we are reusing OBT's build mechanics. Also to prevent confusion, I reckon no need to do temporary caps as in buy this to remove that, just go with the flow, ensure to structure the build like that."
 
 Follow-up: "remember that the builder is a new builder and doesn't know what's outbreak tycoon so you need to explain"
+
+Follow-up (2026-11-18): "The builder wants a pdf file. Also a visualisaton, give me a prompt I can paste on google flow to provide a visualisation of the building"

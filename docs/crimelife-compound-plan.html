@@ -93,6 +93,28 @@ svg .pad{fill:var(--accent);stroke:var(--accent-ink)}
 #m3tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--sheet);font:500 .76rem/1.45 var(--f-mono);padding:6px 9px;border-radius:3px;max-width:260px;z-index:2}
 #m3msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
 .m3key{position:absolute;left:10px;bottom:8px;font:500 .72rem var(--f-mono);color:var(--muted);pointer-events:none}
+.print-only{display:none}
+@page{size:A4 landscape;margin:10mm}
+@media print{
+ html{scroll-behavior:auto}
+ body{padding:0;background:var(--sheet);font-size:12px}
+ body::before,nav,.m3bar,.m3key,#m3tip,.screen-only{display:none!important}
+ .print-only{display:block}
+ .wrap{max-width:none;gap:14px}
+ .tb{margin-top:0}
+ section.sheet{break-before:page}
+ .plan,.tbl{overflow:visible;border:0}
+ .plan svg{min-width:0;width:auto;max-width:100%;max-height:142mm;margin:0 auto}
+ section.sheet{gap:8px}
+ .shead h2{font-size:1.5rem}
+ table{min-width:0;font-size:10.5px}
+ th,td{padding:4px 7px}
+ tr,.panel,.stage{break-inside:avoid}
+ .m3stage{height:150mm;border:0}
+ .tb{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+ .tb .meta{border-left:2px solid var(--ink);border-top:0}
+ .grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 html{scroll-behavior:smooth}
 </style>
@@ -155,8 +177,9 @@ html{scroll-behavior:smooth}
 </div>
 
 <section class="sheet" id="model">
- <div class="shead"><span class="no">3D</span><h2>Block model</h2><span class="lbl lv">Drag to orbit · scroll to zoom · right-drag to pan</span></div>
- <p>Every room from the plans as a block at its real size and height, built from the same numbers as the sheets. Hover a block to see its name and size. Pull the levels apart with Explode, or switch on Fixtures to see machines, the fight pit and furniture spots.</p>
+ <div class="shead"><span class="no">3D</span><h2>Block model</h2><span class="lbl lv screen-only">Drag to orbit · scroll to zoom · right-drag to pan</span></div>
+ <p class="screen-only">Every room from the plans as a block at its real size and height, built from the same numbers as the sheets. Hover a block to see its name and size. Pull the levels apart with Explode, or switch on Fixtures to see machines, the fight pit and furniture spots.</p>
+ <p class="print-only">Every room from the plans as a block at its real size and height, seen from the south-east. Open the HTML version of this plan to spin the model, pull the levels apart and hover rooms for their names.</p>
  <div class="m3bar">
   <div class="m3bar" role="group" aria-label="Levels" id="m3lv"></div>
   <div class="m3bar"><button type="button" id="m3fx" aria-pressed="false">Fixtures</button><button type="button" id="m3ex" aria-pressed="false">Explode</button><button type="button" id="m3reset">Reset view</button></div>
@@ -240,7 +263,7 @@ const SHEETS=[
  fx:[F('Scrap pile',196,8,236,30),F('Bins',150,8,170,22),F('Bay',306,124,330,140),F('Bay',306,142,330,158),F('Bay',306,160,330,176),F('Bay',332,124,354,140),F('Bay',332,142,354,158),F('Bay',332,160,354,176),F('Sign',250,284,262,292)],
  ghost:[r(268,54,300,66)],ghostLabel:[[284,51,'Skybridge (F2)']],
  perimeter:{gate:[268,300]},
- doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(268,92,268,116,'roll'),D(268,136,268,160,'roll'),D(268,168,268,192,'roll'),D(268,204,268,228,'roll')],
+ doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(268,92,268,116,'roll'),D(268,131,268,155,'roll'),D(268,175,268,199,'roll'),D(268,204,268,228,'roll')],
  extra:[['Perimeter wall','0–361','0–300','361 × 300','2 thick, 16 tall concrete with barbed wire on top. 32-wide sliding gate at X 268–300 on the south wall.']]},
 
 {id:'S01',title:'Ground floor',lv:'Y 0 → 20',
@@ -268,11 +291,11 @@ const SHEETS=[
   F('Stage',6,40,30,76),F('Bar counter',40,38,104,44),F('Booths',40,70,104,78),
   F('Pallets',116,40,164,56),
   F('Shelves',10,94,50,98),F('Shelves',10,110,50,114),F('Shelves',10,126,50,130),
-  F('Stair',8,152,24,188),F('Lift',34,162,50,178),
+  F('Stair',8,152,24,188),F('Lift',38,152,54,168),
   F('Outfits',6,194,10,224),F('Counter',10,236,96,242),F('Racks',6,246,10,276),
   F('Desk',112,250,148,256),F('Cases',166,246,210,252),
   F('Car lift',236,104,262,128),F('Crusher',218,116,230,128),
-  F('Bay 1',226,134,262,160),F('Bay 2',226,168,262,194),F('Turntable',226,206,250,230),
+  F('Bay 1',226,132,262,154),F('Bay 2',226,176,262,198),F('Turntable',226,206,250,230),
   F('Fight pit',118,122,154,158),F('Benches',84,132,92,176),F('Benches',180,132,188,176),
  ],
  pads:[r(126,188,146,202)],padLabel:[136,186,'Spawn'],
@@ -280,7 +303,7 @@ const SHEETS=[
  doors:[D(240,36,264,36,'roll'),D(118,280,142,280),D(80,80,92,80),D(134,80,146,80),D(168,52,168,64),D(184,80,196,80),
   D(56,108,56,120),D(56,164,56,176),D(56,203,56,215),D(70,228,82,228),D(118,228,142,228),D(180,228,192,228),
   D(100,248,100,260),D(160,248,160,260),D(216,99,216,111),D(216,159,216,171),D(216,208,216,220),
-  D(268,92,268,116,'roll'),D(268,136,268,160,'roll'),D(268,168,268,192,'roll'),D(268,204,268,228,'roll')]},
+  D(268,92,268,116,'roll'),D(268,131,268,155,'roll'),D(268,175,268,199,'roll'),D(268,204,268,228,'roll')]},
 
 {id:'S02',title:'Upper floor',lv:'Y 20 → 40',
  intro:'This floor holds the real operation. The printer conveyor runs through the wall into Cash Counting. The boss suite takes the north-east corner and opens onto the skybridge. A gallery rings the yard so players upstairs can watch fights.',
@@ -303,13 +326,13 @@ const SHEETS=[
  ],
  fx:[
   ...[8,24,40,56,72,88].map((x,i)=>F('P'+(i+1),x,38,x+12,48)),
-  F('Cash pile',128,58,156,76),F('Tables',116,40,164,48),
+  F('Cash pile',134,64,158,78),F('Tables',128,38,166,44),
   F('Desk',236,44,262,54),F('Sofa',176,64,206,72),
-  F('Stair',8,152,24,188),F('Lift',34,162,50,178),
+  F('Stair',8,152,24,188),F('Lift',38,152,54,168),
   F('Targets',6,232,10,276),F('Booths',146,232,154,276),
   F('Benches',166,264,210,276),F('Pool',228,158,256,172),F('Table',220,232,236,262),
  ],
- conv:[[[14,52],[104,52],[124,52],[124,60]]],
+ conv:[[[14,52],[106,52],[106,72],[133,72]]],
  doors:[D(80,80,92,80),D(134,80,146,80),D(184,80,196,80),D(112,48,112,60),D(268,54,268,66),D(230,80,242,80),
   D(56,108,56,120),D(56,164,56,176),D(56,203,56,215),D(70,228,82,228),D(180,228,192,228),D(160,248,160,260),
   D(216,104,216,116),D(216,164,216,176),D(216,208,216,220)]},
@@ -341,7 +364,7 @@ const SHEETS=[
  ],
  fx:[...[62,80,98,116,134].map((x,i)=>F('F'+(i+1),x,84,x+12,96)),F('Gold stack',172,100,204,130),F('Gens',10,90,48,112),
   F('C1',142,190,164,226),F('C2',167,190,189,226),F('C3',192,190,214,226),F('Racks',64,170,132,176),F('Crates',64,200,110,222),
-  F('Stair',8,152,24,188),F('Lift',34,162,50,178),F('Table',20,204,40,214)],
+  F('Stair',8,152,24,188),F('Lift',38,152,54,168),F('Table',20,204,40,214)],
  conv:[[[68,102],[140,102],[160,102],[160,110]]],
  doors:[D(56,150,56,160),D(56,104,56,116),D(56,200,56,212),D(96,146,108,146),D(175,146,191,146,'roll'),D(92,162,104,162),D(147,162,159,162),D(172,162,184,162),D(197,162,209,162)]},
 ];
@@ -387,7 +410,7 @@ function label(x,z,fs,name,dim){
   (dim?`<text class="rd" x="${x}" y="${(top+fs*1.2).toFixed(2)}" font-size="${(fs*.68).toFixed(2)}" text-anchor="middle">${dim}</text>`:'')}
 
 function svgFor(s){
- let o=`<svg viewBox="-12 -10 ${W+20} ${H+22}" role="img" aria-label="${esc(s.title)} plan">`+grid();
+ let o=`<svg viewBox="-12 -10 ${W+24} ${H+28}" role="img" aria-label="${esc(s.title)} plan">`+grid();
  (s.ghost||[]).forEach(g=>o+=`<polygon class="ghost" points="${pts(g)}" stroke-width=".5"/>`);
  s.rooms.forEach(rm=>o+=`<polygon class="rm" points="${pts(rm.p)}" fill="var(--k-${rm.k})" stroke-width=".6"/>`);
  (s.fx||[]).forEach(f=>{const[a,b,c,d]=bbox(f.p),w=c-a,h=d-b,fs=Math.min(2.6,Math.max(1.6,w/(f.t.length*.62)));
@@ -403,7 +426,8 @@ function svgFor(s){
  (s.doors||[]).forEach(d=>{o+=`<line class="gap" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="1.8"/>`;
   o+=`<line class="${d.t=='roll'?'roll':'dr'}" x1="${d.x0}" y1="${d.z0}" x2="${d.x1}" y2="${d.z1}" stroke-width="${d.t=='roll'?.9:.35}"/>`});
  (s.ghostLabel||[]).forEach(([x,z,t])=>o+=`<text x="${x}" y="${z}" font-size="2.6" text-anchor="middle" class="rd">${t}</text>`);
- const blocked=(s.fx||[]).map(f=>{const[a,b,c,d]=bbox(f.p);return[a-.5,b-.5,c+.5,d+.5]}).concat((s.pads||[]).map(bbox));
+ const blocked=(s.fx||[]).map(f=>{const[a,b,c,d]=bbox(f.p);return[a-.5,b-.5,c+.5,d+.5]}).concat((s.pads||[]).map(bbox))
+  .concat((s.conv||[]).flatMap(c=>c.slice(1).map((q,i)=>[Math.min(c[i][0],q[0])-1,Math.min(c[i][1],q[1])-1,Math.max(c[i][0],q[0])+1,Math.max(c[i][1],q[1])+1])));
  s.rooms.forEach(rm=>{if(rm.nolabel)return;const[a,b,c,d]=bbox(rm.p),w=c-a,h=d-b,dim=rm.nodim?'':`${w} × ${h}`;
   const fs=lfs(rm.lx?60:w,rm.n),room=rm.lx?[rm.lx-34,rm.lz-14,rm.lx+34,rm.lz+14]:[a,b,c,d];
   const[x,z,box]=place(rm.lx??a+w/2,rm.lz??b+h/2,fs,rm.n,dim,room,blocked);blocked.push(box);
@@ -431,15 +455,15 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  const stage=document.getElementById('m3stage'),canvas=document.getElementById('m3c'),tip=document.getElementById('m3tip'),msg=document.getElementById('m3msg');
  const fail=t=>{msg.textContent=t;msg.hidden=false};
  if(!window.THREE||!THREE.OrbitControls){fail('The 3D viewer could not load. The 2D sheets below have every dimension.');return}
- let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(e){fail('This browser can\'t show 3D (WebGL is off). The 2D sheets below have every dimension.');return}
+ let renderer;try{renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true})}catch(e){fail('This browser can\'t show 3D (WebGL is off). The 2D sheets below have every dimension.');return}
  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
  const css=n=>{const v=getComputedStyle(document.documentElement).getPropertyValue(n).trim();return new THREE.Color(v.length>7?v.slice(0,7):v)};
  const scene=new THREE.Scene();scene.background=css('--sheet');
  const camera=new THREE.PerspectiveCamera(38,1,1,4000);
  const controls=new THREE.OrbitControls(camera,canvas);controls.maxPolarAngle=Math.PI*.495;controls.minDistance=40;controls.maxDistance=1400;
  const home=()=>{camera.position.set(330,330,420);controls.target.set(0,0,0);controls.update()};home();
- scene.add(new THREE.HemisphereLight(0xffffff,css('--grid2'),.95));
- const sun=new THREE.DirectionalLight(0xffffff,.55);sun.position.set(220,320,160);scene.add(sun);
+ scene.add(new THREE.HemisphereLight(0xffffff,css('--grid2'),.62));
+ const sun=new THREE.DirectionalLight(0xffffff,.5);sun.position.set(220,320,160);scene.add(sun);
  const CX=W/2,CZ=H/2,edgeCol=css('--ink'),pick=[];
  // Level bands per sheet; per-room overrides by name.
  const LV={S00:{y:0,h:.4,name:'Site'},S04:{y:-24,h:23,name:'Bunker'},S01:{y:0,h:19,name:'Ground'},S02:{y:20,h:19,name:'Upper'},S03:{y:40,h:1,name:'Roof'}};
