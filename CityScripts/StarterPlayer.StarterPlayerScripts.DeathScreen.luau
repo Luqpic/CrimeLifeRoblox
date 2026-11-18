@@ -52,6 +52,7 @@ local DEATH_IN_FOCUS_RADIUS = 2
 local MAX_RESPAWN_WAIT = 10 -- hard upper bound; never block longer than this no matter what
 
 local gui = Instance.new("ScreenGui")
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling -- Sibling: see UI Layout Traps; the template's TextContainer sits at its children's ZIndex so the order is the same in both modes
 gui.Name = "DeathScreenGui"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true

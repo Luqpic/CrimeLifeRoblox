@@ -138,6 +138,14 @@ QuestConfig.RESTORED_ATTRIBUTE = "QuestsRestored"
 -- The dialogue itself closes at 10 studs (DialogModule's walk-away range); 30 leaves room for lag.
 QuestConfig.MAX_INTERACT_DISTANCE = 30
 
+-- Why the server refused an accept or turn-in. QuestService sends the key back to the player on the same
+-- remote (FireClient(player, questId, reason)); QuestFeedbackController shows the text as a toast.
+QuestConfig.REFUSALS = {
+	too_far = "Too far away.",
+	not_ready = "Not ready yet.",
+	low_level = "Your level is too low.",
+}
+
 -- A NaN magnitude compares false, so a NaN position is never within reach.
 function QuestConfig.withinReach(a: Vector3, b: Vector3): boolean
 	return (a - b).Magnitude <= QuestConfig.MAX_INTERACT_DISTANCE

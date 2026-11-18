@@ -1,6 +1,7 @@
 -- Kill-based leveling: XP is granted on every kill by a real player, for both AI and PvP kills --
 -- unlike CashService, which deliberately excludes PvP so cash cannot be farmed that way.
--- Session-only, matching how Cash already resets on every join; this does not add a DataStore.
+-- Saved: level and XP live in the player's profile through ProfileGateway (ProfileStore, since 2026-09-23),
+-- restored by `hydrate` below and written by every mirror call.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")

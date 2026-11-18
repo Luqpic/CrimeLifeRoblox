@@ -1,7 +1,7 @@
 -- Personal feedback when one of this player's own quests completes: the shine effect on their
--- character, a sound, and a bottom-left toast. Driven off the same reactive player attributes the
--- rest of the quest system replicates through, the way WeaponaryShopController already reacts to
--- WeaponUpgrade_/WeaponOwned_/LoadoutSlot.
+-- character, a sound, and a bottom-left toast; and a toast when the server refuses an accept or turn-in.
+-- Driven off the same reactive player attributes the rest of the quest system replicates through, the
+-- way WeaponaryShopController already reacts to WeaponUpgrade_/WeaponOwned_/LoadoutSlot.
 --
 -- There is deliberately no centre-screen banner: the toast already announces the completion, and
 -- showing both said the same thing twice.
@@ -72,6 +72,17 @@ local function onCompletionsChanged(questId: string)
 	-- name -- previously the whole sentence went into the one-line message label.
 	NotificationController.show(quest.name, "QUEST COMPLETE")
 end
+
+-- A refused accept or turn-in: QuestService answers on the same remote with a reason key.
+local function onRefused(_questId: unknown, reason: unknown)
+	local text = if typeof(reason) == "string" then QuestConfig.REFUSALS[reason] else nil
+	if text then
+		NotificationController.show(text, "QUEST")
+	end
+end
+local remotes = questsRoot:WaitForChild("Remotes")
+remotes:WaitForChild("AcceptQuestRequest").OnClientEvent:Connect(onRefused)
+remotes:WaitForChild("TurnInQuestRequest").OnClientEvent:Connect(onRefused)
 
 for questId in QuestConfig.Quests do
 	-- Seeded from the current value first, so completions banked before this script ran (a rejoin,

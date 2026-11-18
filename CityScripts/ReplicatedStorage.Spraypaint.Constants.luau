@@ -28,6 +28,10 @@ Constants.KILL_SPRAYPAINT = {
 
 Constants.LEVEL_SPRAYPAINT = 25
 
+-- Skins card: after the first click on a locked chip ("Buy for N?"), a second click within this many
+-- seconds buys; the timeout cancels the offer.
+Constants.BUY_CONFIRM_SECONDS = 4
+
 -- Anything that is not a recognised NPC faction is worth nothing, and that includes nil.
 --
 -- This is the anti-farming rule, not a defensive nicety: a player's own character carries no Faction

@@ -424,7 +424,7 @@ return function(t)
 		profile:EndSession()
 	end)
 
-	t.test("quest progress written before the bind is not saved, and a restored quest wins", function()
+	t.test("quest progress written before the bind is not saved, and restore reads the saved entries", function()
 		-- QuestService mirrors through the same guarded mirror: unbound, nothing reaches a profile.
 		local QuestConfig = require(game.ReplicatedStorage.Quests.QuestConfig)
 		local player = standIn()
@@ -443,5 +443,98 @@ return function(t)
 		expect.equal(completions.Level1Thugs, 2)
 
 		profile:EndSession()
+	end)
+
+	t.test("the quest hydrator wins over quest state published before the restore", function()
+		-- QuestService is a Script: its hydrator has been in the gateway's list since server start, and
+		-- _runHydrators runs it. The stand-in carries what an accept and kills before the bind published.
+		local QuestConfig = require(game.ReplicatedStorage.Quests.QuestConfig)
+		local player = standIn()
+		player:SetAttribute(QuestConfig.stateAttributeFor("Level1Thugs"), QuestConfig.STATE_ACCEPTED)
+		player:SetAttribute(QuestConfig.progressAttributeFor("Level1Thugs"), 9)
+		player:SetAttribute(QuestConfig.stateAttributeFor("Level10Smugglers"), QuestConfig.STATE_ACCEPTED)
+
+		local profile = Gateway.loadForKey("adopt-quest-hydrator-" .. os.clock())
+		profile.Data.quests = { Level1Thugs = { state = QuestConfig.STATE_ACCEPTED, progress = 4 } }
+		profile.Data.questCompletions = { Level1Thugs = 2 }
+		Gateway._runHydrators(player, profile) -- the restore
+
+		expect.equal(player:GetAttribute(QuestConfig.RESTORED_ATTRIBUTE), true)
+		expect.equal(player:GetAttribute(QuestConfig.progressAttributeFor("Level1Thugs")), 4)
+		expect.equal(player:GetAttribute(QuestConfig.completionsAttributeFor("Level1Thugs")), 2)
+		expect.equal(player:GetAttribute(QuestConfig.stateAttributeFor("Level10Smugglers")), "") -- not in the save
+		expect.equal(profile.Data.quests.Level1Thugs.progress, 4)
+
+		profile:EndSession()
+	end)
+
+	t.test("restoring quests prunes what restore drops or clamps from the saved table", function()
+		-- Without it a dropped id stays in the save, and a quest removed and later re-added would bring its
+		-- old progress back.
+		local QuestConfig = require(game.ReplicatedStorage.Quests.QuestConfig)
+		local target = QuestConfig.Quests.Level1Thugs.objectiveTarget
+		local player = standIn()
+		local profile = Gateway.loadForKey("adopt-quest-prune-" .. os.clock())
+		profile.Data.quests = {
+			Gone = { state = QuestConfig.STATE_ACCEPTED, progress = 3 },
+			Level1Thugs = { state = QuestConfig.STATE_ACCEPTED, progress = target + 50 },
+			Level10Smugglers = { state = "Hacked", progress = 1 },
+		}
+		profile.Data.questCompletions = { Gone = 4, Level1Thugs = 2.5 }
+		Gateway._runHydrators(player, profile)
+
+		expect.equal(player:GetAttribute(QuestConfig.RESTORED_ATTRIBUTE), true)
+		expect.deepEqual(profile.Data.quests, { Level1Thugs = { state = QuestConfig.STATE_READY_TO_TURN_IN, progress = target } })
+		expect.deepEqual(profile.Data.questCompletions, { Level1Thugs = 2 })
+
+		profile:EndSession()
+	end)
+
+	t.test("a Police kill is counted, saved and restored", function()
+		-- KillStatsService (a Script) counts only a real Player's kill, so this needs the Play session's
+		-- player. A throwaway mock profile is bound to them for the kill and their own put back before any
+		-- assertion. The fake kill also reaches the other Eliminated listeners (XP, Spraypaint, a kill
+		-- toast; a witnessed-kill heat is cleared below when the player had none).
+		local StatsConstants = require(game.ReplicatedStorage.Stats.Constants)
+		local WantedService = require(game.ServerScriptService.Wanted.WantedService)
+		local player = game:GetService("Players"):GetPlayers()[1]
+		expect.truthy(player) -- run in Play
+
+		local key = "adopt-police-kill-" .. os.clock()
+		local profile = Gateway.loadForKey(key)
+		local realProfile = Gateway.get(player)
+		local heatBefore = player:GetAttribute("WantedHeat")
+		local before = player:GetAttribute(StatsConstants.POLICE_ATTRIBUTE) or 0
+
+		local victim = Instance.new("Model")
+		victim.Name = "UnitTestPolice"
+		victim:SetAttribute(StatsConstants.FACTION_ATTRIBUTE, StatsConstants.POLICE)
+		local humanoid = Instance.new("Humanoid")
+		humanoid.Parent = victim
+
+		Gateway._bind(player, profile)
+		game.ServerScriptService.Blaster.Events.Eliminated:Fire(player, humanoid)
+		task.wait() -- listeners run deferred in this place
+		if realProfile then
+			Gateway._bind(player, realProfile)
+		else
+			Gateway._unbind(player)
+		end
+		if heatBefore == 0 then
+			WantedService.clear(player)
+		end
+		victim:Destroy()
+
+		expect.equal(player:GetAttribute(StatsConstants.POLICE_ATTRIBUTE), before + 1)
+		expect.equal(profile.Data.kills[StatsConstants.POLICE_ATTRIBUTE], before + 1)
+		profile:EndSession() -- the save
+
+		local reloaded = Gateway.loadForKey(key)
+		expect.equal(reloaded.Data.kills[StatsConstants.POLICE_ATTRIBUTE], before + 1)
+		local rejoined = standIn()
+		Gateway._runHydrators(rejoined, reloaded)
+		expect.equal(rejoined:GetAttribute(StatsConstants.POLICE_ATTRIBUTE), before + 1)
+
+		reloaded:EndSession()
 	end)
 end

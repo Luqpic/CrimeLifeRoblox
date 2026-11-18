@@ -69,13 +69,11 @@ local function hydrate(player: any, profile: any?)
 	if not profile then
 		return
 	end
-	-- A malformed save would make every later save() throw; reset only that field.
-	if type(profile.Data.quests) ~= "table" then
-		profile.Data.quests = {}
-	end
-	if type(profile.Data.questCompletions) ~= "table" then
-		profile.Data.questCompletions = {}
-	end
+	-- The save is written back cleaned first: an entry restore drops or clamps leaves the save too, so a
+	-- quest id removed and later re-added cannot bring old progress back, and a malformed (non-table)
+	-- field becomes {} so a later save() cannot throw. The session state is a second restore of the
+	-- cleaned save (restore always returns new tables), so it never shares a table with the save.
+	profile.Data.quests, profile.Data.questCompletions = QuestConfig.restore(profile.Data.quests, profile.Data.questCompletions)
 	local quests, completions = QuestConfig.restore(profile.Data.quests, profile.Data.questCompletions)
 	playerQuests[player] = quests
 	for questId in QuestConfig.Quests do
@@ -124,6 +122,7 @@ acceptQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 		return
 	end
 	if not canReach(player, quest) then
+		acceptQuestRequest:FireClient(player, questId, "too_far") -- refusals answer on the same remote
 		return
 	end
 
@@ -137,7 +136,8 @@ acceptQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 
 	local level = (player:GetAttribute("Level") :: number?) or 1
 	if level < quest.requiredLevel then
-		return -- client should already be refusing to offer this; server is the real gate
+		acceptQuestRequest:FireClient(player, questId, "low_level") -- the client should not offer it; the server is the real gate
+		return
 	end
 
 	quests[questId] = { progress = 0, state = QuestConfig.STATE_ACCEPTED }
@@ -194,22 +194,20 @@ turnInQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 		return
 	end
 	if not canReach(player, quest) then
+		turnInQuestRequest:FireClient(player, questId, "too_far")
 		return
 	end
 
 	local quests = playerQuests[player]
 	local entry = quests and quests[questId]
 	if not entry or entry.state ~= QuestConfig.STATE_READY_TO_TURN_IN then
+		turnInQuestRequest:FireClient(player, questId, "not_ready")
 		return
 	end
 
-	local leaderstats = player:FindFirstChild("leaderstats")
-	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
-	if cash then
-		cash.Value += quest.rewardCash
-	end
-	grantXpEvent:Fire(player, quest.rewardXp)
-
+	-- The claim is recorded, published and saved first and the reward paid last, so a second turn-in can
+	-- never find the quest still claimable after a payout, whether or not anything below ever yields.
+	--
 	-- Incremented before the state change below. For a repeatable quest the state returns to ""
 	-- immediately, so this counter is the only thing that records the completion -- and the only
 	-- signal the client's completion feedback can key off.
@@ -225,4 +223,11 @@ turnInQuestRequest.OnServerEvent:Connect(function(player: Player, questId: any)
 	end
 	publishQuestAttributes(player, questId)
 	save(player, questId)
+
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
+	if cash then
+		cash.Value += quest.rewardCash
+	end
+	grantXpEvent:Fire(player, quest.rewardXp)
 end)
