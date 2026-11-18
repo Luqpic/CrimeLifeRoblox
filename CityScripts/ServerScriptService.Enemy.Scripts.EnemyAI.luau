@@ -24,6 +24,8 @@ local AimConfig = require(ReplicatedStorage.Enemy.AimConfig)
 local Constants = require(ReplicatedStorage.Enemy.Constants)
 local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
 local ShotResolver = require(ServerScriptService.Blaster.Scripts.ShotResolver)
+local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
+local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
 local getRayDirections = require(ReplicatedStorage.Blaster.Utility.getRayDirections)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
@@ -495,6 +497,45 @@ function EnemyAI:_tryFire(now: number)
 	end
 end
 
+-- Open items pass 2026-11-18: would this shot be wasted on an ally? True when the first thing on the line of
+-- fire (the bullet's own radius, muzzle to aim point) belongs to a humanoid this enemy cannot damage (another
+-- enemy, police, a Witness NPC) other than the target; records that ally's position for _sidestep. Melee is
+-- exempt: a swing fans its rays across the arc, and a ring of melee enemies (the 2026-09-21 cluster) must
+-- keep swinging.
+function EnemyAI:_allyInLine(from: Vector3, to: Vector3, targetHumanoid: Humanoid): boolean
+	if self.weapon:GetAttribute(BlasterConstants.MELEE_HIT_EFFECT_ATTRIBUTE) then
+		return false
+	end
+	local radius = self.weapon:GetAttribute(BlasterConstants.RAY_RADIUS_ATTRIBUTE) or 0.1
+	local hit = castRays(self.character, from, { to - from }, radius, false)[1]
+	local humanoid = hit and hit.instance and findOwningHumanoid(hit.instance)
+	if not humanoid or humanoid == targetHumanoid or hit.taggedHumanoid then
+		return false
+	end
+	local root = humanoid.RootPart
+	self.allyInLine = if root then root.Position else hit.position
+	self.allyInLineAt = os.clock()
+	return true
+end
+
+-- Steps across the line of fire, away from the ally in it, so the next shot has a clear line. Called each
+-- Attack think while an ally was in the line within the last two thinks; an enemy never stands behind an
+-- ally holding its fire.
+function EnemyAI:_sidestep(aimPosition: Vector3)
+	local from = self.rootPart.Position
+	local toTarget = (aimPosition - from) * Vector3.new(1, 0, 1)
+	if toTarget.Magnitude < 1e-3 then
+		return
+	end
+	local side = toTarget.Unit:Cross(Vector3.yAxis)
+	if (self.allyInLine - from):Dot(side) > 0 then
+		side = -side
+	end
+	self:_clearPath()
+	self.humanoid.WalkSpeed = self.config.walkSpeed
+	self.humanoid:MoveTo(from + side * Constants.ALLY_SIDESTEP)
+end
+
 function EnemyAI:_reload()
 	local weapon = self.weapon
 	if weapon:GetAttribute(BlasterConstants.RELOADING_ATTRIBUTE) then
@@ -617,6 +658,9 @@ function EnemyAI:_fireOnce(): boolean
 	local muzzlePosition = self:_muzzlePosition()
 	if not ShotResolver.hasLineOfSight(self.character, muzzlePosition, targetHumanoid) then
 		return false
+	end
+	if self:_allyInLine(muzzlePosition, aimPosition, targetHumanoid) then
+		return false -- hold fire: the ally would absorb the shot
 	end
 
 	-- Aim at the torso. Enemies do not deliberately go for the head; a headshot only happens if the
@@ -907,7 +951,9 @@ function EnemyAI:_thinkAttack(now: number)
 	if not self:_isAutomatic() then
 		self:_tryFire(now)
 	end
-	if distance > engageRange * self.config.preferredRangeFraction then
+	if self.allyInLineAt and now - self.allyInLineAt <= Constants.THINK_INTERVAL * 2 then
+		self:_sidestep(aimPosition)
+	elseif distance > engageRange * self.config.preferredRangeFraction then
 		self:_followPath(aimPosition, self.config.chaseSpeed, now)
 	else
 		self:_stopMoving()

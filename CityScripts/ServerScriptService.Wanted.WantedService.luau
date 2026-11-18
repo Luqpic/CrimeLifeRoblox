@@ -4,8 +4,10 @@
 -- the client only reads those. Raised by robbery alarms (onAlarm, called where each robbery path announces
 -- NotifyRobberyTriggered), by hits and kills on police, and by witnessed crimes on other NPCs (onDamaged /
 -- onEliminated, fed by Blaster.Events.Damaged and Eliminated). Unseen for DRAIN_INTERVAL seconds, heat drops
--- one step; seen, the timer restarts. Death and leaving clear it. Each step also publishes WantedSeen (seen, or
--- the active-robbery bypass) and WantedDraining (the unseen timer is running) for the star meter (Task 4).
+-- one step; seen, the timer restarts. Leaving clears it, and so does a death after damage; a death with no
+-- damage in the last RESET_DAMAGE_SECONDS (a self-reset) keeps it (open items pass 2026-11-18). Each step also
+-- publishes WantedSeen (seen, or the active-robbery bypass) and WantedDraining (the unseen timer is running)
+-- for the star meter (Task 4).
 --
 -- Requiring this connects nothing: WantedRunner calls start() and steps the drain at SEEN_CHECK_HZ.
 -- _deps holds the clock, the seen provider, the witness check and the character-to-player lookup, so the
@@ -75,6 +77,7 @@ local heatOf = {} -- [player] = heat, only while > 0
 local timerFrom = {} -- [player] = when the drain timer last restarted
 local raisedAt = {} -- [player] = when heat last rose (the search window runs from here)
 local lastPoliceHit = {} -- [player] = { [Humanoid] = time of the last credited hit }
+local hurtAt = {} -- [player] = when the server last saw them take damage (_watchCharacter, _onTaggedEvent)
 local lastSeenWarning = -math.huge
 
 -- A minimal signal: :Connect(fn) returns { Disconnect }, fire(...) spawns every listener.
@@ -220,8 +223,13 @@ local function isSeen(player, t: number): boolean
 	return false
 end
 
+-- Is the player a participant of an active robbery near its building? The dispatcher sends officers there.
+function WantedService.inActiveRobbery(player): boolean
+	return deps.activeRobbery(player) == true
+end
+
 -- Do the police know where the player is? During the search window after a rise in heat, and while a
--- robbery they are in is active. The dispatcher sends officers to the player's position then.
+-- robbery they are in is active. Either one holds the drain back.
 function WantedService.knowsWhere(player, now: number?): boolean
 	local t = now or deps.now()
 	local raised = raisedAt[player]
@@ -252,11 +260,37 @@ function WantedService._step(now: number?)
 	end
 end
 
+-- A death with damage in the last RESET_DAMAGE_SECONDS clears heat (the haul goes as before). One without is a
+-- self-reset: the stars carry into the next character, and the search window and the drain start over from the
+-- death, so a reset is never a faster way out than hiding.
+function WantedService._onDied(player)
+	local now = deps.now()
+	local hurt = hurtAt[player]
+	if hurt and now - hurt <= Constants.RESET_DAMAGE_SECONDS then
+		WantedService.clear(player)
+	elseif heatOf[player] then
+		timerFrom[player], raisedAt[player] = now, now
+		player:SetAttribute("WantedSeen", false)
+		player:SetAttribute("WantedDraining", false)
+	end
+end
+
+-- Damage is what the server saw: a health drop the player survived (shots, guards, lasers; a client's own
+-- partial health changes never reach the server), or a Blaster hit (Tagged, lethal ones included). A drop
+-- straight to 0 proves nothing: a reset reaches the server as exactly that (measured 2026-11-18).
 function WantedService._watchCharacter(player, character: Model)
 	local humanoid = character:WaitForChild("Humanoid", 10)
 	if humanoid then
+		local health = humanoid.Health
+		humanoid.HealthChanged:Connect(function(new)
+			-- A drop to exactly MaxHealth is a clamp from lowering MaxHealth, not damage.
+			if new > 0 and new < health and new < humanoid.MaxHealth then
+				hurtAt[player] = deps.now()
+			end
+			health = new
+		end)
 		humanoid.Died:Connect(function()
-			WantedService.clear(player)
+			WantedService._onDied(player)
 		end)
 	end
 end
@@ -283,7 +317,20 @@ function WantedService._onEliminatedEvent(attacker, humanoid)
 	end
 end
 
-WantedService._onPlayerRemoving = WantedService.clear
+-- Tagged fires on every Blaster hit (any attacker) right after the damage, before the Died it may cause; also
+-- on a ForceField-protected body, which takes nothing (measured 2026-11-18), so that hit is no damage.
+function WantedService._onTaggedEvent(_attacker, humanoid)
+	local character = isHumanoid(humanoid) and humanoid.Parent
+	local player = character and deps.playerFromCharacter(character)
+	if player and not character:FindFirstChildOfClass("ForceField") then
+		hurtAt[player] = deps.now()
+	end
+end
+
+function WantedService._onPlayerRemoving(player)
+	hurtAt[player] = nil
+	WantedService.clear(player)
+end
 
 function WantedService.start()
 	local function onPlayer(player: Player)
@@ -303,6 +350,7 @@ function WantedService.start()
 	local events = ServerScriptService.Blaster.Events
 	events.Damaged.Event:Connect(WantedService._onDamagedEvent)
 	events.Eliminated.Event:Connect(WantedService._onEliminatedEvent)
+	events.Tagged.Event:Connect(WantedService._onTaggedEvent)
 end
 
 return WantedService

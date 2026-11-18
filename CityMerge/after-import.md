@@ -641,3 +641,20 @@ Studio objects: the obby pad group at z 2472 restored to its original CFrames (6
 The 8 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (8 / 8). City suites 262 / 262 / 0; heist 706 passed / 1 failed (the Zone "real occupancy sweep" only). After: 1 enabled SpawnLocation in Workspace, no temporary object.
 
 NOT saved / NOT published
+
+## Open items pass 2026-11-18
+
+Task 1 (police, wanted level and enemy AI, `Batch: open items police and enemy AI`). Same columns; old = the place before this task.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ServerScriptService.Wanted.WantedService` (ModuleScript) | 12,214 / 2218288967 | 14,516 / 2846783794 | Developer decision 1: `_onDied` clears heat only after damage the server saw within `RESET_DAMAGE_SECONDS`; otherwise (a self-reset) the heat carries and the search window and drain restart at the death. Damage = a `HealthChanged` drop the player survived, or a Blaster `Tagged` hit while no ForceField is on (`_onTaggedEvent`, connected in `start()`); a drop straight to 0 is what a client reset looks like on the server (measured), so it is not damage. `inActiveRobbery(player)`; `_onPlayerRemoving` also forgets the damage time. Attribute set. |
+| 2026-11-18 | `ServerScriptService.Wanted.PoliceDispatcher` (ModuleScript) | 21,708 / 1953592970 | 22,319 / 1938311026 | Developer decision 3: `believedPosition` = the robbery's entrance or the player's position during an active robbery, else the last-seen spot, also in the search window (no live tracking). `tick` keeps a squad while its player is wanted but between characters (a self-reset). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Enemy.Scripts.EnemyAI` (ModuleScript) | 40,610 / 2586628771 | 42,838 / 3716075725 | `_allyInLine` (gun weapons only: the first hit on the muzzle-to-aim line, at the bullet's radius, is a humanoid the shooter cannot damage and not the target) holds the shot in `_fireOnce`; `_thinkAttack` calls `_sidestep` (walk `ALLY_SIDESTEP` across the line, away from the ally) while an ally was in the line within two thinks. Melee exempt (the 2026-09-21 cluster). Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.Wanted.Constants` (ModuleScript) | 3,331 / 1706559087 | 3,575 / 2502907630 | `RESET_DAMAGE_SECONDS = 5`. Attribute set. |
+| 2026-11-18 | `ReplicatedStorage.Enemy.Constants` (ModuleScript) | 6,525 / 631277248 | 6,732 / 667011660 | `ALLY_SIDESTEP = 4`. Attribute set. First export. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.WantedService_Test` (ModuleScript) | 21,569 / 2875280365 | 24,594 / 1301158880 | "death clears heat" becomes four cases: a death right after damage clears; a self-reset keeps the stars (damage 5.5 s earlier does not count) and the window and drain restart at the death; a lethal `Tagged` hit clears; a `Tagged` hit under a ForceField does not count. Attribute set. |
+
+The 6 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (6 / 6). City suites 265 / 265 / 0 (262 + 4 new - 1 replaced); heist 707 passed / 0 failed. Officer rig builds (item 3): no change, measured already one build per frame. Outfit staging folder: not in the city. After: 1 enabled SpawnLocation in Workspace, no temporary object, no Workspace attribute.
+
+NOT saved / NOT published

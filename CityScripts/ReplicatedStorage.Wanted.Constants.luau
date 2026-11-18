@@ -20,6 +20,9 @@ return {
 	-- Design section 9: after any rise in heat the unseen timer may not start for this long.
 	SEARCH_SECONDS = 20,
 	SEEN_CHECK_HZ = 2,
+	-- A death with no damage the server saw in the last this-many seconds is a self-reset: the stars carry into
+	-- the next character (developer decision, open items pass 2026-11-18). A death after damage clears them.
+	RESET_DAMAGE_SECONDS = 5,
 
 	-- Police dispatch
 	POLICE_TEMPLATES = { Police = true, ["Armed Police"] = true }, -- victim attribute EnemyTemplate

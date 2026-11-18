@@ -138,10 +138,9 @@ return function(t)
 		WantedService.clear(p)
 	end)
 
-	t.test("death clears heat", function()
-		local p = standIn()
-		-- Died fires only for a humanoid with a body (measured: a bare Model's humanoid never fires it), so a
-		-- root and a head, welded, high above the map; ChangeState(Dead) is what fires it on the server.
+	-- Died fires only for a humanoid with a body (measured: a bare Model's humanoid never fires it), so a
+	-- root and a head, welded, high above the map; ChangeState(Dead) is what fires it on the server.
+	local function body()
 		local humanoid, model = victim()
 		local root = Instance.new("Part")
 		root.Name = "HumanoidRootPart"
@@ -158,13 +157,101 @@ return function(t)
 		weld.Part0, weld.Part1 = root, head
 		weld.Parent = root
 		model.Parent = workspace
-		WantedService._watchCharacter(p, model)
-		WantedService.onAlarm("Bank", { p })
+		return humanoid, model
+	end
+	-- Kills the body and waits until the service's own Died handler (connected first) has run.
+	local function kill(humanoid: Humanoid)
+		local died = false
+		humanoid.Died:Connect(function() died = true end)
 		humanoid:ChangeState(Enum.HumanoidStateType.Dead)
 		local waited = 0
-		while WantedService.getHeat(p) > 0 and waited < 1 do waited += task.wait() end
+		while not died and waited < 1 do waited += task.wait() end
+		task.wait()
+		return died
+	end
+
+	-- Open items pass 2026-11-18 (developer decision): a death within RESET_DAMAGE_SECONDS of damage the server
+	-- saw clears heat as before; a death without (a self-reset) keeps the stars.
+	t.test("a death right after damage clears heat", function()
+		local p = standIn()
+		local humanoid, model = body()
+		WantedService._watchCharacter(p, model)
+		clock = 20000
+		WantedService.onAlarm("Bank", { p })
+		humanoid:TakeDamage(10)
+		clock = 20000 + Constants.RESET_DAMAGE_SECONDS
+		local died = kill(humanoid)
 		model:Destroy()
+		expect.truthy(died)
 		check(p, 0)
+	end)
+
+	t.test("a self-reset keeps the stars; damage longer ago does not count; the search window and drain restart at the death", function()
+		deps.searchSeconds = Constants.SEARCH_SECONDS
+		local p = standIn()
+		local humanoid, model = body()
+		WantedService._watchCharacter(p, model)
+		clock = 21000
+		WantedService.onAlarm("Bank", { p })
+		humanoid:TakeDamage(10)
+		clock = 21000 + Constants.RESET_DAMAGE_SECONDS + 0.5
+		local died = kill(humanoid)
+		model:Destroy()
+		local deathAt = clock
+		local kept = WantedService.getHeat(p)
+		local draining = p:GetAttribute("WantedDraining")
+		local steps = (Constants.SEARCH_SECONDS + Constants.DRAIN_INTERVAL) * 2 -- 2 Hz, as WantedRunner steps
+		local beforeDrain
+		for i = 1, steps do
+			clock = deathAt + i * 0.5
+			WantedService._step()
+			if i == steps - 1 then beforeDrain = WantedService.getHeat(p) end
+		end
+		local afterDrain = WantedService.getHeat(p)
+		deps.searchSeconds = 0
+		WantedService.clear(p)
+		expect.truthy(died)
+		expect.equal(kept, 3)
+		expect.equal(draining, false)
+		expect.equal(beforeDrain, 3)
+		expect.equal(afterDrain, 2)
+	end)
+
+	t.test("a Blaster hit (Tagged) counts as damage: a death right after it clears heat", function()
+		local p = standIn()
+		local humanoid, model = body()
+		playerOfCharacter[model] = p
+		WantedService._watchCharacter(p, model)
+		clock = 22000
+		WantedService.onAlarm("Bank", { p })
+		WantedService._onTaggedEvent(Instance.new("Model"), humanoid, 500)
+		clock = 22001
+		local died = kill(humanoid)
+		playerOfCharacter[model] = nil
+		model:Destroy()
+		expect.truthy(died)
+		check(p, 0)
+	end)
+
+	-- Measured in Play 2026-11-18: police shots on a ForceField-protected robber fire Tagged but deal nothing; a
+	-- reset right after cleared the stars.
+	t.test("a Blaster hit on a ForceField-protected player is not damage: a reset after it keeps the stars", function()
+		local p = standIn()
+		local humanoid, model = body()
+		Instance.new("ForceField").Parent = model
+		playerOfCharacter[model] = p
+		WantedService._watchCharacter(p, model)
+		clock = 23000
+		WantedService.onAlarm("Bank", { p })
+		WantedService._onTaggedEvent(Instance.new("Model"), humanoid, 12)
+		clock = 23001
+		local died = kill(humanoid)
+		playerOfCharacter[model] = nil
+		model:Destroy()
+		local kept = WantedService.getHeat(p)
+		WantedService.clear(p)
+		expect.truthy(died)
+		expect.equal(kept, 3)
 	end)
 
 	t.test("clear sets heat and both attributes to 0", function()

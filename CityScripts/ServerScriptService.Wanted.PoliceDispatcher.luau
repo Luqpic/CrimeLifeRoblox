@@ -5,12 +5,13 @@
 -- the shared EnemyAI, built by EnemyRig like any enemy, with config.targetFilter = "wanted" and
 -- config.faction = "Police". The first squad after an alarm spawns in a ring around the robbed location's
 -- StatusBillboardAnchor; later ones in a ring around the player; every point passes isValidSpawn. Officers
--- head for where the police believe their player is (design section 9): the player's position during the
--- search window or an active robbery (the robbery's entrance when the player is inside it), else the spot
--- an officer last saw them; their own chase takes over on sight, and each prefers its squad's player. An
--- officer whose player is cleared, dead or gone takes another wanted player it can see, or walks away and
--- despawns once no player sees it (LEAVE_TIMEOUT at most); a leaving officer sees nobody for "seen". When
--- stars fall, officers above the new squad target leave the same way, Armed Police first.
+-- head for where the police believe their player is (design section 9): the player's position during an
+-- active robbery (the robbery's entrance when the player is inside it), else the spot an officer or guard
+-- last saw them, also in the search window (no live tracking, 2026-11-18); their own chase takes over on
+-- sight, and each prefers its squad's player. An officer whose player is cleared, dead or gone takes another
+-- wanted player it can see, or walks away and despawns once no player sees it (LEAVE_TIMEOUT at most); a
+-- leaving officer sees nobody for "seen". When stars fall, officers above the new squad target leave the same
+-- way, Armed Police first. A squad keeps its player through a respawn that kept the stars (2026-11-18).
 --
 -- Also installs WantedService's seen provider: a wanted player is seen while a live officer within
 -- SEEN_RANGE can see them, or a live guard within SEEN_RANGE has them in sight (Witnesses.guardSees, Task 3).
@@ -475,9 +476,12 @@ local function shed(squad, stars: number, now: number)
 	end
 end
 
--- Where the police believe `player` is (design section 9), or nil when they have no idea.
-local function believedPosition(player: Player, root: BasePart): Vector3?
-	if WantedService.knowsWhere(player) then
+-- Where the police believe `player` is, or nil when they have no idea. An active robbery near its building
+-- gives the place away (design section 9); otherwise the spot an officer or guard last saw them. The search
+-- window adds no live tracking (developer decision 2026-11-18): officers search the last-seen spot and
+-- re-engage only on sight; a squad that never saw the player patrols where it last went.
+local function believedPosition(player: Player, root: BasePart?): Vector3?
+	if root and WantedService.inActiveRobbery(player) then
 		-- Inside a robbery building the interior is off the navmesh: go to its entrance.
 		return entranceNear(root.Position) or root.Position
 	end
@@ -490,11 +494,13 @@ end
 local function tick(now: number)
 	local adopted = {} -- applied after the walk: no new keys in squads while iterating it
 	for player, squad in squads do
-		local root = player.Parent == Players and isWanted(player) and rootOf(player)
+		-- A wanted player between characters (a self-reset keeps the stars) keeps the squad, searching as before.
+		local wanted = player.Parent == Players and isWanted(player)
+		local root = if wanted then rootOf(player) else nil
 		for record in squad do
 			if not isLive(record) then
 				squad[record] = nil
-			elseif not root then
+			elseif not wanted then
 				squad[record] = nil
 				local other = visibleWanted(record.ai)
 				if other then
@@ -511,7 +517,7 @@ local function tick(now: number)
 				end
 			end
 		end
-		if root then
+		if wanted then
 			shed(squad, player:GetAttribute("WantedStars") or 0, now)
 		end
 		if next(squad) == nil then
