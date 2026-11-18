@@ -2,8 +2,9 @@
 -- The Skins card: a detached panel beside the weapon shop's detail view, replacing the old in-panel
 -- SkinRow + BuyStrip (see the retired SkinRowController). One chip per palette; clicking an owned
 -- one asks the server to equip it and recolours the spinning preview immediately so the choice reads
--- before the round trip. Clicking a locked one PREVIEWS it on the 3D model, and clicking that same
--- chip again buys it -- see the note above paintChip for why a purchase takes two clicks.
+-- before the round trip. Clicking a locked one PREVIEWS it on the 3D model and asks "Buy for N?", and
+-- clicking that same chip again while it asks buys it -- see the note above paintChip for why a
+-- purchase takes two clicks.
 --
 -- Built natively -- Frames/UICorner/UIStroke -- to the Figma spec (iRetcvpbMMD190DJA9Mwrm, node
 -- 147:6, "SLICE - SkinsCard" 240x580). The only image is the spray-can icon beside each
@@ -219,12 +220,16 @@ end
 -- second click on the same chip is the purchase. So one stray click only ever shows a colour -- it
 -- can never spend up to 8200 -- and the step before buying now does something useful.
 --
--- The offer is a confirm step (developer decision 2026-11-18): the price row asks "Buy for N?", and only a
--- second click on that chip within SpraypaintConstants.BUY_CONFIRM_SECONDS buys. The timeout, a press
--- anywhere else (another chip included), BACK, closing the shop or re-targeting the card all cancel it,
--- and the preview goes with it.
+-- The confirm step (developer decision 2026-11-18): the first click also ARMS the chip and its price row
+-- asks "Buy for N?"; only a click on the armed chip buys. The timeout
+-- (SpraypaintConstants.BUY_CONFIRM_SECONDS) or a press anywhere else disarms it: the label goes back to
+-- the price and the PREVIEW STAYS, so a later click on that chip asks again instead of buying. The
+-- preview still ends only as it always did: another chip, BACK, closing the shop, re-targeting the
+-- card, or the equip landing.
 local previewPalette = nil
--- Bumped by every disarm, so a timeout armed for an older offer never cancels a newer one.
+-- The previewed chip while it asks "Buy for N?"; nil once disarmed.
+local armedPalette = nil
+-- Bumped by every disarm, so a timeout armed for an older question never disarms a newer one.
 local confirmToken = 0
 local outsideClick: RBXScriptConnection? = nil
 local hoveredKey: string? = nil
@@ -261,26 +266,26 @@ local function paintAllChips()
 	end
 end
 
--- The price row reads "<icon> 1500" at rest and "Buy for 1500?" in accent while that chip is being
--- previewed, cueing the second click.
+-- The price row reads "<icon> 1500" at rest and "Buy for 1500?" in accent while that chip is armed,
+-- cueing the second click.
 local function paintPrice(palette)
 	local chip = chips[palette.key]
 	local price = chip and chip:FindFirstChild("PriceLabel")
 	if not price or not palette.price then
 		return
 	end
-	local previewing = previewPalette == palette
-	local color = if previewing then COLOR_ACCENT else Color3.new(1, 1, 1)
+	local asking = armedPalette == palette
+	local color = if asking then COLOR_ACCENT else Color3.new(1, 1, 1)
 	local amount = price:FindFirstChild("Amount")
 	if amount and amount:IsA("TextLabel") then
-		amount.Text = if previewing then `Buy for {palette.price}?` else tostring(palette.price)
+		amount.Text = if asking then `Buy for {palette.price}?` else tostring(palette.price)
 		amount.TextColor3 = color
 	end
 	local icon = price:FindFirstChild("Icon")
 	if icon and icon:IsA("ImageLabel") then
 		-- Out while the question is up: icon + gap + "Buy for 8200?" is 85.5 px against the chip's 84
 		-- (measured at TextSize 11); the words alone are 71.5.
-		icon.Visible = not previewing
+		icon.Visible = not asking
 	end
 end
 
@@ -298,12 +303,17 @@ local function dressPreview()
 	end
 end
 
--- Ends the offer's timeout and its press-anywhere-else watch.
+-- Ends the question: its timeout, its press-anywhere-else watch and its label. The preview is untouched.
 local function disarm()
 	confirmToken += 1
 	if outsideClick then
 		outsideClick:Disconnect()
 		outsideClick = nil
+	end
+	local palette = armedPalette
+	if palette then
+		armedPalette = nil
+		paintPrice(palette)
 	end
 end
 
@@ -325,34 +335,26 @@ end
 
 local function clearPreview()
 	disarm()
-	local palette = previewPalette
-	if not palette then
+	if not previewPalette then
 		return
 	end
 	previewPalette = nil
-	paintPrice(palette)
 	paintAllChips()
 	dressPreview()
 end
 
-local function preview(palette)
-	local previous = previewPalette
-	previewPalette = palette
-	if previous and previous ~= palette then
-		paintPrice(previous)
-	end
-	paintPrice(palette)
-	paintAllChips()
-	dressPreview()
-
+-- Asks "Buy for N?" on `palette`'s chip until the timeout or a press anywhere else.
+local function arm(palette)
 	disarm()
+	armedPalette = palette
+	paintPrice(palette)
 	local token = confirmToken
 	task.delay(SpraypaintConstants.BUY_CONFIRM_SECONDS, function()
 		if token == confirmToken then
-			clearPreview()
+			disarm()
 		end
 	end)
-	-- A press outside this chip cancels. InputObject.Position and AbsolutePosition share one space
+	-- A press outside this chip disarms. InputObject.Position and AbsolutePosition share one space
 	-- (measured: a real click at a chip's centre read the same point, the top-bar inset excluded in both).
 	outsideClick = UserInputService.InputBegan:Connect(function(input)
 		local kind = input.UserInputType
@@ -363,9 +365,16 @@ local function preview(palette)
 		local at, size = chip.AbsolutePosition, chip.AbsoluteSize
 		local x, y = input.Position.X, input.Position.Y
 		if x < at.X or y < at.Y or x > at.X + size.X or y > at.Y + size.Y then
-			clearPreview()
+			disarm()
 		end
 	end)
+end
+
+local function preview(palette)
+	previewPalette = palette
+	paintAllChips()
+	dressPreview()
+	arm(palette)
 end
 
 -- Refused purchase, the same feedback the weapon BUY button's denyAction gives: the denied tone, and
@@ -550,8 +559,8 @@ for index, palette in Palettes.list do
 				clearPreview()
 				Sounds.click():Play()
 				promptGamepass:FireServer("Vip")
-			elseif previewPalette == palette then
-				-- Second click on the previewed chip: the purchase. Affordability is checked here purely
+			elseif armedPalette == palette then
+				-- Second click while the chip asks: the purchase. Affordability is checked here purely
 				-- as feedback -- the server still validates every purchase, so this cannot be used to
 				-- buy anything.
 				local balance = player:GetAttribute(SpraypaintConstants.ATTRIBUTE)
@@ -561,8 +570,10 @@ for index, palette in Palettes.list do
 				end
 				Sounds.click():Play()
 				awaitingBurst[palette.key] = true
+				disarm() -- one purchase per question: a fast extra click asks again instead of firing twice
 				buyRemote:FireServer(palette.key, currentWeaponName)
 			else
+				-- A first click, or a click on the previewed chip after its question ended: preview and ask.
 				Sounds.click():Play()
 				preview(palette)
 			end

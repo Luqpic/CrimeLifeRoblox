@@ -774,3 +774,20 @@ Task 3 fix round 2 (rate slack and third-person aim, controller ruling, `Batch: 
 The 5 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (5 / 5). City suites 288 / 288 / 0 (282 + 6); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 3.45 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 4 fix round 1 (controller ruling on the chip preview, and a player-text sweep for the no-dash rule, `Batch: open items chip preview and text sweep`). Same columns; old = the place before this round (`SkinsCardController`: its Task 4 row; the other five: their `CityScripts/` copies at 0f34b88, shown equal by undoing this round's edits on the new export).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.SkinsCardController` (ModuleScript) | 32,372 / 2935679564 | 32,967 / 3206786732 | Controller ruling: the timeout and a press elsewhere end only the "Buy for N?" question (`armedPalette`, `arm`, `disarm` repaints the label); the 3D preview stays and ends only as before (another chip, BACK, close, re-target, equip landing). A click on the previewed chip after its question ended asks again instead of buying; the buy click disarms (one fire per question). Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.QuestDialogueController` (LocalScript) | 9,176 / 4006366522 | 9,174 / 4177808622 | "Clean work -- {n} {enemies} gone." -> "Clean work. {n} {enemies} gone." Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Services.LocationServer` (ModuleScript) | 20,877 / 1915285561 | 20,872 / 1291709925 | `cap_exceeded` "Duffel Full — get clear ..." -> "Duffel Full. Get clear ..."; cooldown toast "%s sealed -- %d:%02d remaining." -> "%s sealed. %d:%02d remaining." Attribute appended. |
+| 2026-11-18 | `ServerScriptService.HeistServer` (Script) | 53,166 / 1059659372 | 53,153 / 2289833884 | `vault_not_breached`, `already_breached`, `cap_exceeded`, the heartbeat Duffel Full toast and "Vault sealed — %d:%02d remaining." without dash punctuation. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.LocationServerSpec` (ModuleScript) | 25,709 / 2880402448 | 25,707 / 1588753348 | The exact sealed-refusal wording follows the new text (RED before the source change: 732 / 1 on this case). Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.AdminLevelController` (LocalScript) | 7,491 / 3139161519 | 7,490 / 3458649500 | Admin panel title "Admin - Set Level" -> "Admin: Set Level". Attribute appended. |
+
+Studio objects (not scripts): `StarterGUI.DuffelUpgradeGui.DialogFrame.DialogText.Text` "Carry more cash in a single run. Highest tier applies -- these do not stack." -> "... Highest tier applies. These do not stack." (attribute `CityMergeDeviation`). Kept (not punctuation, or the allowed name/tag pattern): the six quest nameplates "OFC. DOYLE - LV 1" ... "CHIEF HARLAN - LV 70", `AdminLevelController` "Level -" (empty value) and "1 - {LEVEL_CAP}" (a range), the shop's "\u{2014}" no-price placeholder; developer-only `warn` / test-runner strings.
+
+The 6 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (6 / 6). City suites 288 / 288 / 0; heist 733 passed / 0 failed. After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

@@ -340,15 +340,15 @@ end
 local REFUSAL_MESSAGES = {
 	inactive = "The heist isn't active right now.",
 	too_far = "Get closer before you try that.",
-	vault_not_breached = "The vault's still locked -- plant and detonate the C4 first.",
+	vault_not_breached = "The vault's still locked. Plant and detonate the C4 first.",
 	terminals_incomplete = "Hit both terminals before you can plant the charge.",
 	countdown_active = "The charge is already counting down.",
-	already_breached = "The vault's already breached -- head to the teleporter.",
+	already_breached = "The vault's already breached. Head to the teleporter.",
 	-- Shared with the ATM machines' RobbableObject onRefused (spec addendum,
 	-- 2026-09-14) -- same wording as the heartbeat's own Duffel Full toast
 	-- below; both were updated together when the claim zone was replaced by
 	-- the getaway (spec: Getaway-Distance-Claim-And-GUI, 2026-09-19).
-	cap_exceeded = "Duffel Full — get clear of the building to bank it.",
+	cap_exceeded = "Duffel Full. Get clear of the building to bank it.",
 	-- Supplies Robbery (spec addendum, 2026-09-19) -- shared by every
 	-- robbable-object's new isBlocked gate.
 	carrying_supplies = Config.SupplyCarryingRefusalMessage,
@@ -1005,7 +1005,7 @@ local function tryTriggerRobbery(player)
 	end
 	if reason == "cooldown" then
 		local remaining = math.max(0, (bank:GetCooldownEndsAt() or 0) - now())
-		net:Toast(player, string.format("Vault sealed — %d:%02d remaining.",
+		net:Toast(player, string.format("Vault sealed. %d:%02d remaining.",
 			remaining // 60, math.floor(remaining % 60)))
 	end
 end
@@ -1133,7 +1133,7 @@ task.spawn(function()
 				if bank:GetDuffel(player) >= Config.DuffelCap then
 					if not duffelFullNotified[player] then
 						duffelFullNotified[player] = true
-						net:Toast(player, "Duffel Full — get clear of the building to bank it.")
+						net:Toast(player, "Duffel Full. Get clear of the building to bank it.")
 					end
 				else
 					duffelFullNotified[player] = nil

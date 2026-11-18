@@ -138,7 +138,7 @@ local function wireQuestNpc(questId: string, quest)
 			responses = { "Anytime." }
 			mode = "Completed"
 		elseif state == QuestConfig.STATE_READY_TO_TURN_IN then
-			text = `Clean work -- {quest.objectiveTarget} {quest.objectiveEnemyNamePlural} gone. Your envelope's ready.`
+			text = `Clean work. {quest.objectiveTarget} {quest.objectiveEnemyNamePlural} gone. Your envelope's ready.`
 			responses = { "Turn in quest", "Not yet" }
 			mode = "ReadyToTurnIn"
 		elseif state == QuestConfig.STATE_ACCEPTED then

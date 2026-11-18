@@ -398,7 +398,7 @@ return function()
 		local toasts = rig.calls.Toast
 		local lastToast = toasts[#toasts]
 		local remaining = math.max(0, (rig.bank:GetCooldownEndsAt() or 0) - rig.now())
-		local expected = string.format("%s sealed -- %d:%02d remaining.",
+		local expected = string.format("%s sealed. %d:%02d remaining.",
 			NAME, remaining // 60, math.floor(remaining % 60))
 		rig.teardown()
 

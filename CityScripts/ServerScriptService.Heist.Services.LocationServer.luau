@@ -72,7 +72,7 @@ LocationServer.__index = LocationServer
 -- passed in: a location needing different wording is a change worth making
 -- deliberately, not a knob to turn by accident.
 local REFUSAL_MESSAGES = {
-	cap_exceeded = "Duffel Full — get clear of the building to bank it.",
+	cap_exceeded = "Duffel Full. Get clear of the building to bank it.",
 	carrying_supplies = HeistConfig.SupplyCarryingRefusalMessage,
 	-- Leftovers (2026-11-18): names what the player holds (the rip and the gold refuse it too, not only supplies).
 	has_duffel = "You're already holding a bag. Bank it first.",
@@ -325,7 +325,7 @@ function LocationServer:TryTriggerRobbery(player)
 	end
 	if reason == "cooldown" then
 		local remaining = math.max(0, (self.bank:GetCooldownEndsAt() or 0) - self.now())
-		self.net:Toast(player, string.format("%s sealed -- %d:%02d remaining.",
+		self.net:Toast(player, string.format("%s sealed. %d:%02d remaining.",
 			self.name, remaining // 60, math.floor(remaining % 60)))
 	end
 end
