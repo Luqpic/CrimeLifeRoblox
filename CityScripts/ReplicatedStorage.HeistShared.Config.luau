@@ -131,6 +131,11 @@ Config.DepositBoxClickWindow = 0.25
 -- infinite and larger amounts are refused as invalid_amount.
 Config.MaxBagGrant = 100000
 
+-- Open items pass 2026-11-18: the largest single credit PlayerData.CurrencyService:Add accepts (a bank-in,
+-- a supplier sale, a heavy carry). The biggest real one is a full x4 Bank bag with box cash, about 72,000;
+-- NaN, infinite and larger amounts are refused and the balance is unchanged.
+Config.MaxCashCredit = 1000000
+
 -- Heavy carries get the getaway widget (developer decision 2026-11-18): CarryState sets this character
 -- attribute to the carried object's getawayLocation ("Bank", "Gas2Go"); HeistClient shows that
 -- location's getaway distance while it is set.

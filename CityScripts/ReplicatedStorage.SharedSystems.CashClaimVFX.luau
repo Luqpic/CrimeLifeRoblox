@@ -50,6 +50,9 @@ local DEFAULT_BURST_ORIGIN = UDim2.new(0.5, 0, 0.5, 0)
 -- live to be more than enough margin (RobberySuccess arrived within one
 -- frame of the property change in every observed case).
 local PASSIVE_LISTENER_GRACE = 0.05
+-- Open items pass 2026-11-18: leaderstats.Cash may appear after the constructor runs (the city creates it at
+-- join); the passive listener waits this long for it, in its own thread, instead of never attaching.
+local CASH_WAIT_TIMEOUT = 10
 
 local function defaultGetCash(player)
 	local stats = player:FindFirstChild("leaderstats")
@@ -113,8 +116,16 @@ function CashClaimVFX.new(deps)
 	self._displayedValue = getCash()
 
 	if player then
-		local cash = self:_findCashValue()
-		if cash then
+		-- Runs inline when Cash already exists (attached before new returns, as before); otherwise it waits.
+		task.spawn(function()
+			local cash = self:_findCashValue()
+			if not cash then
+				local stats = player:WaitForChild("leaderstats", CASH_WAIT_TIMEOUT)
+				cash = stats and stats:WaitForChild("Cash", CASH_WAIT_TIMEOUT)
+				if not cash or self._destroyed then return end
+				-- Late: the display starts from the balance as it is now, not from 0.
+				if not self._animating then self._displayedValue = cash.Value end
+			end
 			self._cashConn = cash:GetPropertyChangedSignal("Value"):Connect(function()
 				local value = cash.Value
 				-- Grace window (see PASSIVE_LISTENER_GRACE above): give a
@@ -128,7 +139,7 @@ function CashClaimVFX.new(deps)
 				if self._displayedValue == value then return end
 				self._displayedValue = value
 			end)
-		end
+		end)
 	end
 
 	return self
@@ -153,9 +164,15 @@ end
 -- Centre of the city cash frame (AbsolutePosition + AbsoluteSize / 2), as an offset inside
 -- `space` (the burst ScreenGui), so inset settings of either ScreenGui cancel out.
 -- nil when the frame is absent: the coins then fade where they scattered (no fly-to).
+-- Open items pass 2026-11-18: a frame that left the PlayerGui (a GUI rebuild on respawn) is looked up again.
 function CashClaimVFX:_targetPosition(space: GuiBase2d?): UDim2?
 	local target = self._cashTarget
-	if not (target and target.Parent) then return nil end
+	if not (target and target:IsDescendantOf(self.playerGui)) then
+		local inventory = self.playerGui:FindFirstChild("Custom Inventory")
+		target = inventory and inventory:FindFirstChild("cashDisplay") :: GuiObject?
+		self._cashTarget = target
+	end
+	if not target then return nil end
 	local centre = target.AbsolutePosition + target.AbsoluteSize / 2
 	local base = space and space.AbsolutePosition or Vector2.zero
 	return UDim2.fromOffset(centre.X - base.X, centre.Y - base.Y)
@@ -246,6 +263,7 @@ function CashClaimVFX:PlaySequence()
 end
 
 function CashClaimVFX:Destroy()
+	self._destroyed = true
 	if self._cashConn then self._cashConn:Disconnect() end
 end
 

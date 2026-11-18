@@ -23,12 +23,13 @@
 -- Deliberately knows nothing about workspace, zones, currency or remotes: it
 -- takes plain callbacks so GetawaySpec can drive it without a DataModel.
 
+-- Open items pass 2026-11-18: the distance maths lives in ReplicatedStorage.HeistShared.GetawayMath, which
+-- HeistClient's widget calls too, so the two can no longer drift.
+local GetawayMath = require(game:GetService("ReplicatedStorage").HeistShared.GetawayMath)
+local horizontalDistance = GetawayMath.horizontalDistance
+
 local Getaway = {}
 Getaway.__index = Getaway
-
-local function horizontalDistance(a: Vector3, b: Vector3): number
-	return (Vector3.new(a.X, 0, a.Z) - Vector3.new(b.X, 0, b.Z)).Magnitude
-end
 
 function Getaway.new(cfg)
 	assert(type(cfg) == "table", "Getaway requires a config table")
@@ -79,8 +80,7 @@ function Getaway:DistanceRemaining(player): number?
 	if self.isInsideBuilding(player) then return nil end
 	local position = self.getPosition(player)
 	if not position then return nil end
-	local travelled = horizontalDistance(position, self.getAnchorPosition())
-	return math.max(0, self.escapeDistance - travelled)
+	return GetawayMath.remaining(position, self.getAnchorPosition(), self.escapeDistance)
 end
 
 -- Is this player still at the robbery: inside the building, or horizontally closer to the anchor than

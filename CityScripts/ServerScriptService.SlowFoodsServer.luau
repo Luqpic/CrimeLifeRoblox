@@ -32,6 +32,8 @@ local ComponentRegistry = require(Heist.ComponentRegistry)
 local AccessBarrier = require(Heist.Components.AccessBarrier)
 local LocationServer = require(Heist.Services.LocationServer)
 local FleeingManager = require(Heist.Components.FleeingManager)
+-- Open items pass 2026-11-18: the manager-key layer's wiring (key, Use Key, storage safe), under SlowFoodsKeySpec.
+local SlowFoodsKey = require(Heist.Services.SlowFoodsKey)
 
 local RobbableObject = require(ReplicatedStorage.SharedSystems.RobbableObject)
 local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
@@ -93,8 +95,6 @@ end
 
 -- Heist layers 2026-11-17: the fleeing Manager, his spawner, his escape point and the storage safe.
 local MANAGER_TAG = "SlowFoodsManager"
-local KEY_ATTRIBUTE = "SlowFoodsKey"
-local NO_KEY_MESSAGE = "You need the manager's key."
 do
 	local managerSpawners = 0
 	for _, spawner in ipairs(CollectionService:GetTagged("NPCSpawner")) do
@@ -110,20 +110,9 @@ do
 	assert(workspace.SlowFoods:FindFirstChild("StorageSafe"), "[SlowFoodsServer] Workspace.SlowFoods.StorageSafe is missing")
 end
 
--- One key per run: the player who caught the Manager. Cleared on Seal, Rearm, death and leave.
-local keyHolder: Player? = nil
-local keyDiedConn: RBXScriptConnection? = nil
-local function clearKey()
-	if keyDiedConn then keyDiedConn:Disconnect() keyDiedConn = nil end
-	if keyHolder then keyHolder:SetAttribute(KEY_ATTRIBUTE, nil) end
-	keyHolder = nil
-end
-local function hasKey(player): boolean
-	return keyHolder ~= nil and player == keyHolder
-end
-
--- Built below; forward-declared for the leave and death hooks (a begun safe hold is forgotten).
-local storageSafe
+-- The manager-key layer (one key per run, Use Key, the storage safe). Built below the storage-room door;
+-- forward-declared for the leave and death hooks and the Manager's onKeyTaken.
+local keyLayer
 
 -- The shared skeleton: Net.setup, Forfeit, BankInstance, zones/ZoneService,
 -- AlarmEffects (cloned into the Restaurant zone) and DuffelBagAttachment.
@@ -137,11 +126,10 @@ local location = LocationServer.new({
 	markerFolder = "SlowFoodsMarkers",
 	exitCFrame = function() return exitSpawn.CFrame end,
 	onPlayerRemoving = function(player)
-		if player == keyHolder then clearKey() end
-		if storageSafe then storageSafe:Forget(player) end
+		if keyLayer then keyLayer:Forget(player) end
 	end,
 	onDied = function(player)
-		if storageSafe then storageSafe:Forget(player) end
+		if keyLayer then keyLayer:OnDied(player) end
 	end,
 })
 
@@ -182,18 +170,10 @@ local managerSpawnManager = NPCSpawnManager.new({
 		bank = bank,
 		config = Config,
 		escapePoint = workspace.SlowFoodsMarkers.ManagerEscapePoint,
-		onKeyTaken = function(player)
-			clearKey()
-			keyHolder = player
-			player:SetAttribute(KEY_ATTRIBUTE, true)
-			local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-			if humanoid then keyDiedConn = humanoid.Died:Connect(clearKey) end
-			net:Toast(player, "You took the manager's key.")
-		end,
+		onKeyTaken = function(player) keyLayer:Give(player) end,
 	},
 })
 bank:RegisterComponent(managerSpawnManager)
-bank:RegisterComponent({ Seal = clearKey, Rearm = clearKey })
 
 -- Cash registers aren't bound through the generic registry: they need extra
 -- deps (promptTemplate, onRefused) that would otherwise have to be threaded
@@ -280,48 +260,25 @@ local lockedDoor = LockedDoor.new(workspace.SlowFoods.LockedDoor, {
 })
 bank:RegisterComponent(lockedDoor)
 
--- Heist layers 2026-11-17: "Use Key" on the storage-room door, shown to everyone while the door
--- is closed in an Active run, accepted only from the key holder (key F: the lockpick keeps E).
-useKeyPrompt.Triggered:Connect(function(player)
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not (root and root:IsA("BasePart")) then return end
-	if (root.Position - useKeyPrompt.Parent.Position).Magnitude > useKeyPrompt.MaxActivationDistance then return end
-	-- Leftovers (2026-11-18): a bystander is told to join rather than to find a key.
-	if not bank:IsParticipant(player) then
-		notifyRefused(player, "not_participant")
-		return
-	end
-	if not hasKey(player) then
-		net:Toast(player, NO_KEY_MESSAGE)
-		return
-	end
-	if lockedDoor:Open(player) then useKeyPrompt.Enabled = false end
-end)
-bank:RegisterComponent({
-	OnSessionStart = function() useKeyPrompt.Enabled = true end,
-	Seal = function() useKeyPrompt.Enabled = false end,
-})
-
--- The storage safe: open from session start, robbable only by the key holder, paid over the
--- bag cap through AddBonus. Final review 2026-11-18: a carrier can't rob it (I1, like every other
--- robbable), its 8 s hold is timed on the server (M1) and the server measures the reach (M3).
-storageSafe = RobbableObject.new(workspace.SlowFoods.StorageSafe, {
+-- Heist layers 2026-11-17: "Use Key" on the storage-room door (shown to everyone while the door is closed in
+-- an Active run, accepted only from the key holder) and the storage safe (open from session start, robbable
+-- only by the key holder, paid over the bag cap through AddBonus). Final review 2026-11-18: a carrier can't
+-- rob the safe (I1), its 8 s hold is timed on the server (M1) and the server measures the reach (M3).
+-- Open items pass 2026-11-18: all of it lives in Heist.Services.SlowFoodsKey, unchanged.
+keyLayer = SlowFoodsKey.new({
 	bank = bank,
-	promptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobSafePrompt,
-	amount = Config.ManagerSafeAmount,
-	payWith = "bonus",
-	isBlocked = function(player) return carryState:IsCarrying(player) or not hasKey(player) end,
-	blockedReason = "no_key",
-	onRefused = function(player, reason)
-		if reason == "no_key" and carryState:IsCarrying(player) then reason = "carrying_supplies" end
-		if reason == "no_key" then net:Toast(player, NO_KEY_MESSAGE) else notifyRefused(player, reason) end
-	end,
+	net = net,
+	carryState = carryState,
+	notifyRefused = notifyRefused,
+	door = lockedDoor,
+	useKeyPrompt = useKeyPrompt,
+	safeModel = workspace.SlowFoods.StorageSafe,
+	safePromptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobSafePrompt,
+	safeAmount = Config.ManagerSafeAmount,
 	playRobSound = function(part) part.SafeRobSound:Play() end,
-	enforceHold = true,
-	checkReach = true,
 })
-bank:RegisterComponent(storageSafe)
+bank:RegisterComponent(keyLayer)
+bank:RegisterComponent(keyLayer.storageSafe)
 
 do
 	local manifest = registry:Manifest()

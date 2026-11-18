@@ -177,6 +177,34 @@ return function()
 		character:Destroy()
 	end)
 
+	-- Open items pass 2026-11-18: a leaver's carry is dropped as a death drops it, not left hidden.
+	suite:test("Forget while carrying drops the object where the leaver stood, as a death does", function(expect)
+		local carryState = CarryState.new()
+		local player, character = tempPlayerWithCharacter()
+		local dropCalls = {}
+		local supplyObject = { DropAt = function(_self, cframe) table.insert(dropCalls, cframe) end, originalCFrame = CFrame.new(9, 9, 9) }
+		carryState:PickUp(player, tempToolTemplate(), supplyObject)
+		local spot = CFrame.new(1, 2, 3)
+		carryState:Forget(player, spot)
+		expect.falsy(carryState:IsCarrying(player), "forgotten")
+		expect.equal(#dropCalls, 1, "dropped once")
+		expect.equal(dropCalls[1], spot, "where the leaver stood")
+		character:Destroy()
+	end)
+
+	suite:test("Forget with no spot drops the object back at its start", function(expect)
+		local carryState = CarryState.new()
+		local player, character = tempPlayerWithCharacter()
+		local dropCalls = {}
+		local start = CFrame.new(9, 9, 9)
+		local supplyObject = { DropAt = function(_self, cframe) table.insert(dropCalls, cframe) end, originalCFrame = start }
+		carryState:PickUp(player, tempToolTemplate(), supplyObject)
+		carryState:Forget(player)
+		expect.falsy(carryState:IsCarrying(player), "forgotten")
+		expect.equal(dropCalls[1], start, "at its start")
+		character:Destroy()
+	end)
+
 	suite:test("the Unequipped safeguard re-forces the carry tool back if something else unequips it", function(expect)
 		local carryState = CarryState.new()
 		local player, character, humanoid, backpack = tempPlayerWithCharacter()

@@ -791,3 +791,40 @@ Studio objects (not scripts): `StarterGUI.DuffelUpgradeGui.DialogFrame.DialogTex
 The 6 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (6 / 6). City suites 288 / 288 / 0; heist 733 passed / 0 failed. After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 5 (heist test gaps and robbery leftovers, `Batch: open items heist tests and robbery leftovers`). Same columns; old = the place at 668e659 ("new" for new scripts).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ServerScriptService.Heist.Components.Zone` (ModuleScript) | 2,264 / 181732240 | 2,666 / 1921814475 | `deps.overlap` (default `workspace:GetPartsInPart`) so ZoneSpec counts the parts the real sweep walks; the Include filter is unchanged. Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.ZoneSpec` (ModuleScript) | 12,057 / 634819463 | 12,616 / 3747238027 | "the real occupancy sweep" asserts 0 parts walked and 1 call through the seam (was a 3 ms wall-clock limit that failed at 3.05 to 10.19 ms). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.VaultDoorSpec` (ModuleScript) | 13,881 / 1293824993 | 14,434 / 2035872095 | Cases unparent their fixture instead of destroying it: the 4 s door tween outlives the fake-clock sequence and warned "no PrimaryPart" every frame on a destroyed model (1,680 warnings per RunAll, now 0). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.CarryGetawaySpec` (ModuleScript) | 4,621 / 1058397731 | 5,064 / 653552930 | Each case destroys its own anchors and characters (`cleanup()`). Attribute appended. |
+| 2026-11-18 | `ServerScriptService.PlayerData.CurrencyService` (ModuleScript) | 2,062 / 3995652172 | 2,418 / 383011360 | `Add` refuses amounts above `HeistShared.Config.MaxCashCredit` (1e300 credited 9,223,372,036,854,776,000 before). Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.HeistShared.Config` (ModuleScript) | 15,577 / 273243205 | 15,903 / 4102867017 | `MaxCashCredit = 1000000`. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.CurrencyBridge_Test` (ModuleScript) | 4,519 / 1400801589 | 5,801 / 2577280369 | `-math.huge`, `MaxCashCredit + 1`, `1e300` refused, exactly `MaxCashCredit` accepted, the default `_playerFor` (read only). Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.SharedSystems.CashClaimVFX` (ModuleScript) | 11,096 / 4226909799 | 12,174 / 2978213759 | The passive listener waits up to 10 s for `leaderstats.Cash` in its own thread; the cash frame is looked up again once it leaves the PlayerGui. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.CashClaimVFXSpec` (ModuleScript) | 11,490 / 3531921895 | 13,365 / 1303330692 | 2 cases: Cash arriving after construction; a rebuilt cash frame. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Weapons.Scripts.CashService` (Script) | 10,845 / 4129585844 | 11,550 / 1501192552 | The Cash it creates at join carries `PreBindBase`; `hydrate` adds any change since to the saved balance (floor 0) and clears it. Attribute set. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.ProfileAdoption_Test` (ModuleScript) | 23,699 / 2943384353 | 25,365 / 461676520 | 2 cases through the real hydrator list: a pre-bind credit kept (1300, was 1000), no marker restores the saved balance. Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.SharedSystems.CarryState` (ModuleScript) | 6,851 / 3014874475 | 7,341 / 777583984 | `Forget(player, dropCFrame?)` drops a still-held carry as a death does (at the spot, or the object's start). Attribute appended. |
+| 2026-11-18 | `ServerScriptService.SuppliesServer` (Script) | 8,169 / 1008868426 | 8,444 / 316963667 | `PlayerRemoving` passes the leaver's drop spot to `Forget`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.CarryStateSpec` (ModuleScript) | 11,542 / 3799212739 | 12,914 / 3073323821 | 2 cases: Forget drops at the spot, or at the start with no spot. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Services.Getaway` (ModuleScript) | 5,734 / 2317195041 | 5,875 / 3624455801 | Distance from `HeistShared.GetawayMath` (same formula). Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.HeistClient` (LocalScript) | 66,908 / 3845503917 | 66,721 / 1138916754 | The getaway widget's distance from `HeistShared.GetawayMath.remaining`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.GetawaySpec` (ModuleScript) | 6,811 / 2190058934 | 8,035 / 636955752 | Server `DistanceRemaining` equals `GetawayMath.remaining` on 7 samples; HeistClient calls it. Attribute set. |
+| 2026-11-18 | `ServerScriptService.SlowFoodsServer` (Script) | 15,841 / 1238792724 | 14,166 / 2703310953 | Key, Use Key and storage-safe wiring moved, unchanged, to `Heist.Services.SlowFoodsKey`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.NewsStationServer` (Script) | 22,509 / 2612295366 | 22,317 / 521420143 | Go-live heat, guard alert and payout moved, unchanged, to `Heist.Services.BroadcastHooks`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.Gas2GoRipSpec` (ModuleScript) | 9,617 / 2503303253 | 12,459 / 2042229020 | Two players racing a rip: one carry, banked once through a real CarryGetaway. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.RunAll` (ModuleScript) | 2,949 / 1427489501 | 3,053 / 1910825537 | `SlowFoodsKeySpec`, `BroadcastHooksSpec`. Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.HeistShared.GetawayMath` (ModuleScript) | new | 971 / 2194952250 | The getaway distance for server and client. Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Services.SlowFoodsKey` (ModuleScript) | new | 4,738 / 608721198 | SlowFoods' key layer wiring (from SlowFoodsServer). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Services.BroadcastHooks` (ModuleScript) | new | 1,502 / 2078012852 | NewsStation's broadcast payoff (from NewsStationServer). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.SlowFoodsKeySpec` (ModuleScript) | new | 12,351 / 1736436723 | 8 cases: key, Use Key, safe pay; Seal mid-chase, after the catch, after the escape; safe gates; death and leave. Attribute set. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.BroadcastHooksSpec` (ModuleScript) | new | 4,816 / 3044356405 | 2 cases: heat floor and guard alert at go-live; one payout each at the desk. Attribute set. |
+
+Studio objects (not scripts): `Workspace.SlowFoods.Cashier` x3 and `Workspace.Bank."Bank Clerk"` x2 tagged `Invulnerable` and `Witness` like their templates (attribute `CityMergeDeviation`); the `StarterGui` service renamed from `StarterGUI` back to `StarterGui` (no script in the place names it `StarterGUI`; 473 scripts scanned).
+
+The 26 sources exported to `CityScripts/`; on-disk bytes equal the place (26 / 26). City suites 295 / 295 / 0 (288 + 7); heist 749 passed / 0 failed (733 + 16), three runs in a row plus a final one, 0 "PrimaryPart" warnings. After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

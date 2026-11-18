@@ -537,4 +537,47 @@ return function(t)
 
 		reloaded:EndSession()
 	end)
+
+	-- Open items pass 2026-11-18: CashService's hydrator (a Script, so reached through the real hydrator list, as
+	-- the Leveling case above) keeps a change made to Cash before the profile bound. CashService marks the Cash it
+	-- creates at join with PreBindBase (its starting value); the stand-in is a Folder so FindFirstChild works.
+	t.test("CashService.hydrate adds a credit made before the bind to the saved balance", function()
+		local player = Instance.new("Folder")
+		player.Name = "CashHydrateStandIn"
+		local leaderstats = Instance.new("Folder")
+		leaderstats.Name = "leaderstats"
+		leaderstats.Parent = player
+		local cash = Instance.new("IntValue")
+		cash.Name = "Cash"
+		cash.Value = 500
+		cash:SetAttribute("PreBindBase", 500)
+		cash.Parent = leaderstats
+		cash.Value += 300 -- a heist bank-in before the bind
+		local profile = Gateway.loadForKey("adopt-cash-merge-" .. os.clock())
+		profile.Data.cash = 1000
+
+		Gateway._runHydrators(player, profile)
+		local value, marker = cash.Value, cash:GetAttribute("PreBindBase")
+		profile:EndSession()
+		player:Destroy()
+
+		expect.equal(value, 1300)
+		expect.equal(marker, nil)
+	end)
+
+	t.test("CashService.hydrate with no join marker restores the saved balance", function()
+		local player = Instance.new("Folder")
+		player.Name = "CashHydrateStandIn"
+		local profile = Gateway.loadForKey("adopt-cash-plain-" .. os.clock())
+		profile.Data.cash = 1000
+
+		Gateway._runHydrators(player, profile)
+		local stats = player:FindFirstChild("leaderstats")
+		local cash = stats and stats:FindFirstChild("Cash")
+		local value = cash and cash.Value
+		profile:EndSession()
+		player:Destroy()
+
+		expect.equal(value, 1000)
+	end)
 end

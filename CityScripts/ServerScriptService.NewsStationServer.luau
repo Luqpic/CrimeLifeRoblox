@@ -47,6 +47,7 @@ local GuardPost = require(Heist.Components.GuardPost)
 local WantedConstants = require(ReplicatedStorage.Wanted.Constants)
 -- Broadcast takeover (heist layers 2026-11-17).
 local BroadcastDesk = require(Heist.Components.BroadcastDesk)
+local BroadcastHooks = require(Heist.Services.BroadcastHooks)
 local WantedService = require(ServerScriptService.Wanted.WantedService)
 
 -- NewsStation carries its OWN tag table, unlike SlowFoods/Gas2Go which both
@@ -321,7 +322,15 @@ bank:RegisterComponent(lockedDoor)
 -- the station on air for Config.BroadcastSeconds of air time held by participants at the desk.
 -- Final review I1 (2026-11-18): carriers can't go live and are not paid. Leftovers (2026-11-18): a
 -- bystander's or carrier's press is told why; the go-live toast is gone (the city card already says it,
--- and the desk counts down).
+-- and the desk counts down). Open items pass 2026-11-18: the go-live heat, guard alert and payout are
+-- Heist.Services.BroadcastHooks (unchanged, now under BroadcastHooksSpec).
+local broadcastHooks = BroadcastHooks.new({
+	bank = bank,
+	net = net,
+	config = Config,
+	wanted = WantedService,
+	guardPosts = function() return guardPosts end,
+})
 broadcastDesk = BroadcastDesk.new(workspace.NewsStation.BroadcastDesk, {
 	bank = bank,
 	config = Config,
@@ -329,25 +338,8 @@ broadcastDesk = BroadcastDesk.new(workspace.NewsStation.BroadcastDesk, {
 	onRefused = function(player, reason)
 		if reason == "not_participant" or reason == "carrying_supplies" then notifyRefused(player, reason) end
 	end,
-	onLive = function(player)
-		net:NotifyBroadcastHijacked(player.Name)
-		for _, participant in ipairs(bank:GetParticipants()) do
-			local heat = WantedService.getHeat(participant)
-			if heat < Config.BroadcastHeatFloor then
-				WantedService.addHeat(participant, Config.BroadcastHeatFloor - heat, "broadcast")
-			end
-		end
-		for _, post in ipairs(guardPosts) do
-			post:Alert()
-		end
-	end,
-	onComplete = function(players)
-		for _, player in ipairs(players) do
-			if bank:AddBonus(player, Config.BroadcastPayout) then
-				net:Toast(player, string.format("Broadcast complete: %d added to your bag.", Config.BroadcastPayout))
-			end
-		end
-	end,
+	onLive = broadcastHooks.onLive,
+	onComplete = broadcastHooks.onComplete,
 })
 bank:RegisterComponent(broadcastDesk)
 

@@ -130,6 +130,85 @@ return function()
 		rig.model:Destroy()
 	end)
 
+	-- Open items pass 2026-11-18: two crew members race the rip. Both hold the full ATMRipHold; the first
+	-- trigger takes the carry, the second finds the ATM gone. The carry banks once through a real CarryGetaway.
+	suite:test("two players racing a rip: exactly one carry, paid once", function(expect)
+		local CarryGetaway = TestRunner.freshRequire(game.ServerScriptService.Heist.Services.CarryGetaway)
+		local rig = makeRig()
+		local made = {}
+		local function racer(userId)
+			local character = Instance.new("Model")
+			local root = Instance.new("Part")
+			root.Anchored = true
+			root.Position = Vector3.new(0, 500, 0)
+			root.Parent = character
+			character.PrimaryPart = root
+			character.Parent = workspace
+			table.insert(made, character)
+			return { UserId = userId, Character = character }
+		end
+		local a, b = racer(1), racer(2)
+		rig.bank:AddParticipant(a)
+		rig.bank:AddParticipant(b)
+		local anchor = Instance.new("Part")
+		anchor.Anchored = true
+		anchor.Position = Vector3.new(0, 500, 0)
+		anchor.Parent = workspace
+		table.insert(made, anchor)
+		-- The carry state is the rig's pickup list: a pickup is a carry until CarryGetaway consumes it.
+		local credited = {}
+		local carryState = {
+			GetCarried = function(_, p)
+				for _, pickup in ipairs(rig.pickups) do
+					if pickup[1] == p then return pickup[2] end
+				end
+				return nil
+			end,
+			Consume = function(_, p)
+				for i, pickup in ipairs(rig.pickups) do
+					if pickup[1] == p then
+						table.remove(rig.pickups, i)
+						return true, pickup[2]
+					end
+				end
+				return false, nil
+			end,
+		}
+		local getaway = CarryGetaway.new({
+			escapeDistance = 200,
+			anchor = anchor,
+			isInsideBuilding = function() return false end,
+			matches = function(obj) return obj == rig.atm.rip end,
+			value = Config.ATMRipAmount,
+			carryState = carryState,
+			currency = { Add = function(_, userId, amount) table.insert(credited, { userId, amount }) end },
+			net = { Toast = function() end, NotifyRobberySuccess = function() end },
+			getPlayers = function() return { a, b } end,
+		})
+
+		rig.atm.rip:_onHoldBegan(a)
+		rig.atm.rip:_onHoldBegan(b)
+		rig.advance(Config.ATMRipHold)
+		rig.atm.rip:_onPromptTriggered(a)
+		rig.atm.rip:_onPromptTriggered(b)
+		local carries = #rig.pickups
+		local carrier = rig.pickups[1] and rig.pickups[1][1]
+
+		a.Character:PivotTo(CFrame.new(0, 500, 250))
+		b.Character:PivotTo(CFrame.new(0, 500, -250))
+		getaway:Step()
+		getaway:Step()
+		getaway:Destroy()
+		for _, instance in ipairs(made) do instance:Destroy() end
+		rig.model:Destroy()
+
+		expect.equal(carries, 1, "exactly one carry")
+		expect.equal(carrier, a, "the first full trigger")
+		expect.equal(#credited, 1, "paid once")
+		expect.equal(credited[1] and credited[1][1], 1, "to the carrier")
+		expect.equal(credited[1] and credited[1][2], Config.ATMRipAmount, "the rip amount")
+	end)
+
 	suite:test("the rip hold is timed on the server", function(expect)
 		local rig = makeRig()
 		rig.atm.rip:_onPromptTriggered("p1")

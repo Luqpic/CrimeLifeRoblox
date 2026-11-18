@@ -161,6 +161,9 @@ require(ReplicatedStorage.Utility.safePlayerAdded)(function(player)
 	end)
 end)
 
+-- Open items pass 2026-11-18: a carry still held at leave is dropped where the leaver stood, as a death
+-- drops it (CarryState:Forget puts it at the object's start when there is no character).
 Players.PlayerRemoving:Connect(function(player)
-	carryState:Forget(player)
+	local character = player.Character
+	carryState:Forget(player, character and computeDropCFrame(character))
 end)

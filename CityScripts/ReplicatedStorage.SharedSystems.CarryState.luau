@@ -137,10 +137,19 @@ end
 -- PlayerRemoving cleanup, same shape as every other per-player table in
 -- this system -- does NOT try to preserve/restore carried state across a
 -- reconnect (matches DuffelBag's own "not persisted" precedent).
-function CarryState:Forget(player)
+-- Open items pass 2026-11-18: a carry still held when its player leaves is dropped as a death drops it
+-- (Drop: the object reappears with its re-pickup prompt and despawn timer), at dropCFrame (where the leaver
+-- stood), or at the object's own start (originalCFrame) when there is no spot. Death and leave now agree.
+function CarryState:Forget(player, dropCFrame: CFrame?)
 	local state = self._carrying[player]
-	if state and state.unequipConn then state.unequipConn:Disconnect() end
-	if state then setSpeedCap(player, nil) end
+	if not state then return end
+	local cframe = dropCFrame or (state.supplyObject and state.supplyObject.originalCFrame)
+	if cframe then
+		self:Drop(player, cframe)
+		return
+	end
+	if state.unequipConn then state.unequipConn:Disconnect() end
+	setSpeedCap(player, nil)
 	self._carrying[player] = nil
 end
 

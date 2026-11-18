@@ -29,6 +29,8 @@ local GamepassManager = require(ReplicatedStorage:WaitForChild("SharedSystems"):
 -- Heavy carries get the getaway widget (developer decision 2026-11-18): CarryState names the carried
 -- object's location in this character attribute while it is carried.
 local CARRY_GETAWAY_ATTRIBUTE = require(shared:WaitForChild("Config")).CarryGetawayAttribute
+-- Open items pass 2026-11-18: the getaway distance, the same function the server's Getaway banks with.
+local GetawayMath = require(shared:WaitForChild("GetawayMath"))
 
 -- The client re-derives the display from the same function the server uses.
 -- Duplicated rather than required: Net lives in ServerScriptService, which
@@ -1197,11 +1199,8 @@ RunService.RenderStepped:Connect(function()
 		-- Getaway service uses, rather than pushed per-tick -- same reasoning
 		-- as the lockpick needle's local animation.
 		--
-		-- HORIZONTAL only, Y zeroed on both vectors: every StatusBillboardAnchor
-		-- floats 40-120 studs above its building so the badge reads from ground
-		-- level, and a 3D distance would credit that height as escape progress.
-		-- Getaway.horizontalDistance drops Y for precisely this reason; so does
-		-- this, or the two would disagree by the anchor's height.
+		-- HORIZONTAL only (see HeistShared.GetawayMath, shared with the server's
+		-- Getaway since 2026-11-18, so the two cannot disagree).
 		--
 		-- `not zoneOccupancy[location]` is this client's mirror of the server's
 		-- isInsideBuilding gate. Every location broadcasts that flag from the very
@@ -1218,9 +1217,7 @@ RunService.RenderStepped:Connect(function()
 		local remaining = nil
 		local hasLoot = (session.state == "Active" and amount > 0) or carryLocation == location
 		if anchor and characterRoot and escapeDistance and hasLoot and not zoneOccupancy[location] then
-			local here = Vector3.new(characterRoot.Position.X, 0, characterRoot.Position.Z)
-			local there = Vector3.new(anchor.Position.X, 0, anchor.Position.Z)
-			remaining = math.max(0, escapeDistance - (here - there).Magnitude)
+			remaining = GetawayMath.remaining(characterRoot.Position, anchor.Position, escapeDistance)
 		end
 		getawayRemaining[location] = remaining
 

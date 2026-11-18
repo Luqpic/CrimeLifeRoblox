@@ -4,6 +4,10 @@
 -- mirrors into the profile). API and return values: CityMerge/phase3/currency-api.md.
 -- Never creates leaderstats, never yields, never touches a DataStore.
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Open items pass 2026-11-18: every caller is heist code, so the bound lives beside MaxBagGrant.
+local MAX_CREDIT = require(ReplicatedStorage.HeistShared.Config).MaxCashCredit
 
 local currency = {}
 
@@ -25,7 +29,7 @@ local function isSaneAmount(amount): boolean
 	if type(amount) ~= "number" then return false end
 	if amount ~= amount then return false end -- NaN
 	if amount == math.huge or amount == -math.huge then return false end
-	return amount > 0
+	return amount > 0 and amount <= MAX_CREDIT
 end
 
 function currency:Get(userId: number): number
@@ -38,7 +42,8 @@ function currency:Load(userId: number): number
 	return self:Get(userId)
 end
 
--- Fractional credits are floored, as in the Robbery adapter; a refused call returns the unchanged balance.
+-- Fractional credits are floored, as in the Robbery adapter; a refused call (not a number, NaN, infinite, not
+-- positive, or above HeistShared.Config.MaxCashCredit) returns the unchanged balance.
 function currency:Add(userId: number, amount): number
 	local cash = cashValue(userId)
 	if not cash then return 0 end

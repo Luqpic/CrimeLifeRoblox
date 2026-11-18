@@ -42,7 +42,10 @@ return function(t)
 			expect.equal(cashOf(p), 600)
 		end)
 	end)
-	for _, case in ipairs({ { "NaN", 0 / 0 }, { "-5", -5 }, { "math.huge", math.huge }, { "string 100", "100" }, { "nil", nil }, { "0", 0 } }) do
+	-- Open items pass 2026-11-18: -math.huge, and amounts above HeistShared.Config.MaxCashCredit.
+	local MAX_CREDIT = require(game:GetService("ReplicatedStorage").HeistShared.Config).MaxCashCredit
+	for _, case in ipairs({ { "NaN", 0 / 0 }, { "-5", -5 }, { "math.huge", math.huge }, { "-math.huge", -math.huge },
+		{ "string 100", "100" }, { "nil", nil }, { "0", 0 }, { "MaxCashCredit + 1", MAX_CREDIT + 1 }, { "1e300", 1e300 } }) do
 		t.test("Add " .. case[1] .. " leaves Cash 500 and returns the unchanged balance", function()
 			with(true, function(c, p)
 				expect.equal(c:Add(USER, case[2]), 500)
@@ -50,6 +53,12 @@ return function(t)
 			end)
 		end)
 	end
+	t.test("Add accepts exactly MaxCashCredit", function()
+		with(true, function(c, p)
+			expect.equal(c:Add(USER, MAX_CREDIT), 500 + MAX_CREDIT)
+			expect.equal(cashOf(p), 500 + MAX_CREDIT)
+		end)
+	end)
 	t.test("Add floors a fraction: 100.9 adds 100, 0.5 adds nothing", function()
 		with(true, function(c, p)
 			expect.equal(c:Add(USER, 100.9), 600)
@@ -77,6 +86,21 @@ return function(t)
 			expect.equal(coroutine.status(co), "dead")
 			expect.equal(v, 501)
 		end)
+	end)
+
+	-- Open items pass 2026-11-18: the unswapped _playerFor resolves through Players:GetPlayerByUserId. Read only:
+	-- a real player in the session is looked up, never credited.
+	t.test("the default _playerFor finds a real player by UserId and nobody for an unknown id", function()
+		local currency = require(game:GetService("ServerScriptService").PlayerData.CurrencyService)
+		local Players = game:GetService("Players")
+		expect.equal(currency._playerFor(USER), nil)
+		expect.equal(currency:Get(USER), 0)
+		local real = Players:GetPlayers()[1]
+		if real then
+			expect.equal(currency._playerFor(real.UserId), real)
+			local cash = real:FindFirstChild("leaderstats") and real.leaderstats:FindFirstChild("Cash")
+			if cash then expect.equal(currency:Get(real.UserId), cash.Value) end
+		end
 	end)
 
 	t.test("Get returns Cash", function()

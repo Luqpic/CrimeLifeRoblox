@@ -10,6 +10,14 @@ return function()
 
 	local VALUE = 3000
 
+	-- Open items pass 2026-11-18: every anchor and character a case builds is destroyed by the case itself
+	-- (cleanup() on its last line), not left for TestRunner's per-case sweep.
+	local made = {}
+	local function cleanup()
+		for _, instance in ipairs(made) do instance:Destroy() end
+		table.clear(made)
+	end
+
 	local function makePlayer(userId, x)
 		local character = Instance.new("Model")
 		local root = Instance.new("Part")
@@ -18,6 +26,7 @@ return function()
 		root.Parent = character
 		character.PrimaryPart = root
 		character.Parent = workspace
+		table.insert(made, character)
 		return { UserId = userId, Character = character }
 	end
 
@@ -27,6 +36,7 @@ return function()
 		anchor.Anchored = true
 		anchor.Position = Vector3.new(0, 0, 0)
 		anchor.Parent = workspace
+		table.insert(made, anchor)
 		local rig = { carried = {}, consumed = {}, credited = {}, toasts = {}, successes = {}, players = {}, inside = {} }
 		local carryState = {
 			GetCarried = function(_, p) return rig.carried[p] end,
@@ -64,6 +74,7 @@ return function()
 		rig.getaway:Step()
 		expect.equal(#rig.credited, 0, "no pay")
 		expect.truthy(rig.getaway:IsNear(p), "still near")
+		cleanup()
 	end)
 
 	suite:test("a matching carry outside at 200 studs is paid once and consumed", function(expect)
@@ -80,6 +91,7 @@ return function()
 		expect.equal(rig.toasts[1][2], "Banked 3000 Cash.", "toast")
 		expect.equal(#rig.successes, 1, "robbery success VFX")
 		expect.falsy(rig.getaway:IsNear(p), "no carry: not near")
+		cleanup()
 	end)
 
 	suite:test("a carrier inside the building at 300 studs is not paid", function(expect)
@@ -91,6 +103,7 @@ return function()
 		rig.getaway:Step()
 		expect.equal(#rig.credited, 0, "no pay inside")
 		expect.truthy(rig.getaway:IsNear(p), "inside counts as near")
+		cleanup()
 	end)
 
 	suite:test("a non-matching carry is not paid", function(expect)
@@ -101,6 +114,7 @@ return function()
 		rig.getaway:Step()
 		expect.equal(#rig.credited, 0, "no pay")
 		expect.equal(#rig.consumed, 0, "not consumed")
+		cleanup()
 	end)
 
 	suite:test("no carry is never near", function(expect)
@@ -108,6 +122,7 @@ return function()
 		local p = makePlayer(1, 10)
 		rig.players = { p }
 		expect.falsy(rig.getaway:IsNear(p), "no carry: not near")
+		cleanup()
 	end)
 
 	suite:test("addActiveRobbery registers carrying-and-near, and Destroy disconnects it", function(expect)
@@ -126,6 +141,7 @@ return function()
 		expect.truthy(registered(p), "carrying and near: active")
 		rig.getaway:Destroy()
 		expect.equal(disconnected, 1, "disconnected on Destroy")
+		cleanup()
 	end)
 
 	return suite:run()

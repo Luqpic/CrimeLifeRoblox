@@ -49,6 +49,8 @@ local SPECS = {
 	"BroadcastDeskSpec", -- heist layers 2026-11-17 (Task 5)
 	"DepositBoxLootSpec", -- heist layers 2026-11-17 (Task 6)
 	"DepositBoxesSpec", -- heist layers 2026-11-17 (Task 6)
+	"SlowFoodsKeySpec", -- open items pass 2026-11-18
+	"BroadcastHooksSpec", -- open items pass 2026-11-18
 }
 
 return function()

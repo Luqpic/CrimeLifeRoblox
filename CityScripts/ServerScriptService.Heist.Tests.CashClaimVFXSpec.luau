@@ -64,6 +64,54 @@ return function()
 		expect.truthy(typeof(position) == "UDim2", "a fly-to position")
 	end)
 
+	-- Open items pass 2026-11-18: after a GUI rebuild (respawn) the old frame is gone; the coins fly to the new one.
+	suite:test("after the cash frame is rebuilt, the target is looked up again", function(expect)
+		local gui = tempGui()
+		local function build()
+			local inventory = Instance.new("ScreenGui")
+			inventory.Name = "Custom Inventory"
+			local frame = Instance.new("Frame")
+			frame.Name = "cashDisplay"
+			frame.Parent = inventory
+			inventory.Parent = gui
+			return inventory, frame
+		end
+		local first = build()
+		local vfx = makeVFX({ cash = 0, playerGui = gui })
+		task.wait(0.05) -- the first lookup runs in its own thread
+		first:Destroy()
+		local _, second = build()
+		local position = vfx:_targetPosition(nil)
+		local target = vfx._cashTarget
+		vfx:Destroy()
+		expect.equal(target, second, "the rebuilt frame")
+		expect.truthy(typeof(position) == "UDim2", "a fly-to position")
+	end)
+
+	-- Open items pass 2026-11-18: the passive listener no longer needs leaderstats.Cash at construction.
+	suite:test("the passive listener attaches when leaderstats.Cash arrives after construction", function(expect)
+		local player = Instance.new("Folder") -- a stand-in with FindFirstChild and WaitForChild
+		local vfx = CashClaimVFX.new({ player = player, playerGui = tempGui(), passiveListenerGrace = 0.02 })
+		local before = vfx._displayedValue
+		local stats = Instance.new("Folder")
+		stats.Name = "leaderstats"
+		local cash = Instance.new("IntValue")
+		cash.Name = "Cash"
+		cash.Value = 300
+		cash.Parent = stats
+		stats.Parent = player
+		task.wait(0.1)
+		local attached = vfx._displayedValue
+		cash.Value = 450
+		task.wait(0.15)
+		local updated = vfx._displayedValue
+		vfx:Destroy()
+		player:Destroy()
+		expect.equal(before, 0, "no Cash yet")
+		expect.equal(attached, 300, "the balance when Cash arrived")
+		expect.equal(updated, 450, "later changes followed")
+	end)
+
 	suite:test("PlaySequence animates the display up to the exact new value, no drift", function(expect)
 		local vfx, setCash = makeVFX({ cash = 100 })
 		setCash(2100) -- e.g. a 2000 register rob on top of an existing 100
