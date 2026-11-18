@@ -1024,6 +1024,15 @@ return function()
 		expect.falsy(PhysicsService:CollisionGroupsAreCollidable("Default", "CarrierLedge"), "Default passes through ledges")
 		expect.truthy(PhysicsService:CollisionGroupsAreCollidable("Carrier", "CarrierLedge"), "carriers stand on ledges")
 		expect.truthy(PhysicsService:CollisionGroupsAreCollidable("Carrier", "Default"), "carriers collide with the world")
+		-- Leftovers (2026-11-18): only Carrier stands on the ledges, whichever group registered first. The two groups
+		-- scripts register lazily (EnemyRig, RagdollController) are registered in the place itself.
+		expect.truthy(PhysicsService:IsCollisionGroupRegistered("EnemyCharacter") and PhysicsService:IsCollisionGroupRegistered("Ragdoll"),
+			"EnemyCharacter and Ragdoll registered in the place")
+		for _, group in ipairs(PhysicsService:GetRegisteredCollisionGroups()) do
+			if group.name ~= "Carrier" then
+				expect.falsy(PhysicsService:CollisionGroupsAreCollidable(group.name, "CarrierLedge"), group.name .. " passes through the ledges")
+			end
+		end
 		for name, at in pairs({ CarrierLedge = Vector3.new(1361.8, -95.25, 2511), CarrierLedge2 = Vector3.new(1363.2, -94.25, 2476.9) }) do
 			local ledge = workspace.BankVault:FindFirstChild(name)
 			expect.truthy(ledge ~= nil and ledge:IsA("Model") and CollectionService:HasTag(ledge, "CarrierLedge"), name .. " is a tagged Model")
@@ -1032,6 +1041,7 @@ return function()
 				for _, d in ipairs(ledge:GetDescendants()) do
 					if d:IsA("BasePart") then
 						expect.truthy(d.CollisionGroup == "CarrierLedge" and d.Transparency == 1, name .. "." .. d.Name .. " carrier-only and invisible")
+						expect.falsy(d.CanQuery, name .. "." .. d.Name .. " CanQuery off")
 					end
 				end
 			end

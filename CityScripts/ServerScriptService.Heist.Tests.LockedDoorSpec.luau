@@ -103,6 +103,10 @@ return function()
 			openCFrame = overrides.openCFrame or DEFAULT_OPEN_CFRAME,
 			onSolved = overrides.onSolved,
 			objectText = overrides.objectText,
+			canAttempt = overrides.canAttempt,
+			-- Fake players are strings with no character: in reach unless a case says otherwise.
+			measure = overrides.measure or function() return 0 end,
+			maxLatencyCompensation = overrides.maxLatencyCompensation,
 		})
 		return door, model, net
 	end
@@ -613,6 +617,106 @@ return function()
 		expect.truthy(doorA._attempts["p1"] ~= nil, "A can be picked again after the exit")
 		modelA:Destroy()
 		modelB:Destroy()
+	end)
+
+	-- Final review C1 (2026-11-18): a click is judged only from a living character still within reach, and
+	-- only while canAttempt still allows it.
+	suite:test("a click from beyond the prompt range plus 6 studs drops the attempt and closes the lockpick; at the edge it is judged", function(expect)
+		local distances = {}
+		local door, model, net = newDoor({ bank = activeBank(), generateZoneAngle = alwaysZeroAngle,
+			measure = function(player) return distances[player] end })
+		door:OnSessionStart()
+		local reach = door.prompt.MaxActivationDistance + 6
+		distances.p1 = reach
+		door:_onTriggered("p1")
+		requestStop(net, "p1")
+		expect.equal(#net.updates, 1, "judged at the edge of reach")
+		distances.p1 = reach + 0.5
+		requestStop(net, "p1")
+		expect.equal(#net.updates, 1, "not judged out of reach")
+		expect.equal(door._attempts["p1"], nil, "attempt dropped")
+		expect.equal(net.solved[1], "p1", "lockpick screen closed")
+		expect.falsy(door.isOpen, "door shut")
+		distances.p1 = nil -- dead, or no character
+		door:_onTriggered("p1")
+		requestStop(net, "p1")
+		expect.equal(door._attempts["p1"], nil, "no living character: dropped")
+		expect.equal(#net.updates, 1, "still one judgement")
+		model:Destroy()
+	end)
+
+	suite:test("canAttempt is asked again on every click", function(expect)
+		local allowed = true
+		local door, model, net = newDoor({ bank = activeBank(), generateZoneAngle = alwaysZeroAngle,
+			canAttempt = function() return allowed end })
+		door:OnSessionStart()
+		door:_onTriggered("p1")
+		requestStop(net, "p1")
+		allowed = false
+		requestStop(net, "p1")
+		expect.equal(#net.updates, 1, "the second click is not judged")
+		expect.equal(door._attempts["p1"], nil, "attempt dropped")
+		model:Destroy()
+	end)
+
+	-- The client closes its lockpick screen at death without telling the server: the server drops it itself.
+	suite:test("a death drops the attempt on the server", function(expect)
+		local character = Instance.new("Model")
+		local humanoid = Instance.new("Humanoid")
+		humanoid.Parent = character
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Position = Vector3.new(0, 5000, 0)
+		root.Parent = character
+		character.PrimaryPart = root
+		character.Parent = workspace
+		local player = { Character = character }
+		local door, model = newDoor({ bank = activeBank(), generateZoneAngle = alwaysZeroAngle })
+		door:OnSessionStart()
+		door:_onTriggered(player)
+		local live = door._attempts[player] ~= nil
+		humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+		local waited = 0
+		while door._attempts[player] and waited < 1 do waited += task.wait() end
+		expect.truthy(live, "attempt live before the death")
+		expect.equal(door._attempts[player], nil, "dropped at the death")
+		character:Destroy()
+		model:Destroy()
+	end)
+
+	-- Final review M4 (2026-11-18).
+	suite:test("Forget drops a leaver's attempt; Destroy drops every attempt on the door", function(expect)
+		local door, model, net = newDoor({ bank = activeBank(), generateZoneAngle = alwaysZeroAngle })
+		door:OnSessionStart()
+		door:_onTriggered("p1")
+		door:Forget("p1")
+		requestStop(net, "p1")
+		expect.equal(door._attempts["p1"], nil, "p1 forgotten")
+		expect.equal(#net.updates, 0, "a forgotten player's click is not judged")
+		door:_onTriggered("p2")
+		door:Destroy()
+		expect.equal(next(door._attempts), nil, "no attempt kept after Destroy")
+		model:Destroy()
+	end)
+
+	-- Final review M2 (2026-11-18): a door that pays takes a narrower client click-time window.
+	suite:test("maxLatencyCompensation narrows the click timestamp window (default 1 s)", function(expect)
+		-- The zone sits where the needle stood 1 s before the trigger; the clock never moves, so only a
+		-- click time honoured 1 s back can hit it.
+		local function oneSecondBack() return 2 * math.pi - math.rad(120) end
+		local wide, wideModel, wideNet = newDoor({ bank = activeBank(), generateZoneAngle = oneSecondBack })
+		wide:OnSessionStart()
+		wide:_onTriggered("p1")
+		requestStop(wideNet, "p1", 1000 - 1)
+		local narrow, narrowModel, narrowNet = newDoor({ bank = activeBank(), generateZoneAngle = oneSecondBack,
+			maxLatencyCompensation = 0.25 })
+		narrow:OnSessionStart()
+		narrow:_onTriggered("p1")
+		requestStop(narrowNet, "p1", 1000 - 1)
+		expect.equal(wideNet.updates[1] and wideNet.updates[1].payload.outcome, "hit", "1 s window: honoured")
+		expect.equal(narrowNet.updates[1] and narrowNet.updates[1].payload.outcome, "miss", "0.25 s window: clamped, a miss")
+		wideModel:Destroy()
+		narrowModel:Destroy()
 	end)
 
 	return suite:run()

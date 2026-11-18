@@ -5,8 +5,12 @@
 -- range (pauses when nobody is, never resets). At config.BroadcastSeconds the participants in range
 -- at that moment go to onComplete. One broadcast per session; Seal ends it without a payout.
 --
--- deps = {bank, config, now?, measure?(player)->number?, onLive(player), onComplete({Player})}
+-- deps = {bank, config, now?, measure?(player)->number?, onLive(player), onComplete({Player}),
+--   isBlocked?(player)->boolean, onRefused?(player, reason)}
 -- The model needs a Highlight and a Studio-authored BillboardGui with a TextLabel.
+-- Final review I1 (2026-11-18): carriers can't rob. isBlocked (the carry check) refuses Go Live with reason
+-- "carrying_supplies", and a carrier in range at completion is not paid (still counts as holding the desk).
+-- Leftovers (2026-11-18): a refused press through the prompt goes to onRefused, so the presser is told why.
 local BroadcastDesk = {}
 BroadcastDesk.__index = BroadcastDesk
 
@@ -75,6 +79,8 @@ function BroadcastDesk.new(model: Model, deps)
 		measure = deps.measure or defaultMeasure(part),
 		onLive = deps.onLive,
 		onComplete = deps.onComplete,
+		isBlocked = deps.isBlocked or function() return false end,
+		onRefused = deps.onRefused or function() end,
 		state = "locked",
 		airSeconds = 0,
 		_lastUpdate = 0,
@@ -128,7 +134,11 @@ function BroadcastDesk:_onPromptTriggered(player)
 	local began = self._holdBegan[player]
 	self._holdBegan[player] = nil
 	if not began or self.now() - began < HOLD_DURATION - HOLD_TOLERANCE then return end
-	self:TryGoLive(player)
+	local ok, reason = self:TryGoLive(player)
+	if not ok then
+		local rok, rerr = pcall(self.onRefused, player, reason)
+		if not rok then warn("[BroadcastDesk] onRefused failed: " .. tostring(rerr)) end
+	end
 end
 
 function BroadcastDesk:TryGoLive(player): (boolean, string?)
@@ -136,6 +146,7 @@ function BroadcastDesk:TryGoLive(player): (boolean, string?)
 	if self.state == "done" then return false, "done" end
 	if self.state ~= "armed" then return false, "not_armed" end
 	if not self.bank:IsParticipant(player) then return false, "not_participant" end
+	if self.isBlocked(player) then return false, "carrying_supplies" end
 	if not self:_inRange(player) then return false, "too_far" end
 
 	self.state = "live"
@@ -169,7 +180,11 @@ function BroadcastDesk:Update()
 		self.state = "done"
 		self:_setOpen(false)
 		self:_render()
-		local ok, err = pcall(self.onComplete, holders)
+		local payees = {}
+		for _, player in ipairs(holders) do
+			if not self.isBlocked(player) then table.insert(payees, player) end
+		end
+		local ok, err = pcall(self.onComplete, payees)
 		if not ok then warn("[BroadcastDesk] onComplete failed: " .. tostring(err)) end
 		return
 	end

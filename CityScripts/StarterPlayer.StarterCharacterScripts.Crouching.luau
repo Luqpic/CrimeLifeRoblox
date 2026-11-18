@@ -43,10 +43,15 @@ local config = {
 
 ---------------------------------------------------------
 
--- Crouch speed, never above a heavy-loot carry cap (heist layers 2026-11-17).
-local function crouchSpeed()
+-- A speed never above a heavy-loot carry cap (heist layers 2026-11-17; the stand-up too since 2026-11-18,
+-- so a carrier who stands up is capped on the same frame, not one frame later).
+local function carryCapped(speed: number): number
 	local cap = Character:GetAttribute(MovementConstants.CARRY_SPEED_CAP_ATTRIBUTE)
-	return if type(cap) == "number" then math.min(config.Speed, cap) else config.Speed
+	return if type(cap) == "number" then math.min(speed, cap) else speed
+end
+
+local function crouchSpeed()
+	return carryCapped(config.Speed)
 end
 
 -- -=/ANIMATIONS/=-
@@ -177,7 +182,7 @@ local function Stop()
 			end
 
 			-- Reset to original speed (running system will handle it from here)
-			Humanoid.WalkSpeed = originalSpeed
+			Humanoid.WalkSpeed = carryCapped(originalSpeed)
 
 			Humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
 

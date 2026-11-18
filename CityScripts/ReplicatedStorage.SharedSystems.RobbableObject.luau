@@ -12,6 +12,19 @@ RobbableObject.__index = RobbableObject
 local BURST_PARTICLE_COUNT = 18
 local BOUNCE_HOP_HEIGHT = 1.5
 local BOUNCE_DURATION = 0.9
+-- Final review 2026-11-18, both opt-in, same as SupplyObject's: enforceHold (M1) honours a prompt trigger
+-- only after a hold the server timed (seconds of jitter allowed below), checkReach (M3) only from a living
+-- character within the prompt's MaxActivationDistance + REACH_ALLOWANCE of the attach part.
+local HOLD_TOLERANCE = 0.15
+local REACH_ALLOWANCE = 6
+
+local function defaultMeasure(player, part: BasePart): number?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (humanoid and humanoid.Health > 0 and root and root:IsA("BasePart")) then return nil end
+	return (root.Position - part.Position).Magnitude
+end
 
 -- Generalizes the "flat-value, one-time-per-session robbable object with a
 -- cloned prompt and a toggled pre-placed Highlight" pattern, first built for
@@ -104,12 +117,43 @@ function RobbableObject.new(model: Model, deps)
 		-- its current "available the instant the session starts" behavior
 		-- unchanged.
 		deferUnlock = deps.deferUnlock == true,
+		-- Final review 2026-11-18 (see the constants above): clock defaults to os.clock, measure(player) ->
+		-- number? (nil = dead or no character) to the distance from the attach part.
+		enforceHold = deps.enforceHold == true,
+		clock = deps.clock or os.clock,
+		checkReach = deps.checkReach == true,
+		measure = deps.measure or function(player) return defaultMeasure(player, part) end,
+		_holdBegan = {}, -- player -> clock() when their hold began
 		_unlocked = false,
 		_prompt = nil,
 		_conn = nil,
 		_bounceTween = nil,
 		_bounceRestoreCFrame = nil,
 	}, RobbableObject)
+end
+
+function RobbableObject:_onHoldBegan(player)
+	self._holdBegan[player] = self.clock()
+end
+
+-- Leftovers (2026-11-18): a hold begun before a leave or a death is not honoured later.
+function RobbableObject:Forget(player)
+	self._holdBegan[player] = nil
+end
+
+-- The prompt's Triggered: the opt-in server checks, then the rob.
+function RobbableObject:_onPromptTriggered(player)
+	if self.enforceHold and self._prompt and self._prompt.HoldDuration > 0 then
+		local began = self._holdBegan[player]
+		self._holdBegan[player] = nil
+		if not began or self.clock() - began < self._prompt.HoldDuration - HOLD_TOLERANCE then return end
+	end
+	if self.checkReach then
+		local distance = self.measure(player)
+		local range = self._prompt and self._prompt.MaxActivationDistance or 0
+		if type(distance) ~= "number" or distance > range + REACH_ALLOWANCE then return end
+	end
+	self:_tryRob(player)
 end
 
 function RobbableObject:_teardownPrompt()
@@ -244,9 +288,14 @@ function RobbableObject:Unlock()
 	local prompt = self.promptTemplate:Clone()
 	prompt.Parent = self.part
 	self._prompt = prompt
+	table.clear(self._holdBegan)
 	self._conn = prompt.Triggered:Connect(function(player)
-		self:_tryRob(player)
+		self:_onPromptTriggered(player)
 	end)
+	if self.enforceHold then
+		-- Destroyed with the prompt, so no connection to keep.
+		prompt.PromptButtonHoldBegan:Connect(function(player) self:_onHoldBegan(player) end)
+	end
 	-- Same trigger point as the prompt clone: the highlight tracks the
 	-- prompt's own availability lifecycle exactly.
 	self.highlight.Enabled = true

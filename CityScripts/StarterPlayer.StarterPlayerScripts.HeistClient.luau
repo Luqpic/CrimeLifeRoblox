@@ -26,6 +26,9 @@ local UITheme = require(ReplicatedStorage:WaitForChild("SharedSystems"):WaitForC
 -- UI has no other way to learn a real Gamepass Id. No ownership state is read
 -- client-side -- only the static config table.
 local GamepassManager = require(ReplicatedStorage:WaitForChild("SharedSystems"):WaitForChild("GamepassManager"))
+-- Heavy carries get the getaway widget (developer decision 2026-11-18): CarryState names the carried
+-- object's location in this character attribute while it is carried.
+local CARRY_GETAWAY_ATTRIBUTE = require(shared:WaitForChild("Config")).CarryGetawayAttribute
 
 -- The client re-derives the display from the same function the server uses.
 -- Duplicated rather than required: Net lives in ServerScriptService, which
@@ -1106,6 +1109,9 @@ end
 
 RunService.RenderStepped:Connect(function()
 	local now = workspace:GetServerTimeNow()
+	-- The location whose heavy loot (the ripped ATM, the gold bar) this character carries, or nil.
+	local liveCharacter = player.Character
+	local carryLocation = liveCharacter and liveCharacter:GetAttribute(CARRY_GETAWAY_ATTRIBUTE)
 
 	for _, location in ipairs(LOCATIONS) do
 		local session = sessionStates[location]
@@ -1207,9 +1213,11 @@ RunService.RenderStepped:Connect(function()
 		local character = player.Character
 		local characterRoot = character and character.PrimaryPart
 
+		-- A heavy carry counts like a bag here (2026-11-18): CarryGetaway banks it at the same distance from the
+		-- same anchor once out of the building, with or without an Active session, so the widget follows it.
 		local remaining = nil
-		if anchor and characterRoot and escapeDistance
-			and session.state == "Active" and amount > 0 and not zoneOccupancy[location] then
+		local hasLoot = (session.state == "Active" and amount > 0) or carryLocation == location
+		if anchor and characterRoot and escapeDistance and hasLoot and not zoneOccupancy[location] then
 			local here = Vector3.new(characterRoot.Position.X, 0, characterRoot.Position.Z)
 			local there = Vector3.new(anchor.Position.X, 0, anchor.Position.Z)
 			remaining = math.max(0, escapeDistance - (here - there).Magnitude)

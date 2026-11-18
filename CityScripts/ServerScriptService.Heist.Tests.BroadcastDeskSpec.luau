@@ -25,7 +25,8 @@ return function()
 	end
 
 	-- distances[player] is what measure() returns (nil = dead or no character); clock.t is now().
-	local function setup()
+	local function setup(opts)
+		opts = opts or {}
 		local clock = { t = 0 }
 		local model = makeModel()
 		local bank = BankInstance.new({ config = Config, now = function() return clock.t end })
@@ -37,6 +38,8 @@ return function()
 			measure = function(player) return distances[player] end,
 			onLive = function(player) table.insert(lives, player) end,
 			onComplete = function(players) table.insert(completes, players) end,
+			isBlocked = opts.isBlocked,
+			onRefused = opts.onRefused,
 		})
 		bank:RegisterComponent(desk)
 		bank:TryStart("p1")
@@ -212,6 +215,46 @@ return function()
 		desk:_onPromptTriggered("p1")
 		expect.equal(desk.state, "live", "timed hold: live")
 		expect.equal(#lives, 1, "onLive once")
+		cleanup()
+	end)
+
+	-- Final review I1 (2026-11-18): carriers can't rob. Leftovers: a refused press says why instead of nothing.
+	suite:test("a carrier is refused at Go Live, and a refused press goes to onRefused with its reason", function(expect)
+		local carrying, refusals = { p2 = true }, {}
+		local desk, _, distances, lives, _, clock, _, cleanup = setup({
+			isBlocked = function(p) return carrying[p] == true end,
+			onRefused = function(p, reason) table.insert(refusals, { p, reason }) end,
+		})
+		desk:Arm()
+		distances.p2, distances.p9 = 5, 5
+		local ok, reason = desk:TryGoLive("p2")
+		for _, p in ipairs({ "p9", "p2" }) do
+			desk:_onHoldBegan(p)
+			clock.t += 1
+			desk:_onPromptTriggered(p)
+		end
+		expect.falsy(ok, "carrier refused")
+		expect.equal(reason, "carrying_supplies", "carrier reason")
+		expect.equal(#lives, 0, "nobody went live")
+		expect.equal(refusals[1] and refusals[1][2], "not_participant", "the non-participant is told")
+		expect.equal(refusals[2] and refusals[2][2], "carrying_supplies", "the carrier is told")
+		cleanup()
+	end)
+
+	suite:test("at completion a carrier in range is not paid; the others are", function(expect)
+		local carrying = {}
+		local desk, _, distances, _, completes, clock, _, cleanup = setup({
+			isBlocked = function(p) return carrying[p] == true end,
+		})
+		desk:Arm()
+		distances.p1, distances.p2 = 5, 5
+		desk:TryGoLive("p1")
+		carrying.p2 = true
+		clock.t += Config.BroadcastSeconds
+		desk:Update()
+		expect.equal(#completes, 1, "completed once")
+		expect.equal(completes[1] and #completes[1], 1, "one payee")
+		expect.equal(completes[1] and completes[1][1], "p1", "the one not carrying")
 		cleanup()
 	end)
 

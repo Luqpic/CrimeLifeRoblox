@@ -123,6 +123,18 @@ Config.DepositBoxCount = 8
 Config.DepositBoxCash = 1500
 Config.GoldBarChance = 0.5
 Config.GoldBarValue = 8000
+-- Final review M2 (2026-11-18): a box pays, so its lockpick honours a client click time at most this many
+-- seconds back (the base doors keep LockedDoor's 1 s).
+Config.DepositBoxClickWindow = 0.25
+
+-- Leftovers (2026-11-18): the largest single grant BankInstance:AddBonus / TryAddDuffel accepts; NaN,
+-- infinite and larger amounts are refused as invalid_amount.
+Config.MaxBagGrant = 100000
+
+-- Heavy carries get the getaway widget (developer decision 2026-11-18): CarryState sets this character
+-- attribute to the carried object's getawayLocation ("Bank", "Gas2Go"); HeistClient shows that
+-- location's getaway distance while it is set.
+Config.CarryGetawayAttribute = "CarryGetaway"
 
 -- Supplies Robbery (spec addendum, 2026-09-19): SlowFoods/Gas2Go-only
 -- side mechanic -- picking up a supply object starts a Carry State (see

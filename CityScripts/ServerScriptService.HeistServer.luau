@@ -151,6 +151,8 @@ local zoneService
 local isInsideBank
 local forfeit = Forfeit.new({
 	exitCFrame = function() return exitSpawn.CFrame end,
+	-- Final review I2 (2026-11-18): the timer's eject takes a heavy carry (the gold bar) held inside.
+	carryState = carryState,
 	teleport = function(player, cframe)
 		local character = player.Character
 		if character then character:PivotTo(cframe + Vector3.new(0, 4, 0)) end
@@ -489,6 +491,9 @@ for _, volume in ipairs(byTag[T.HeistDeathVolume] or {}) do
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid.Health > 0 then
+			-- Open items pass 2026-11-18: a kill from full health reads as a self-reset to WantedService
+			-- (the stars would carry); the pit marks the robber hurt first, so it clears heat like any death.
+			require(ServerScriptService.Wanted.WantedService).markHurt(player)
 			humanoid.Health = 0
 		end
 	end
@@ -643,13 +648,32 @@ local goldBar = SupplyObject.new(workspace.BankVault.GoldBar, {
 	bankOnly = true,
 	speedCap = CARRY_SPEED_CAP,
 	startHidden = true,
+	-- 2026-11-18: the carry shows the Bank's getaway widget; the re-pickup prompt re-measures reach (M3).
+	getawayLocation = "Bank",
+	checkReach = true,
 	onRefused = notifyRefused,
 	isBlocked = function(player) return carryState:IsCarrying(player) end,
 	onPickup = function(player, bar)
-		carryState:PickUp(player, heistShared.ModelTemplates.GoldBarTool, bar)
+		return carryState:PickUp(player, heistShared.ModelTemplates.GoldBarTool, bar)
 	end,
 })
 bank:RegisterComponent(goldBar)
+
+-- Leftovers (2026-11-18): only Carrier stands on the carrier-only ledges, whichever group registered
+-- first (a group registered later collides with every group by default). Deferred past the boot's
+-- other registrations; the two groups scripts register lazily (EnemyRig's EnemyCharacter,
+-- RagdollController's Ragdoll) are registered in the place itself for the same reason.
+task.defer(function()
+	local PhysicsService = game:GetService("PhysicsService")
+	local ok, err = pcall(function()
+		for _, group in ipairs(PhysicsService:GetRegisteredCollisionGroups()) do
+			if group.name ~= "Carrier" then
+				PhysicsService:CollisionGroupSetCollidable(group.name, "CarrierLedge", false)
+			end
+		end
+	end)
+	if not ok then warn("[HeistServer] carrier ledge groups: " .. tostring(err)) end
+end)
 
 local depositBoxes
 do

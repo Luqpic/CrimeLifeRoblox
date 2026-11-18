@@ -10,7 +10,10 @@
 -- from HeistServer's vault-door latch) arms them.
 --
 -- deps = { bank, net, config, carryState, goldBar (SupplyObject: GiveTo, DropAt),
---   roll(count) -> {"cash"|"empty"|"gold"}, location? ("Bank"), now?, generateZoneAngle? }
+--   roll(count) -> {"cash"|"empty"|"gold"}, location? ("Bank"), now?, generateZoneAngle?, measure? }
+-- Final review 2026-11-18: a box is picked only by a participant who is not carrying (I1), each click
+-- only from within reach of the box (C1, LockedDoor's measure; specs inject it), and the click-time
+-- window is config.DepositBoxClickWindow (M2).
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LockedDoor = require(ReplicatedStorage.SharedSystems.LockedDoor)
 
@@ -50,8 +53,13 @@ function DepositBoxes.new(models: { Model }, deps)
 			openCFrame = pivot * CFrame.Angles(0, OPEN_ANGLE, 0),
 			now = deps.now,
 			generateZoneAngle = deps.generateZoneAngle,
-			-- Only this robbery's participants may pick a box (a bystander would empty it for nothing).
-			canAttempt = function(player) return deps.bank:IsParticipant(player) end,
+			measure = deps.measure,
+			maxLatencyCompensation = deps.config.DepositBoxClickWindow,
+			-- Only this robbery's participants may pick a box (a bystander would empty it for nothing), and not
+			-- while carrying (final review I1: carriers can't rob). Asked again on every click.
+			canAttempt = function(player)
+				return deps.bank:IsParticipant(player) and not deps.carryState:IsCarrying(player)
+			end,
 			onSolved = function(player) self:_onSolved(i, player) end,
 		})
 		local handle = model:FindFirstChild("ProximityPart Handle") :: BasePart
@@ -91,8 +99,8 @@ function DepositBoxes:_onSolved(i: number, player)
 			self.net:Toast(player, "+" .. withCommas(self.config.DepositBoxCash))
 		end
 	elseif kind == "gold" then
-		-- GiveTo reports success once its onPickup ran, even if CarryState then refused the pickup:
-		-- check the carry itself, and leave the bar on the floor with its re-pickup prompt otherwise.
+		-- A carrier never gets here (canAttempt), but the carry itself is the proof of a pickup: anything
+		-- else leaves the bar on the floor with its re-pickup prompt.
 		if not self.carryState:IsCarrying(player) then
 			self.goldBar:GiveTo(player)
 		end

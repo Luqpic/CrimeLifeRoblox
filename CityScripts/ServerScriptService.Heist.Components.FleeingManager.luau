@@ -8,6 +8,7 @@
 -- deps = {bank, config, escapePoint: BasePart, onKeyTaken(player), measure(player)->number?,
 --         pathTo(model, Vector3, keepGoing?), clock?}
 local PathfindingService = game:GetService("PathfindingService")
+local Players = game:GetService("Players")
 
 local FleeingManager = {}
 FleeingManager.__index = FleeingManager
@@ -111,10 +112,18 @@ function FleeingManager.new(model: Model, deps)
 		_holdBegan = {},
 		_walkTrack = loadTrack(humanoid, walkAnim and walkAnim.AnimationId, true),
 		_scaredTrack = loadTrack(humanoid, SCARED_ANIMATION_ID, true),
+		_leaveConn = nil :: RBXScriptConnection?,
 	}, FleeingManager)
 	-- Behind the counter he must not drift or be shoved before the alarm.
 	self.root.Anchored = true
+	-- Leftovers (2026-11-18): a leaver's begun hold goes with them. Disconnected in Destroy (NPCSpawnManager
+	-- destroys each Manager at Rearm).
+	self._leaveConn = Players.PlayerRemoving:Connect(function(player) self:Forget(player) end)
 	return self
+end
+
+function FleeingManager:Forget(player)
+	self._holdBegan[player] = nil
 end
 
 function FleeingManager:_removePrompt()
@@ -211,6 +220,10 @@ end
 
 function FleeingManager:Destroy()
 	self._runId += 1
+	if self._leaveConn then
+		self._leaveConn:Disconnect()
+		self._leaveConn = nil
+	end
 	self:_removePrompt()
 	if self._walkTrack then self._walkTrack:Stop() end
 	if self._scaredTrack then self._scaredTrack:Stop() end

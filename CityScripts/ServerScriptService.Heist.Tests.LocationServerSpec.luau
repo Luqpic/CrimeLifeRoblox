@@ -619,5 +619,38 @@ return function()
 		expect.equal(dies, 0, "no forfeit")
 	end)
 
+	-- Leftovers (2026-11-18): a location's own per-player state (server-timed holds) hears about a death.
+	suite:test("onDied runs with the player at a character death", function(expect)
+		local died = {}
+		local rig = makeRig({ onDied = function(player) table.insert(died, player) end })
+		local character = Instance.new("Model")
+		local humanoid = Instance.new("Humanoid")
+		humanoid.Parent = character
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Position = Vector3.new(0, 5000, 0)
+		root.Parent = character
+		character.PrimaryPart = root
+		character.Parent = workspace
+		rig.location:_watchCharacter("p1", character)
+		humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+		local waited = 0
+		while #died == 0 and waited < 1 do waited += task.wait() end
+		character:Destroy()
+		rig.teardown()
+		expect.equal(died[1], "p1", "onDied with the player")
+	end)
+
+	-- Leftovers (2026-11-18): a refusal names its reason instead of the generic line.
+	suite:test("a non-participant is told to join; a bag holder is told to bank the bag", function(expect)
+		local rig = makeRig()
+		rig.location.notifyRefused("p1", "not_participant")
+		rig.location.notifyRefused("p1", "has_duffel")
+		local toasts = rig.calls.Toast
+		rig.teardown()
+		expect.equal(toasts[1] and toasts[1][2], "Join the robbery first.", "not_participant")
+		expect.equal(toasts[2] and toasts[2][2], "You're already holding a bag. Bank it first.", "has_duffel")
+	end)
+
 	return suite:run()
 end

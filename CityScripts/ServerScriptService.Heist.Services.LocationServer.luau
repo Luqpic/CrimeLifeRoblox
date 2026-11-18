@@ -74,7 +74,10 @@ LocationServer.__index = LocationServer
 local REFUSAL_MESSAGES = {
 	cap_exceeded = "Duffel Full — get clear of the building to bank it.",
 	carrying_supplies = HeistConfig.SupplyCarryingRefusalMessage,
-	has_duffel = "You need to bank your duffel first before carrying supplies.",
+	-- Leftovers (2026-11-18): names what the player holds (the rip and the gold refuse it too, not only supplies).
+	has_duffel = "You're already holding a bag. Bank it first.",
+	-- Leftovers (2026-11-18): a bystander pressing a robbery prompt is told why nothing happened.
+	not_participant = "Join the robbery first.",
 }
 
 local TRIGGER_DEBOUNCE = 1.0
@@ -108,6 +111,9 @@ function LocationServer.new(cfg)
 		_onActive = cfg.onActive,
 		_onSealed = cfg.onSealed,
 		_onPlayerRemoving = cfg.onPlayerRemoving,
+		-- Leftovers (2026-11-18): onDied(player) at every character death, for the location's own per-player
+		-- state (server-timed holds); the bag's forfeiture below does not depend on it.
+		_onDied = cfg.onDied,
 		_heartbeatExtras = cfg.heartbeatExtras,
 		_startHeartbeat = cfg.startHeartbeat ~= false,
 
@@ -135,6 +141,8 @@ function LocationServer.new(cfg)
 
 	self.forfeit = cfg.forfeit or Forfeit.new({
 		exitCFrame = cfg.exitCFrame,
+		-- Final review I2 (2026-11-18): the timer's eject takes a heavy carry held inside (the Gas2Go rip).
+		carryState = self.carryState,
 		teleport = function(player, cframe)
 			local character = player.Character
 			if character then character:PivotTo(cframe + Vector3.new(0, 4, 0)) end
@@ -334,6 +342,10 @@ function LocationServer:_watchCharacter(player, character)
 	local humanoid = character:WaitForChild("Humanoid", 5)
 	if humanoid then
 		humanoid.Died:Connect(function()
+			if self._onDied then
+				local ok, err = pcall(self._onDied, player)
+				if not ok then warn("[LocationServer] onDied failed: " .. tostring(err)) end
+			end
 			if self.bank:GetState() == "Active" and self.bank:IsParticipant(player) then
 				self.forfeit:Die(self.bank, player, "died")
 			end

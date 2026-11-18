@@ -74,6 +74,10 @@ return function()
 			blockedReason = overrides.blockedReason,
 			onRobbed = overrides.onRobbed,
 			payWith = overrides.payWith,
+			enforceHold = overrides.enforceHold,
+			clock = overrides.clock,
+			checkReach = overrides.checkReach,
+			measure = overrides.measure,
 		})
 		bank:RegisterComponent(object)
 		return bank, object, model, refusals, soundCalls
@@ -624,6 +628,57 @@ return function()
 		object:_tryRob("p9")
 		expect.equal(refusals[1] and refusals[1].reason, "not_participant", "not_participant")
 		expect.falsy(model:GetAttribute("Robbed"), "not robbed")
+		model:Destroy()
+	end)
+
+	-- Final review M1 (2026-11-18): an opt-in server-timed hold (the SlowFoods storage safe), as SupplyObject's.
+	suite:test("enforceHold honours a rob only after a hold the server timed; Forget drops a begun hold", function(expect)
+		local now, advance = makeClock()
+		local bank, object, model = makeBankAndObject(now, { enforceHold = true, clock = now, payWith = "bonus" })
+		bank:TryStart("p1")
+		bank:AddParticipant("p1")
+		object:_onPromptTriggered("p1")
+		local noHold = model:GetAttribute("Robbed")
+		object:_onHoldBegan("p1")
+		advance(1)
+		object:_onPromptTriggered("p1")
+		local shortHold = model:GetAttribute("Robbed")
+		object:_onHoldBegan("p1")
+		object:Forget("p1")
+		advance(3)
+		object:_onPromptTriggered("p1")
+		local forgotten = model:GetAttribute("Robbed")
+		object:_onHoldBegan("p1")
+		advance(3)
+		object:_onPromptTriggered("p1")
+		expect.falsy(noHold, "no hold seen: refused")
+		expect.falsy(shortHold, "1 s of a 3 s hold: refused")
+		expect.falsy(forgotten, "a forgotten hold: refused")
+		expect.truthy(model:GetAttribute("Robbed"), "a full server-timed hold robs")
+		cancelBounce(object)
+		model:Destroy()
+	end)
+
+	-- Final review M3 (2026-11-18): checkReach re-measures a prompt trigger on the server.
+	suite:test("checkReach: a rob from beyond the prompt range plus 6 studs, or with no living character, is ignored", function(expect)
+		local now = select(1, makeClock())
+		local distances = {}
+		local bank, object, model = makeBankAndObject(now, { checkReach = true, measure = function(p) return distances[p] end })
+		bank:TryStart("p1")
+		bank:AddParticipant("p1")
+		local reach = object._prompt.MaxActivationDistance + 6
+		distances.p1 = reach + 0.5
+		object:_onPromptTriggered("p1")
+		local far = model:GetAttribute("Robbed")
+		distances.p1 = nil
+		object:_onPromptTriggered("p1")
+		local dead = model:GetAttribute("Robbed")
+		distances.p1 = reach
+		object:_onPromptTriggered("p1")
+		expect.falsy(far, "out of reach: ignored")
+		expect.falsy(dead, "no living character: ignored")
+		expect.truthy(model:GetAttribute("Robbed"), "within reach: robbed")
+		cancelBounce(object)
 		model:Destroy()
 	end)
 

@@ -8,9 +8,14 @@
 -- it always did: Seal therefore only closes an untouched ATM, and Rearm (cooldown end) puts a
 -- ripped one back on its spot, promptless, as it is at Idle today.
 --
+-- Leftovers (2026-11-18): the ATM vanished once after a death mid-rip (a dropped ATM is physics-active
+-- and can leave the world). A copy taken at boot, before either component touches the model, rebuilds a
+-- missing or incomplete ATM at Rearm. Both prompts re-measure reach on the server (final review M3), the
+-- rip names its getaway location for the carry widget, and Forget(player) drops a begun rip hold.
+--
 -- deps = { bank, robPromptTemplate, ripPromptTemplate, repickupPromptTemplate, robAmount,
 --   ripAmount, onPickup(player, ripObject), onRefused?, playRobSound?, isBlocked?,
---   hasDuffel?, clock? }
+--   hasDuffel?, clock?, measure? }
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobbableObject = require(ReplicatedStorage.SharedSystems.RobbableObject)
 local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
@@ -19,9 +24,35 @@ local CARRY_SPEED_CAP = require(ReplicatedStorage.Movement.Constants).CARRY_SPEE
 local ATMRipOut = {}
 ATMRipOut.__index = ATMRipOut
 
+local function countParts(model: Model): number
+	local n = 0
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then n += 1 end
+	end
+	return n
+end
+
 function ATMRipOut.new(model: Model, deps)
 	assert(type(deps.onPickup) == "function", "ATMRipOut requires onPickup")
-	local self = setmetatable({ model = model, ripped = false }, ATMRipOut)
+	local self = setmetatable({
+		model = model,
+		ripped = false,
+		rob = nil :: any,
+		rip = nil :: any,
+		_deps = deps,
+		_parent = model.Parent,
+		-- Unparented, so its tags never count in CollectionService:GetTagged until a rebuild parents a clone.
+		_bootCopy = model:Clone(),
+		_partCount = countParts(model),
+	}, ATMRipOut)
+	self:_build(model)
+	return self
+end
+
+function ATMRipOut:_build(model: Model)
+	local deps = self._deps
+	self.model = model
+	self.ripped = false
 	-- RobbableObject first: both take the part nearest the model's pivot, and SupplyObject then
 	-- makes that part the PrimaryPart (which moves the pivot onto it).
 	self.rob = RobbableObject.new(model, {
@@ -31,6 +62,8 @@ function ATMRipOut.new(model: Model, deps)
 		onRefused = deps.onRefused,
 		playRobSound = deps.playRobSound,
 		isBlocked = deps.isBlocked,
+		checkReach = true,
+		measure = deps.measure,
 		onRobbed = function() self.rip:Close() end,
 	})
 	self.rip = SupplyObject.new(model, {
@@ -40,7 +73,10 @@ function ATMRipOut.new(model: Model, deps)
 		cashOutAmount = deps.ripAmount,
 		bankOnly = true,
 		speedCap = CARRY_SPEED_CAP,
+		getawayLocation = "Gas2Go",
 		enforceHold = true,
+		checkReach = true,
+		measure = deps.measure,
 		clock = deps.clock,
 		onRefused = deps.onRefused,
 		isBlocked = deps.isBlocked,
@@ -48,10 +84,13 @@ function ATMRipOut.new(model: Model, deps)
 		onPickup = function(player, ripObject)
 			self.ripped = true
 			self.rob:Close()
-			deps.onPickup(player, ripObject)
+			return deps.onPickup(player, ripObject)
 		end,
 	})
-	return self
+end
+
+function ATMRipOut:_intact(): boolean
+	return self.model.Parent ~= nil and countParts(self.model) >= self._partCount
 end
 
 function ATMRipOut:OnSessionStart()
@@ -70,10 +109,25 @@ function ATMRipOut:Seal()
 end
 
 function ATMRipOut:Rearm()
+	if not self:_intact() then
+		-- Nobody carries it: a carried ATM is hidden and anchored in place, so only a dropped one can be lost.
+		self.rob:Destroy()
+		self.rip:Destroy()
+		if self.model.Parent then self.model:Destroy() end
+		local fresh = self._bootCopy:Clone()
+		fresh.Parent = self._parent
+		self:_build(fresh) -- standing and promptless, as at Idle
+		return
+	end
 	if not self.ripped then return end
 	self.ripped = false
 	self.rip:OnSessionStart()
 	self.rip:Close()
+end
+
+function ATMRipOut:Forget(player)
+	self.rob:Forget(player)
+	self.rip:Forget(player)
 end
 
 function ATMRipOut:Destroy()

@@ -254,6 +254,47 @@ return function(t)
 		expect.equal(kept, 3)
 	end)
 
+	-- Task 1 review minor 1 (2026-11-18): a death that clears heat also forgets the damage, so a new crime and a
+	-- reset within RESET_DAMAGE_SECONDS of that earlier damage read as a reset, not as a damage death.
+	t.test("a damage death forgets the damage: a new crime and a reset within 5 s keep the stars", function()
+		local p = standIn()
+		local humanoid, model = body()
+		WantedService._watchCharacter(p, model)
+		clock = 24000
+		WantedService.onAlarm("Bank", { p })
+		humanoid:TakeDamage(10)
+		clock = 24001
+		local died = kill(humanoid)
+		model:Destroy()
+		local cleared = WantedService.getHeat(p)
+		local humanoid2, model2 = body()
+		WantedService._watchCharacter(p, model2)
+		WantedService.onAlarm("Bank", { p })
+		clock = 24002
+		local died2 = kill(humanoid2)
+		model2:Destroy()
+		local kept = WantedService.getHeat(p)
+		WantedService.clear(p)
+		expect.truthy(died and died2)
+		expect.equal(cleared, 0)
+		expect.equal(kept, 3)
+	end)
+
+	-- Task 2 (2026-11-18): the Bank death pit kills from full health, which reads as a self-reset; it marks the
+	-- robber hurt first through markHurt, so a pit death clears heat like any death.
+	t.test("markHurt counts as damage: a death right after it clears heat", function()
+		local p = standIn()
+		local humanoid, model = body()
+		WantedService._watchCharacter(p, model)
+		clock = 25000
+		WantedService.onAlarm("Bank", { p })
+		WantedService.markHurt(p)
+		local died = kill(humanoid)
+		model:Destroy()
+		expect.truthy(died)
+		check(p, 0)
+	end)
+
 	t.test("clear sets heat and both attributes to 0", function()
 		local p = standIn()
 		WantedService.addHeat(p, 4.5, "test")

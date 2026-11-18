@@ -1,5 +1,11 @@
 --!strict
 local Signal = require(game.ReplicatedStorage.HeistShared.Signal)
+-- Leftovers (2026-11-18): one grant may not exceed this; NaN and infinities fail the same check.
+local MAX_BAG_GRANT = require(game.ReplicatedStorage.HeistShared.Config).MaxBagGrant
+
+local function validGrant(amount): boolean
+	return type(amount) == "number" and amount > 0 and amount <= MAX_BAG_GRANT
+end
 
 local BankInstance = {}
 BankInstance.__index = BankInstance
@@ -297,7 +303,7 @@ end
 function BankInstance:TryAddDuffel(player, amount: number): (boolean, string?)
 	if self._state ~= ACTIVE then return false, "inactive" end
 	if not self:IsParticipant(player) then return false, "not_participant" end
-	if type(amount) ~= "number" or amount <= 0 then return false, "invalid_amount" end
+	if not validGrant(amount) then return false, "invalid_amount" end
 
 	local current = self:GetDuffel(player)
 	local cap = self:GetDuffelCap(player)
@@ -314,7 +320,7 @@ end
 function BankInstance:AddBonus(player, amount: number): (boolean, string?)
 	if self._state ~= ACTIVE then return false, "inactive" end
 	if not self:IsParticipant(player) then return false, "not_participant" end
-	if type(amount) ~= "number" or amount <= 0 then return false, "invalid_amount" end
+	if not validGrant(amount) then return false, "invalid_amount" end
 
 	self._duffels[player] = self:GetDuffel(player) + amount
 	self.DuffelChanged:Fire(player, self._duffels[player], "add")

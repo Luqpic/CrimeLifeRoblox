@@ -92,6 +92,8 @@ return function()
 			speedCap = overrides.speedCap,
 			enforceHold = overrides.enforceHold,
 			clock = overrides.clock,
+			checkReach = overrides.checkReach,
+			measure = overrides.measure,
 			-- Per-location cash-out generalization (spec addendum, 2026-09-2X):
 			-- now a required dep -- defaulted here so every EXISTING test that
 			-- doesn't care about the exact value keeps working unchanged.
@@ -670,6 +672,49 @@ return function()
 		plain:_onPromptTriggered("p1")
 		expect.equal(#pickups2, 1, "without enforceHold a trigger is honoured as before")
 		model2:Destroy()
+	end)
+
+	-- Final review leftovers (2026-11-18): GiveTo reports a carry that the caller's onPickup refused.
+	suite:test("GiveTo returns false when onPickup refuses the carry, and does not give the object again", function(expect)
+		local now = select(1, makeClock())
+		local bank, supply, model = makeBankAndSupply(now, { startHidden = true, onPickup = function() return false end })
+		bank:TryStart("p1")
+		expect.falsy(supply:GiveTo("p1"), "a refused pickup is reported")
+		expect.falsy(supply:GiveTo("p2"), "not given again")
+		model:Destroy()
+	end)
+
+	-- Final review M3 (2026-11-18): checkReach re-measures a prompt trigger on the server.
+	suite:test("checkReach: a trigger from beyond the prompt range plus 6 studs, or with no living character, takes nothing", function(expect)
+		local now = select(1, makeClock())
+		local distances = {}
+		local bank, supply, model, _, pickups = makeBankAndSupply(now, {
+			checkReach = true,
+			measure = function(player) return distances[player] end,
+		})
+		bank:TryStart("p1")
+		local reach = supply._prompt.MaxActivationDistance + 6
+		distances.far = reach + 0.5
+		supply:_onTriggered("far")
+		supply:_onTriggered("dead")
+		expect.equal(#pickups, 0, "out of reach or dead: nothing taken")
+		distances.near = reach
+		supply:_onTriggered("near")
+		expect.equal(#pickups, 1, "within reach: taken")
+		model:Destroy()
+	end)
+
+	-- Leftovers (2026-11-18): a hold begun before a leave or a death is forgotten.
+	suite:test("Forget clears a player's server-timed hold", function(expect)
+		local now, advance = makeClock()
+		local bank, supply, model, _, pickups = makeBankAndSupply(now, { enforceHold = true, clock = now })
+		bank:TryStart("p1")
+		supply:_onHoldBegan("p1")
+		supply:Forget("p1")
+		advance(3)
+		supply:_onPromptTriggered("p1")
+		expect.equal(#pickups, 0, "a forgotten hold is not honoured")
+		model:Destroy()
 	end)
 
 	return suite:run()

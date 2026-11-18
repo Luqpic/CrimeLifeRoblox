@@ -268,11 +268,20 @@ function WantedService._onDied(player)
 	local hurt = hurtAt[player]
 	if hurt and now - hurt <= Constants.RESET_DAMAGE_SECONDS then
 		WantedService.clear(player)
+		-- Task 1 review (2026-11-18): this damage is spent. Kept, a new crime and a reset within the window
+		-- would read as a damage death and clear the new stars.
+		hurtAt[player] = nil
 	elseif heatOf[player] then
 		timerFrom[player], raisedAt[player] = now, now
 		player:SetAttribute("WantedSeen", false)
 		player:SetAttribute("WantedDraining", false)
 	end
+end
+
+-- A server kill from full health that is not a Blaster hit (the Bank death pit sets Health = 0) records its
+-- damage here first, so the death clears heat like any other (open items pass Task 2, 2026-11-18).
+function WantedService.markHurt(player)
+	hurtAt[player] = deps.now()
 end
 
 -- Damage is what the server saw: a health drop the player survived (shots, guards, lasers; a client's own

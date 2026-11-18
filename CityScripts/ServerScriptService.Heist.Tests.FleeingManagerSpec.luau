@@ -204,5 +204,19 @@ return function()
 		cleanup()
 	end)
 
+	-- Leftovers (2026-11-18): a leaver's begun hold is dropped (Forget runs on PlayerRemoving).
+	suite:test("Forget clears a leaver's Take Key hold", function(expect)
+		local manager, bank, distances, taken, _, clock, _, cleanup = setup()
+		bank:TryStart("p1")
+		bank:AddParticipant("p1")
+		distances.p1 = 3
+		manager:_onHoldBegan("p1")
+		manager:Forget("p1")
+		clock.t += Config.ManagerKeyHold
+		manager:_onPromptTriggered("p1")
+		expect.equal(#taken, 0, "a forgotten hold takes nothing")
+		cleanup()
+	end)
+
 	return suite:run()
 end

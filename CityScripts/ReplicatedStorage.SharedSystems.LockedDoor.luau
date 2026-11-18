@@ -1,4 +1,5 @@
 --!strict
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
 local LockedDoor = {}
@@ -102,12 +103,17 @@ local ZONE_WIDTHS = { math.rad(60), math.rad(45), math.rad(32), math.rad(22) }
 -- the server does NOT trust this as an angle or a success claim -- it only
 -- uses it as WHEN to evaluate its own, still fully server-computed formula,
 -- clamped to this small, sane recent window so a modified client can't
--- claim an arbitrarily-favorable moment in the past. Proportionate to what's
--- at stake: this door gates only cosmetic map access (spec: "no additional
--- reward... just access"), not currency/DuffelCap-relevant state like every
--- other robbable object in this codebase. Do not apply this same
--- client-timestamp pattern elsewhere without equivalent justification.
+-- claim an arbitrarily-favorable moment in the past. The 1 s window is
+-- proportionate for the base doors, which gate only map access (spec: "no
+-- additional reward... just access"). Doors that pay (the Bank's deposit
+-- boxes since 2026-11-17) pass a narrower deps.maxLatencyCompensation
+-- (final review M2, 2026-11-18): the client already knows startTime, zone
+-- and speed, so the window only decides how far back a click may claim.
 local MAX_LATENCY_COMPENSATION = 1
+-- Final review C1 (2026-11-18): the lockpick screen stays open while the
+-- player walks, so a click is judged only from a living character within the
+-- prompt's MaxActivationDistance plus this many studs of the prompt part.
+local REACH_ALLOWANCE = 6
 
 -- Heist layers 2026-11-17: one live lockpick attempt per player across ALL doors. Every door
 -- listens on the same shared stop/exit remotes (which carry no door id), so with several
@@ -145,8 +151,23 @@ local function defaultGenerateZoneAngle(): number
 	return math.random() * 2 * math.pi
 end
 
--- deps = {bank, net, location, openCFrame, now?, generateZoneAngle?, onSolved?, objectText?, canAttempt?}.
--- canAttempt(player) -> boolean (heist layers Task 6): a trigger from a player it refuses starts nothing.
+-- Distance from a living character's root to the prompt part; nil when dead or without a character.
+local function defaultMeasure(part: BasePart)
+	return function(player): number?
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if not (humanoid and humanoid.Health > 0 and root and root:IsA("BasePart")) then return nil end
+		return (root.Position - part.Position).Magnitude
+	end
+end
+
+-- deps = {bank, net, location, openCFrame, now?, generateZoneAngle?, onSolved?, objectText?, canAttempt?,
+-- measure?, maxLatencyCompensation?}.
+-- canAttempt(player) -> boolean (heist layers Task 6): a trigger from a player it refuses starts nothing,
+-- and (final review C1) a click from one it now refuses ends the attempt. measure(player) -> number?
+-- (C1): distance to the prompt part, nil = dead or no character (specs inject it for string players).
+-- maxLatencyCompensation (M2): the click-time window for a door that pays (default 1 s).
 -- onSolved(player) (heist layers 2026-11-17) runs once at a lockpick solve, after LockpickSolved;
 -- objectText overrides the prompt's "Locked Door". net is
 -- required: this component owns its own full remote round-trip (open the
@@ -208,12 +229,15 @@ function LockedDoor.new(model: Model, deps)
 		generateZoneAngle = deps.generateZoneAngle or defaultGenerateZoneAngle,
 		onSolved = deps.onSolved,
 		canAttempt = deps.canAttempt,
+		measure = deps.measure or defaultMeasure(promptPart),
+		maxLatencyCompensation = deps.maxLatencyCompensation or MAX_LATENCY_COMPENSATION,
 		closedCFrame = closedCFrame,
 		openCFrame = openCFrame,
 		isOpen = false,
 		_activeTween = nil,
 		_attempts = {}, -- player -> {progress, widthLevel, zoneAngle, zoneWidth, startTime}
 		_conn = nil,
+		_leaveConn = nil :: RBXScriptConnection?,
 	}, LockedDoor)
 
 	self._conn = prompt.Triggered:Connect(function(player)
@@ -237,8 +261,24 @@ function LockedDoor.new(model: Model, deps)
 	self.net:OnLockpickExitRequested(function(player)
 		self:_onExitRequested(player)
 	end)
+	-- Final review M4 (2026-11-18): a leaver's attempt goes with them.
+	self._leaveConn = Players.PlayerRemoving:Connect(function(player)
+		self:Forget(player)
+	end)
 
 	return self
+end
+
+-- A player's attempt on this door ends now (leave, or a caller's own cleanup).
+function LockedDoor:Forget(player)
+	self:_dropAttempt(player)
+end
+
+-- Final review C1 (2026-11-18): may this player's click still be judged here?
+function LockedDoor:_canStillPick(player): boolean
+	if self.canAttempt and not self.canAttempt(player) then return false end
+	local distance = self.measure(player)
+	return type(distance) == "number" and distance <= self.prompt.MaxActivationDistance + REACH_ALLOWANCE
 end
 
 -- Drops this door's attempt for `player` and, if this door owned the player's live attempt,
@@ -303,13 +343,23 @@ function LockedDoor:_onTriggered(player)
 
 	local zoneAngle = self.generateZoneAngle()
 	local zoneWidth = zoneWidthForLevel(1)
-	self._attempts[player] = {
+	local attempt = {
 		progress = 0,
 		widthLevel = 1,
 		zoneAngle = zoneAngle,
 		zoneWidth = zoneWidth,
 		startTime = self.now(),
 	}
+	self._attempts[player] = attempt
+	-- Final review C1 (2026-11-18): the client closes its lockpick at death without telling the server, so
+	-- the server drops the attempt itself. The connection goes with the humanoid.
+	local character = type(player) ~= "string" and player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.Died:Once(function()
+			if self._attempts[player] == attempt then self:_dropAttempt(player) end
+		end)
+	end
 	self.net:OpenLockpickGui(player, {
 		location = self.location,
 		progress = 0,
@@ -331,6 +381,14 @@ function LockedDoor:_onStopRequested(player, clientClickTime: number?)
 	local attempt = self._attempts[player]
 	if not attempt then return end -- stale/no-op: no in-flight attempt for this player at THIS door
 
+	-- Final review C1 (2026-11-18): walked away, died, or no longer allowed (left the roster, picked up a
+	-- carry): the attempt ends and the lockpick screen closes, judged nothing.
+	if not self:_canStillPick(player) then
+		self:_dropAttempt(player)
+		self.net:LockpickSolved(player) -- closes the client's lockpick screen
+		return
+	end
+
 	if self.isOpen then
 		-- Someone else solved it while this player was still mid-puzzle.
 		self:_dropAttempt(player)
@@ -341,7 +399,7 @@ function LockedDoor:_onStopRequested(player, clientClickTime: number?)
 	local serverNow = self.now()
 	local evalTime = serverNow
 	if type(clientClickTime) == "number" then
-		evalTime = math.clamp(clientClickTime, serverNow - MAX_LATENCY_COMPENSATION, serverNow)
+		evalTime = math.clamp(clientClickTime, serverNow - self.maxLatencyCompensation, serverNow)
 	end
 	local angle = needleAngle(evalTime - attempt.startTime)
 
@@ -457,6 +515,11 @@ function LockedDoor:Destroy()
 		self._conn:Disconnect()
 		self._conn = nil
 	end
+	if self._leaveConn then
+		self._leaveConn:Disconnect()
+		self._leaveConn = nil
+	end
+	self:_dropAllAttempts() -- final review M4: no live-door entry outlives the door
 	self:_cancelTween()
 end
 

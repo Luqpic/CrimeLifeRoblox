@@ -122,6 +122,9 @@ local function hasKey(player): boolean
 	return keyHolder ~= nil and player == keyHolder
 end
 
+-- Built below; forward-declared for the leave and death hooks (a begun safe hold is forgotten).
+local storageSafe
+
 -- The shared skeleton: Net.setup, Forfeit, BankInstance, zones/ZoneService,
 -- AlarmEffects (cloned into the Restaurant zone) and DuffelBagAttachment.
 -- Connects nothing yet -- see Start() at the bottom.
@@ -133,7 +136,13 @@ local location = LocationServer.new({
 	zoneTag = T.SlowFoodsZone,
 	markerFolder = "SlowFoodsMarkers",
 	exitCFrame = function() return exitSpawn.CFrame end,
-	onPlayerRemoving = function(player) if player == keyHolder then clearKey() end end,
+	onPlayerRemoving = function(player)
+		if player == keyHolder then clearKey() end
+		if storageSafe then storageSafe:Forget(player) end
+	end,
+	onDied = function(player)
+		if storageSafe then storageSafe:Forget(player) end
+	end,
 })
 
 local bank = location.bank
@@ -278,6 +287,11 @@ useKeyPrompt.Triggered:Connect(function(player)
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart")) then return end
 	if (root.Position - useKeyPrompt.Parent.Position).Magnitude > useKeyPrompt.MaxActivationDistance then return end
+	-- Leftovers (2026-11-18): a bystander is told to join rather than to find a key.
+	if not bank:IsParticipant(player) then
+		notifyRefused(player, "not_participant")
+		return
+	end
 	if not hasKey(player) then
 		net:Toast(player, NO_KEY_MESSAGE)
 		return
@@ -290,18 +304,22 @@ bank:RegisterComponent({
 })
 
 -- The storage safe: open from session start, robbable only by the key holder, paid over the
--- bag cap through AddBonus.
-local storageSafe = RobbableObject.new(workspace.SlowFoods.StorageSafe, {
+-- bag cap through AddBonus. Final review 2026-11-18: a carrier can't rob it (I1, like every other
+-- robbable), its 8 s hold is timed on the server (M1) and the server measures the reach (M3).
+storageSafe = RobbableObject.new(workspace.SlowFoods.StorageSafe, {
 	bank = bank,
 	promptTemplate = ReplicatedStorage.HeistShared.PromptTemplates.RobSafePrompt,
 	amount = Config.ManagerSafeAmount,
 	payWith = "bonus",
-	isBlocked = function(player) return not hasKey(player) end,
+	isBlocked = function(player) return carryState:IsCarrying(player) or not hasKey(player) end,
 	blockedReason = "no_key",
 	onRefused = function(player, reason)
+		if reason == "no_key" and carryState:IsCarrying(player) then reason = "carrying_supplies" end
 		if reason == "no_key" then net:Toast(player, NO_KEY_MESSAGE) else notifyRefused(player, reason) end
 	end,
 	playRobSound = function(part) part.SafeRobSound:Play() end,
+	enforceHold = true,
+	checkReach = true,
 })
 bank:RegisterComponent(storageSafe)
 

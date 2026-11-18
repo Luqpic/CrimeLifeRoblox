@@ -117,8 +117,9 @@ end
 -- invariant, and the assert must name this location. Handed to the shared
 -- alarm through alarmExtras below.
 -- Heist layers 2026-11-17 (Task 4): the ripped-out ATM's getaway, built after the components and
--- stepped by the location's heartbeat.
+-- stepped by the location's heartbeat. The ATM itself is forward-declared for the leave/death hooks.
 local atmGetaway
+local atmRipOut
 
 local pulseLights = {}
 local alarmLightsModel = workspace.Gas2Go:FindFirstChild("RobberyAlarmLights")
@@ -153,6 +154,11 @@ local location = LocationServer.new({
 	end,
 	onPlayerRemoving = function(player)
 		if atmGetaway then atmGetaway:Forget(player) end
+		if atmRipOut then atmRipOut:Forget(player) end
+	end,
+	-- Leftovers (2026-11-18): a rip or rob hold begun before a death is not honoured after it.
+	onDied = function(player)
+		if atmRipOut then atmRipOut:Forget(player) end
 	end,
 })
 
@@ -211,7 +217,6 @@ end
 -- Heist.Components.ATMRipOut); using either closes the other for the run. The boot assert above
 -- pins exactly one ATM.
 local ATM_RIP_TOAST = "Carry it 200 studs clear of the gas station to cash in."
-local atmRipOut
 for _, model in ipairs(CollectionService:GetTagged(T.Gas2GoATM)) do
 	atmRipOut = ATMRipOut.new(model, {
 		bank = bank,
@@ -225,9 +230,9 @@ for _, model in ipairs(CollectionService:GetTagged(T.Gas2GoATM)) do
 		isBlocked = function(player) return carryState:IsCarrying(player) end,
 		hasDuffel = function(player) return bank:GetDuffel(player) > 0 end,
 		onPickup = function(player, ripObject)
-			if carryState:PickUp(player, ReplicatedStorage.Gas2GoShared.ModelTemplates.ATMCarryTool, ripObject) then
-				net:Toast(player, ATM_RIP_TOAST)
-			end
+			local carried = carryState:PickUp(player, ReplicatedStorage.Gas2GoShared.ModelTemplates.ATMCarryTool, ripObject)
+			if carried then net:Toast(player, ATM_RIP_TOAST) end
+			return carried
 		end,
 	})
 	bank:RegisterComponent(atmRipOut)

@@ -13,7 +13,11 @@ CarryState.__index = CarryState
 
 -- Heavy-loot carry (heist layers 2026-11-17): an object with a numeric speedCap slows its carrier
 -- through this character attribute; the movement scripts read it.
-local SPEED_CAP_ATTRIBUTE = require(game:GetService("ReplicatedStorage").Movement.Constants).CARRY_SPEED_CAP_ATTRIBUTE
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SPEED_CAP_ATTRIBUTE = require(ReplicatedStorage.Movement.Constants).CARRY_SPEED_CAP_ATTRIBUTE
+-- 2026-11-18 (developer decision): a heavy carry also names its getaway location (the object's
+-- getawayLocation) in this character attribute, so HeistClient shows that location's getaway widget.
+local GETAWAY_ATTRIBUTE = require(ReplicatedStorage.HeistShared.Config).CarryGetawayAttribute
 
 -- Heist layers 2026-11-17 (Task 6): a capped carrier's character parts join the "Carrier" collision
 -- group, which also collides with "CarrierLedge" (carrier-only ledges on the Bank vault obby; the
@@ -29,11 +33,13 @@ local function setCarrierGroup(character: Instance, on: boolean)
 	end
 end
 
--- On the player's CURRENT character, if any (a fake string player in a spec has none).
-local function setSpeedCap(player, value: number?)
+-- On the player's CURRENT character, if any (a fake string player in a spec has none). value nil clears
+-- the cap, the getaway location and the Carrier group together.
+local function setSpeedCap(player, value: number?, getawayLocation: string?)
 	local character = type(player) ~= "string" and player.Character
 	if character then
 		character:SetAttribute(SPEED_CAP_ATTRIBUTE, value)
+		character:SetAttribute(GETAWAY_ATTRIBUTE, if value ~= nil then getawayLocation else nil)
 		setCarrierGroup(character, value ~= nil)
 	end
 end
@@ -73,15 +79,13 @@ function CarryState:PickUp(player, toolTemplate: Tool, supplyObject): boolean
 	humanoid:EquipTool(tool)
 
 	-- Safeguard (spec: "prevent the player from manually switching to a
-	-- different Backpack tool while carrying") -- Roblox's default
-	-- tool-switching would otherwise let the player swap away freely; this
-	-- immediately re-forces the carry tool back the instant anything
-	-- unequips it (e.g. the player selects another hotbar slot), self-healing
-	-- within the same engine tick. Belt-and-braces with the explicit
-	-- isBlocked gate added to RobbableObject/Safe/the weapon-trigger path --
-	-- this alone would already make switching away pointless, but the gate
-	-- closes the loophole even in the unlikely event event ordering ever
-	-- let a different tool's own equip logic run first.
+	-- different Backpack tool while carrying"): this re-forces the carry tool
+	-- back whenever something unequips it (e.g. another hotbar slot). It is
+	-- not enough on its own: in Play (heist layers Task 4) a hotbar swap still
+	-- fired a Deagle before the re-equip landed. What closes the swap is
+	-- Weapons.Scripts.EquipService, which ignores equip and unequip requests
+	-- while the player carries; the isBlocked gates on RobbableObject/Safe and
+	-- the weapon-trigger path refuse robbing while carrying.
 	local unequipConn
 	unequipConn = tool.Unequipped:Connect(function()
 		local state = self._carrying[player]
@@ -92,7 +96,7 @@ function CarryState:PickUp(player, toolTemplate: Tool, supplyObject): boolean
 
 	self._carrying[player] = { tool = tool, supplyObject = supplyObject, unequipConn = unequipConn }
 	if supplyObject and type(supplyObject.speedCap) == "number" then
-		setSpeedCap(player, supplyObject.speedCap)
+		setSpeedCap(player, supplyObject.speedCap, supplyObject.getawayLocation)
 	end
 	return true
 end

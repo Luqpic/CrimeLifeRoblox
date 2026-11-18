@@ -192,6 +192,8 @@ local location = LocationServer.new({
 		recentLaserHit[player] = nil
 		lastNewsStationSafeSubmit[player] = nil
 	end,
+	-- Leftovers (2026-11-18): a Go Live hold begun before a death is not honoured after it.
+	onDied = function(player) broadcastDesk:Forget(player) end,
 })
 
 local bank = location.bank
@@ -317,9 +319,16 @@ bank:RegisterComponent(lockedDoor)
 -- (there is no separate physical code-combination display here to own).
 -- Broadcast takeover (heist layers 2026-11-17): the first breach arms the desk; one "Go Live" puts
 -- the station on air for Config.BroadcastSeconds of air time held by participants at the desk.
+-- Final review I1 (2026-11-18): carriers can't go live and are not paid. Leftovers (2026-11-18): a
+-- bystander's or carrier's press is told why; the go-live toast is gone (the city card already says it,
+-- and the desk counts down).
 broadcastDesk = BroadcastDesk.new(workspace.NewsStation.BroadcastDesk, {
 	bank = bank,
 	config = Config,
+	isBlocked = function(player) return carryState:IsCarrying(player) end,
+	onRefused = function(player, reason)
+		if reason == "not_participant" or reason == "carrying_supplies" then notifyRefused(player, reason) end
+	end,
 	onLive = function(player)
 		net:NotifyBroadcastHijacked(player.Name)
 		for _, participant in ipairs(bank:GetParticipants()) do
@@ -327,7 +336,6 @@ broadcastDesk = BroadcastDesk.new(workspace.NewsStation.BroadcastDesk, {
 			if heat < Config.BroadcastHeatFloor then
 				WantedService.addHeat(participant, Config.BroadcastHeatFloor - heat, "broadcast")
 			end
-			net:Toast(participant, string.format("You're live! Hold the desk for %d seconds.", Config.BroadcastSeconds))
 		end
 		for _, post in ipairs(guardPosts) do
 			post:Alert()

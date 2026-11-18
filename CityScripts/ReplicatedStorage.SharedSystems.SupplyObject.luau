@@ -62,7 +62,21 @@ end
 -- enforceHold (Task 4): the engine's hold is client-side only, so a prompt with a HoldDuration is
 -- honoured only after a hold the server timed itself (PromptButtonHoldBegan, then Triggered at
 -- least HoldDuration - HOLD_TOLERANCE later, as FleeingManager does). clock defaults to os.clock.
+-- Final review 2026-11-18: checkReach (M3, opt-in) honours a prompt trigger only from a living character
+-- within the prompt's MaxActivationDistance + REACH_ALLOWANCE of the attach part (measure(player) -> number?
+-- overrides the distance read; nil = dead or no character). getawayLocation ("Bank", "Gas2Go") names the
+-- location whose getaway widget a heavy carry of this object shows (CarryState sets it on the character).
+-- onPickup may return false to say the carry was refused; GiveTo then returns false.
 local HOLD_TOLERANCE = 0.15
+local REACH_ALLOWANCE = 6
+
+local function defaultMeasure(player, part: BasePart): number?
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (humanoid and humanoid.Health > 0 and root and root:IsA("BasePart")) then return nil end
+	return (root.Position - part.Position).Magnitude
+end
 
 function SupplyObject.new(model: Model, deps)
 	assert(model and model:IsA("Model"), "SupplyObject requires a Model")
@@ -203,9 +217,12 @@ function SupplyObject.new(model: Model, deps)
 		cashOutAmount = deps.cashOutAmount,
 		bankOnly = deps.bankOnly,
 		speedCap = deps.speedCap,
+		getawayLocation = deps.getawayLocation,
 		startHidden = deps.startHidden == true,
 		enforceHold = deps.enforceHold == true,
 		clock = deps.clock or os.clock,
+		checkReach = deps.checkReach == true,
+		measure = deps.measure or function(player) return defaultMeasure(player, part) end,
 		_holdBegan = {},
 		_holdDuration = 0,
 		countdownGui = countdownGui,
@@ -355,6 +372,11 @@ function SupplyObject:_onHoldBegan(player)
 	self._holdBegan[player] = self.clock()
 end
 
+-- Leftovers (2026-11-18): a hold begun before a leave or a death is not honoured later.
+function SupplyObject:Forget(player)
+	self._holdBegan[player] = nil
+end
+
 function SupplyObject:_onPromptTriggered(player)
 	if self.enforceHold and self._holdDuration > 0 then
 		local began = self._holdBegan[player]
@@ -370,20 +392,26 @@ function SupplyObject:_onTriggered(player)
 	if not self._visible then return end
 	-- Task 4: nor after Close (or any teardown) took the prompt away.
 	if not self._prompt then return end
+	-- Final review M3 (2026-11-18): the server measures the reach itself.
+	if self.checkReach then
+		local distance = self.measure(player)
+		if type(distance) ~= "number" or distance > self._prompt.MaxActivationDistance + REACH_ALLOWANCE then return end
+	end
 	self:_take(player)
 end
 
--- The pickup itself, shared by a prompt trigger and GiveTo. Returns whether onPickup ran.
-function SupplyObject:_take(player): boolean
+-- The pickup itself, shared by a prompt trigger and GiveTo. Returns whether onPickup ran, and whether it
+-- accepted the carry (it returns false when the carry was refused).
+function SupplyObject:_take(player): (boolean, boolean)
 	if self.isBlocked(player) then
 		local ok, err = pcall(self.onRefused, player, "carrying_supplies")
 		if not ok then warn("[SupplyObject] onRefused failed: " .. tostring(err)) end
-		return false
+		return false, false
 	end
 	if self.hasDuffel(player) then
 		local ok, err = pcall(self.onRefused, player, "has_duffel")
 		if not ok then warn("[SupplyObject] onRefused failed: " .. tostring(err)) end
-		return false
+		return false, false
 	end
 	self._despawnGen += 1
 	self:_teardownPrompt()
@@ -405,20 +433,22 @@ function SupplyObject:_take(player): boolean
 		if not sok then warn("[SupplyObject] SupplyPickupSound failed: " .. tostring(serr)) end
 	end
 
-	local ok, err = pcall(self.onPickup, player, self)
-	if not ok then warn("[SupplyObject] onPickup failed: " .. tostring(err)) end
-	return true
+	local ok, result = pcall(self.onPickup, player, self)
+	if not ok then warn("[SupplyObject] onPickup failed: " .. tostring(result)) end
+	return true, ok and result ~= false
 end
 
 -- Heist layers 2026-11-17: hand a startHidden object straight to a player (a layer's own
 -- trigger, not a prompt). Same path as a prompt trigger, isBlocked/hasDuffel included. Refused
 -- unless the object is hidden and still available this session; once given it is not again
 -- until the next OnSessionStart (a dropped one is re-picked through its own prompt).
+-- Returns false when the carry was refused (onPickup returned false, e.g. CarryState:PickUp refused).
 function SupplyObject:GiveTo(player): boolean
 	if self._visible or not self._givable then return false end
-	if not self:_take(player) then return false end
+	local ran, accepted = self:_take(player)
+	if not ran then return false end
 	self._givable = false
-	return true
+	return accepted
 end
 
 -- Heist layers 2026-11-17: disarm the steal prompt and highlight (and GiveTo) until the next

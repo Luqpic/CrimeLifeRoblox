@@ -65,6 +65,7 @@ return function()
 			robAmount = Config.ATMRobAmount,
 			ripAmount = Config.ATMRipAmount,
 			clock = now,
+			measure = function() return 0 end, -- string players have no character: always within reach
 			onPickup = function(player, obj) table.insert(rig.pickups, { player, obj }) end,
 		})
 		bank:RegisterComponent(rig.atm)
@@ -177,6 +178,71 @@ return function()
 		expect.truthy(prompts(rig.model)["Rip Out ATM"] ~= nil, "rip prompt next session")
 		expect.truthy(prompts(rig.model)["Rob ATM machine"] ~= nil, "rob prompt next session")
 		rig.model:Destroy()
+	end)
+
+	-- Leftovers (2026-11-18): a rip hold begun before a leave or a death is forgotten.
+	suite:test("Forget clears a rip hold", function(expect)
+		local rig = makeRig()
+		rig.atm.rip:_onHoldBegan("p1")
+		rig.atm:Forget("p1")
+		rig.advance(Config.ATMRipHold)
+		rig.atm.rip:_onPromptTriggered("p1")
+		expect.equal(#rig.pickups, 0, "a forgotten hold rips nothing")
+		rig.model:Destroy()
+	end)
+
+	-- Final review M3 and the heavy-carry widget (2026-11-18).
+	suite:test("rob and rip re-measure reach, and the rip names its getaway location", function(expect)
+		local rig = makeRig()
+		expect.truthy(rig.atm.rob.checkReach and rig.atm.rip.checkReach, "both check reach")
+		expect.equal(rig.atm.rip.getawayLocation, "Gas2Go", "the widget's location")
+		rig.model:Destroy()
+	end)
+
+	-- Leftovers (2026-11-18): the ATM vanished once after a death mid-rip. Rearm rebuilds a missing or broken
+	-- ATM from the copy taken at boot.
+	suite:test("Rearm rebuilds a missing ATM from its boot copy, and it plays again", function(expect)
+		local rig = makeRig()
+		local parent, pivot = rig.model.Parent, rig.model:GetPivot()
+		rip(rig, "p1")
+		rig.model:Destroy() -- e.g. a dropped ATM that fell out of the world
+		rig.bank:_seal("timer_expired")
+		rig.bank:_rearm()
+		local rebuilt = rig.atm.model
+		local isNew, sameParent = rebuilt ~= rig.model, rebuilt.Parent == parent
+		local atSpot = (rebuilt:GetPivot().Position - pivot.Position).Magnitude < 0.01
+		local standing, idlePrompts = visible(rebuilt), next(prompts(rebuilt))
+		rig.bank:TryStart("p1")
+		rig.bank:AddParticipant("p1")
+		local armed = prompts(rebuilt)
+		rebuilt:Destroy()
+		expect.truthy(isNew and sameParent, "a new ATM under the same parent")
+		expect.truthy(atSpot, "on its spot")
+		expect.truthy(standing, "standing")
+		expect.equal(idlePrompts, nil, "promptless at Idle")
+		expect.truthy(armed["Rob ATM machine"] ~= nil and armed["Rip Out ATM"] ~= nil, "both prompts next session")
+	end)
+
+	suite:test("Rearm keeps a whole ATM and rebuilds one that lost a part", function(expect)
+		local rig = makeRig()
+		rig.bank:_seal("timer_expired")
+		rig.bank:_rearm()
+		local kept = rig.atm.model == rig.model
+		rig.bank:TryStart("p1")
+		rig.model:FindFirstChildWhichIsA("BasePart"):Destroy()
+		rig.bank:_seal("timer_expired")
+		rig.bank:_rearm()
+		local rebuilt = rig.atm.model
+		local parts = 0
+		for _, d in ipairs(rebuilt:GetDescendants()) do
+			if d:IsA("BasePart") then parts += 1 end
+		end
+		local oldGone = rig.model.Parent == nil
+		rebuilt:Destroy()
+		expect.truthy(kept, "a whole ATM is kept")
+		expect.truthy(rebuilt ~= rig.model, "a broken ATM is rebuilt")
+		expect.equal(parts, 5, "with all its parts")
+		expect.truthy(oldGone, "the broken one is removed")
 	end)
 
 	return suite:run()

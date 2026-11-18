@@ -503,5 +503,23 @@ return function()
 		expect.equal(inst:GetDuffel("p1"), 0, "nothing added")
 	end)
 
+	-- Leftovers (2026-11-18): bag grants refuse NaN, infinite and absurd amounts (HeistShared.Config.MaxBagGrant).
+	suite:test("AddBonus and TryAddDuffel refuse NaN, infinite and absurd amounts", function(expect)
+		local now = makeClock()
+		local inst = BankInstance.new({ config = Config, now = now })
+		inst:TryStart("p1")
+		inst:AddParticipant("p1")
+		expect.equal(Config.MaxBagGrant, 100000, "the bound")
+		for _, amount in ipairs({ 0 / 0, math.huge, -math.huge, (Config.MaxBagGrant or 100000) + 1 }) do
+			local okBonus, bonusReason = inst:AddBonus("p1", amount)
+			local okAdd, addReason = inst:TryAddDuffel("p1", amount)
+			expect.falsy(okBonus or okAdd, tostring(amount) .. " refused")
+			expect.equal(bonusReason, "invalid_amount", tostring(amount) .. ": AddBonus reason")
+			expect.equal(addReason, "invalid_amount", tostring(amount) .. ": TryAddDuffel reason")
+		end
+		expect.equal(inst:GetDuffel("p1"), 0, "nothing added")
+		expect.truthy(inst:AddBonus("p1", Config.MaxBagGrant or 100000), "the bound itself is accepted")
+	end)
+
 	return suite:run()
 end

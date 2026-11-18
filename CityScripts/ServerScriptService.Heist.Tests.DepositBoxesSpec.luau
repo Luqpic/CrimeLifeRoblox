@@ -50,7 +50,7 @@ return function()
 		local bar = { given = {}, drops = {} }
 		function bar:GiveTo(player)
 			table.insert(self.given, player)
-			if opts.pickupRefused then return true end -- GiveTo's known trap: onPickup ran, PickUp refused
+			if opts.pickupRefused then return false end -- onPickup ran, PickUp refused (GiveTo says so since 2026-11-18)
 			carryState.carried[player] = self
 			return true
 		end
@@ -74,6 +74,8 @@ return function()
 		local models = {}
 		for i = 1, #contents do models[i] = boxModel(i) end
 		local rolledWith
+		-- distances[player]: what the reach check measures (default 0, at the box; false = dead).
+		local distances = {}
 		local boxes = DepositBoxes.new(models, {
 			bank = bank,
 			net = net,
@@ -83,13 +85,18 @@ return function()
 			now = function() return 1000 end,
 			generateZoneAngle = function() return 0 end, -- a stop at elapsed 0 always hits
 			roll = function(count) rolledWith = count return table.clone(contents) end,
+			measure = function(player)
+				local d = distances[player]
+				if d == false then return nil end
+				return d or 0
+			end,
 		})
 		bank:RegisterComponent(boxes)
 		bank:TryStart(PLAYER)
 		bank:AddParticipant(PLAYER)
 		return {
 			bank = bank, net = net, carryState = carryState, goldBar = goldBar, models = models,
-			boxes = boxes, rolledWith = function() return rolledWith end,
+			boxes = boxes, rolledWith = function() return rolledWith end, distances = distances,
 		}
 	end
 
@@ -165,11 +172,12 @@ return function()
 		for _, m in ipairs(rig.models) do m:Destroy() end
 	end)
 
+	-- A carrier gets no lockpick at all (final review I1); _onSolved still guards the carry itself.
 	suite:test("gold while already carrying: not given, dropped at the box", function(expect)
 		local rig = makeRig({ "gold" })
 		rig.carryState.carried[PLAYER] = { other = true }
 		rig.boxes:Unlock()
-		solve(rig, 1)
+		rig.boxes:_onSolved(1, PLAYER)
 		expect.equal(#rig.goldBar.given, 0, "GiveTo not called")
 		expect.equal(#rig.goldBar.drops, 1, "dropped for a re-pickup")
 		expect.equal(lastToast(rig), "Gold bar! Your hands are full: it's on the floor.", "toast")
@@ -263,6 +271,74 @@ return function()
 		expect.equal(#rig.goldBar.given, 0, "no gold given")
 		expect.equal(#rig.goldBar.drops, 0, "no gold dropped")
 		expect.equal(#rig.net.toasts, 0, "no toast")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	-- Final review C1 (2026-11-18): a click is judged only while the solver can still pick the box.
+	suite:test("a solve finished from 200 studs pays nothing and gives no bar; back at the box it can be picked again", function(expect)
+		local rig = makeRig({ "gold" })
+		local door = rig.boxes.doors[1]
+		rig.boxes:Unlock()
+		door:_onTriggered(PLAYER)
+		rig.net:click(PLAYER)
+		rig.net:click(PLAYER)
+		rig.distances[PLAYER] = 200
+		rig.net:click(PLAYER)
+		rig.net:click(PLAYER)
+		expect.equal(#rig.goldBar.given, 0, "no bar given")
+		expect.equal(#rig.goldBar.drops, 0, "no bar dropped")
+		expect.falsy(door.isOpen, "box shut")
+		expect.equal(door._attempts[PLAYER], nil, "attempt dropped")
+		expect.equal(rig.net.solved[1], PLAYER, "lockpick screen closed")
+		expect.equal(#rig.net.updates, 2, "only the two clicks at the box were judged")
+		expect.equal(rig.boxes.contents[1], "gold", "the box keeps its gold")
+		rig.distances[PLAYER] = 0
+		solve(rig, 1)
+		expect.equal(rig.goldBar.given[1], PLAYER, "picked at the box: the bar is given")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	suite:test("a click after leaving the roster, or after death, pays nothing", function(expect)
+		local rig = makeRig({ "cash", "cash" })
+		rig.boxes:Unlock()
+		rig.boxes.doors[1]:_onTriggered(PLAYER)
+		for _ = 1, 3 do rig.net:click(PLAYER) end
+		rig.bank:RemoveParticipant(PLAYER)
+		rig.net:click(PLAYER)
+		expect.equal(rig.boxes.doors[1]._attempts[PLAYER], nil, "off the roster: attempt dropped")
+		rig.bank:AddParticipant(PLAYER)
+		rig.boxes.doors[2]:_onTriggered(PLAYER)
+		for _ = 1, 3 do rig.net:click(PLAYER) end
+		rig.distances[PLAYER] = false -- dead: no living character
+		rig.net:click(PLAYER)
+		expect.equal(rig.boxes.doors[2]._attempts[PLAYER], nil, "dead: attempt dropped")
+		expect.equal(rig.bank:GetDuffel(PLAYER), 0, "no cash paid")
+		expect.falsy(rig.boxes.doors[1].isOpen or rig.boxes.doors[2].isOpen, "both boxes shut")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	-- Final review I1 (2026-11-18): carriers can't rob, so a carrier can't pick a box either.
+	suite:test("a carrier starts no lockpick, and picking something up mid-pick stops it", function(expect)
+		local rig = makeRig({ "cash", "cash" })
+		rig.boxes:Unlock()
+		rig.carryState.carried[PLAYER] = { other = true }
+		rig.boxes.doors[1]:_onTriggered(PLAYER)
+		expect.equal(#rig.net.opened, 0, "no lockpick for a carrier")
+		rig.carryState.carried[PLAYER] = nil
+		rig.boxes.doors[2]:_onTriggered(PLAYER)
+		rig.net:click(PLAYER)
+		rig.carryState.carried[PLAYER] = { other = true }
+		for _ = 1, 3 do rig.net:click(PLAYER) end
+		expect.equal(rig.boxes.doors[2]._attempts[PLAYER], nil, "attempt dropped once carrying")
+		expect.equal(rig.bank:GetDuffel(PLAYER), 0, "no cash paid to a carrier")
+		for _, m in ipairs(rig.models) do m:Destroy() end
+	end)
+
+	-- Final review M2 (2026-11-18): doors that pay judge the client's click time in a narrower window.
+	suite:test("boxes use the deposit-box click window from Config", function(expect)
+		local rig = makeRig({ "cash" })
+		expect.equal(Config.DepositBoxClickWindow, 0.25, "Config value")
+		expect.equal(rig.boxes.doors[1].maxLatencyCompensation, Config.DepositBoxClickWindow, "the box's window")
 		for _, m in ipairs(rig.models) do m:Destroy() end
 	end)
 
