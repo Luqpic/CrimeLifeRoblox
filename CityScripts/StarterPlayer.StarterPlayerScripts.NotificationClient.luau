@@ -11,15 +11,28 @@
 -- Purely presentational: the remotes are ToClient-only and nothing here talks back to the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local NotificationController = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("NotificationController"))
-local HeistConfig = require(ReplicatedStorage:WaitForChild("HeistShared"):WaitForChild("Config"))
-
-local remotes = ReplicatedStorage.HeistShared:WaitForChild("Remotes")
-
 local ALARM_TITLE = "ALARM TRIGGERED"
--- BroadcastHijacked is created by the server's Net at run time; a bounded wait degrades to "no hijack
--- card" with a warning instead of a silent infinite yield.
-local REMOTE_WAIT_SECONDS = 30
+-- Every wait is bounded: BroadcastHijacked is created by the server's Net at run time, and a missing
+-- piece degrades to "no such cards" with a warning instead of a silent infinite yield.
+local WAIT_SECONDS = 30
+
+local function waitFor(parent: Instance?, name: string): Instance?
+	local child = parent and parent:WaitForChild(name, WAIT_SECONDS)
+	if not child then
+		warn(`[NotificationClient] {name} not found after {WAIT_SECONDS} s; heist cards will not show`)
+	end
+	return child
+end
+
+local controllerModule = waitFor(waitFor(ReplicatedStorage, "Modules"), "NotificationController")
+local heistShared = waitFor(ReplicatedStorage, "HeistShared")
+local configModule = waitFor(heistShared, "Config")
+local remotes = waitFor(heistShared, "Remotes")
+if not (controllerModule and configModule and remotes) then
+	return
+end
+local NotificationController = require(controllerModule :: ModuleScript)
+local HeistConfig = require(configModule :: ModuleScript)
 
 -- player.Name is always alphanumeric/underscore, so this cannot currently be escaped-into, but the
 -- message label is RichText and composing untrusted-ish text into markup without escaping is the kind
@@ -41,12 +54,10 @@ end
 
 local function listen(name: string, handler: (...any) -> ())
 	task.spawn(function()
-		local remote = remotes:WaitForChild(name, REMOTE_WAIT_SECONDS)
-		if not remote then
-			warn(`[NotificationClient] {name} not found after {REMOTE_WAIT_SECONDS} s; those cards will not show`)
-			return
+		local remote = waitFor(remotes, name)
+		if remote then
+			(remote :: RemoteEvent).OnClientEvent:Connect(handler)
 		end
-		(remote :: RemoteEvent).OnClientEvent:Connect(handler)
 	end)
 end
 

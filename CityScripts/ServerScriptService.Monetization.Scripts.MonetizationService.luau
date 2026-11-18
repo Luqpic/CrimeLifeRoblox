@@ -128,3 +128,4 @@ end
 safePlayerAdded(PassOwnership.publish)
 
 MarketplaceService.PromptGamePassPurchaseFinished:Connect(PassOwnership.onPurchaseFinished)
+Players.PlayerRemoving:Connect(PassOwnership.forget) -- drops the in-flight confirm / pending retry flags

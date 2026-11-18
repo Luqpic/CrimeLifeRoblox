@@ -211,6 +211,61 @@ return function(t)
 		expect.equal(player:GetAttribute(attr("Configured")), nil)
 	end)
 
+	-- Fix round 1 (review I2): a replayed or forged purchase event must not buy web calls.
+	t.test("10 replayed purchase events for an owned pass make no web call", function()
+		local PassOwnership, calls = fresh({ [501] = true })
+		PassOwnership._passes = { PASSES[1] }
+		local player = fakePlayer()
+		PassOwnership.publish(player)
+		local afterJoin = #calls
+		for _ = 1, 10 do
+			PassOwnership.onPurchaseFinished(player, 501, true)
+		end
+		settle()
+		expect.equal(#calls - afterJoin, 0)
+		expect.truthy(PassOwnership.owns(player, "Configured"))
+	end)
+
+	t.test("10 events for a pass not owned while one confirm runs make exactly one confirm (3 calls)", function()
+		local PassOwnership, calls = fresh({ false })
+		PassOwnership._confirmRetryDelay = 0.05
+		local player = fakePlayer()
+		for _ = 1, 10 do
+			PassOwnership.onPurchaseFinished(player, 501, true)
+		end
+		task.wait(0.3)
+		expect.equal(#calls, 3)
+		expect.falsy(PassOwnership.owns(player, "Configured"))
+	end)
+
+	t.test("a failed join check plus a failed purchase confirm leave one pending retry, not two", function()
+		local PassOwnership, calls = fresh({ "error" })
+		PassOwnership._passes = { PASSES[1] }
+		PassOwnership._failedCheckRetryDelay = 0.3
+		local player = fakePlayer()
+		PassOwnership.publish(player) -- 1 call, a retry pending
+		PassOwnership.onPurchaseFinished(player, 501, true) -- 3 calls, its retry folds into the pending one
+		task.wait(0.45)
+		local calls45 = #calls
+		player.inGame = false -- ends the chain at its next step
+		expect.equal(calls45, 5) -- 1 + 3 + one retry (two chains would make 6)
+	end)
+
+	t.test("forget (on leave) drops the in-flight flag: a new event starts a new confirm", function()
+		local PassOwnership, calls = fresh({ false })
+		PassOwnership._confirmRetryDelay = 0.2
+		local player = fakePlayer()
+		PassOwnership.onPurchaseFinished(player, 501, true) -- try 1, then waits
+		PassOwnership.onPurchaseFinished(player, 501, true) -- in flight: ignored
+		local whileInFlight = #calls
+		PassOwnership.forget(player)
+		PassOwnership.onPurchaseFinished(player, 501, true) -- flag gone: a new confirm
+		local afterForget = #calls
+		player.inGame = false
+		expect.equal(whileInFlight, 1)
+		expect.equal(afterForget, 2)
+	end)
+
 	t.test("config: the duffel passes are hidden placeholders; the panel's 7 passes are unchanged", function()
 		local shown, hidden = {}, {}
 		for _, pass in Constants.Gamepasses do

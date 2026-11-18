@@ -229,6 +229,23 @@ local function setInputEnabled(enabled: boolean)
 	setRandomizeEnabled(enabled and randomizesRemaining > 0)
 end
 
+local function closeWordScrambleGui()
+	wordScrambleGui.Enabled = false
+	guessBox.Text = ""
+	feedbackLabel.Text = ""
+	Panels.closed("WordScramble")
+end
+
+-- The X's path (a NEW, dedicated remote -- deliberately not LockedDoor's own LockpickExitRequested,
+-- an unrelated system). Also the close UI.Panels calls when a city panel opens over the puzzle; the
+-- server's exit only drops the attempt, so it is harmless during the breach hold too.
+-- Declared ABOVE openRound on purpose (fix round 1): openRound hands it to UI.Panels, and a local
+-- declared below a function is a nil global inside it (the same trap as POP_IN_INFO above).
+local function exitWordScramble()
+	remotes:WaitForChild("WordScrambleExitRequested"):FireServer()
+	closeWordScrambleGui()
+end
+
 -- Single seam: every round-open, round-advance and randomise arrives as an
 -- OpenWordScrambleGui payload, so the button's label and enabled state are
 -- updated from here only -- deliberately not a second parallel handler that
@@ -247,21 +264,6 @@ local function openRound(payload)
 	exitButton.Visible = true
 	wordScrambleGui.Enabled = true
 	Panels.opened("WordScramble", exitWordScramble)
-end
-
-local function closeWordScrambleGui()
-	wordScrambleGui.Enabled = false
-	guessBox.Text = ""
-	feedbackLabel.Text = ""
-	Panels.closed("WordScramble")
-end
-
--- The X's path (a NEW, dedicated remote -- deliberately not LockedDoor's own LockpickExitRequested,
--- an unrelated system). Also the close UI.Panels calls when a city panel opens over the puzzle; the
--- server's exit only drops the attempt, so it is harmless during the breach hold too.
-local function exitWordScramble()
-	remotes:WaitForChild("WordScrambleExitRequested"):FireServer()
-	closeWordScrambleGui()
 end
 
 local submitRemote = remotes:WaitForChild("SubmitWordScrambleGuess")

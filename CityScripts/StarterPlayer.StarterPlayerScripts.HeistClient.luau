@@ -401,7 +401,9 @@ for _, location in ipairs(LOCATIONS) do
 	duffelWidgets[location].plus.Activated:Connect(function()
 		if upgradeFrame then
 			UITransitions.SlideIn(upgradeFrame, UPGRADE_POSITION, "Right")
-			Panels.opened("DuffelUpgrade", closeUpgradeDialog)
+			if Panels.current() ~= "DuffelUpgrade" then -- a second "+" on the open dialog changes nothing
+				Panels.opened("DuffelUpgrade", closeUpgradeDialog)
+			end
 		end
 	end)
 end

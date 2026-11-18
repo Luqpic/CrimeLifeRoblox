@@ -856,3 +856,18 @@ The 15 sources exported to `CityScripts/`; on-disk bytes and Adler-32 equal the 
 Studio restarted itself for an update at 19:52:50 (installer log); the place file was written at 19:52:49, partway through this task (after the gamepass scripts, `HeistClient`, `WordScrambleClient`, `UiButtonEffects` and `NotificationController`; before `NotificationClient`, the quarantine move, `LevelingHud`, `WantedHud` and the keypad focus line). Not saved by Claude.
 
 NOT saved / NOT published
+
+Task 6 fix round 1 (review I1, I2, M2, M5, `Batch: unify gamepasses and notifications fixes`). Same columns; old = the place at e8e9c64.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.WordScrambleClient` (LocalScript) | 16,905 / 1480956601 | 17,097 / 1132059424 | I1: `closeWordScrambleGui` and `exitWordScramble` moved above `openRound`; the closer handed to `UI.Panels` was a nil global (B over the scramble left both open, no exit sent). Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Monetization.Scripts.PassOwnership` (ModuleScript) | 4,549 / 2906399671 | 6,098 / 1225014576 | I2: a purchase event for an owned pass, or while a confirm for that pass runs, asks nothing; one pending failed-check retry per player and pass; `forget(player)`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Monetization.Scripts.MonetizationService` (Script) | 5,542 / 4031478952 | 5,648 / 3693060990 | `PlayerRemoving` -> `PassOwnership.forget`. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.PassOwnership_Test` (ModuleScript) | 9,008 / 325438263 | 11,231 / 2042603761 | 4 cases: 10 replayed events for an owned pass (0 calls, was 10), 10 events while one confirm runs (3 calls, was 30), join + purchase failure (one retry chain: 5 calls, was 6), `forget` drops the in-flight flag. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.HeistClient` (LocalScript) | 66,676 / 81948207 | 66,782 / 3515715503 | M5: the duffel "+" calls `Panels.opened` only when the dialog is not already the open panel. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.NotificationClient` (LocalScript) | 3,253 / 3674103393 | 3,576 / 4184920304 | M2: every `WaitForChild` bounded (30 s, warn and stop). Attribute appended. |
+
+The 6 sources exported to `CityScripts/`; bytes and Adler-32 equal (6 / 6). City suites 315 / 315 / 0 (311 + 4); heist 740 passed / 0 failed. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

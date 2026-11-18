@@ -2,14 +2,17 @@
 -- heist duffel passes (one system since 2026-11-18). Ownership is published as the player attribute
 -- GamepassOwned_<key>, and that attribute is the only record: WeaponShopService, CosmeticsService, the
 -- heist's GamepassManager and the client shops all read it, so a read never calls the network, and the
--- record leaves with the Player (nothing to clear on leave).
+-- record leaves with the Player.
 --
 -- - A pass with id 0 is "not configured": never owned, never prompted, never asked about, and a
 --   purchase event carrying 0 matches nothing (the heist's three passes used to share the key 0).
--- - A failed check reads not owned and is asked again after FAILED_CHECK_RETRY_SECONDS, never on a read.
+-- - A failed check reads not owned and is asked again after FAILED_CHECK_RETRY_SECONDS, never on a read;
+--   one pending retry per player and pass, however many checks failed.
 -- - PromptGamePassPurchaseFinished is reported through the client, so "purchased" is confirmed with
 --   UserOwnsGamePassAsync before anything is published: up to CONFIRM_ATTEMPTS tries,
---   CONFIRM_RETRY_SECONDS apart, off the event thread, stopping once the player has left.
+--   CONFIRM_RETRY_SECONDS apart, off the event thread, stopping once the player has left. An event for
+--   a pass already owned, or while a confirm for that pass runs, asks nothing (a replayed or forged
+--   event cannot spend the shared web budget).
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,8 +32,42 @@ end
 PassOwnership._confirmRetryDelay = Constants.CONFIRM_RETRY_SECONDS
 PassOwnership._failedCheckRetryDelay = Constants.FAILED_CHECK_RETRY_SECONDS
 
+-- player -> { [pass key] = true }: a confirm in flight, a failed-check retry pending. Cleared when each
+-- ends, and by forget() on leave (MonetizationService wires PlayerRemoving).
+local confirming = {}
+local retryPending = {}
+
+-- True when newly marked, false when already marked.
+local function mark(flags, player, key: string): boolean
+	local keys = flags[player]
+	if not keys then
+		keys = {}
+		flags[player] = keys
+	end
+	if keys[key] then
+		return false
+	end
+	keys[key] = true
+	return true
+end
+
+local function unmark(flags, player, key: string)
+	local keys = flags[player]
+	if keys then
+		keys[key] = nil
+		if next(keys) == nil then
+			flags[player] = nil
+		end
+	end
+end
+
 function PassOwnership.owns(player, key: string): boolean
 	return player:GetAttribute(Constants.ownedAttributeFor(key)) == true
+end
+
+function PassOwnership.forget(player)
+	confirming[player] = nil
+	retryPending[player] = nil
 end
 
 -- A check that started before a confirmed purchase landed may answer a stale false: it never
@@ -47,7 +84,19 @@ local function ask(player, pass: Constants.Gamepass): (boolean, boolean)
 	return ok, ok and owns == true
 end
 
-local function check(player, pass: Constants.Gamepass)
+local check
+
+local function retryLater(player, pass: Constants.Gamepass)
+	if not mark(retryPending, player, pass.key) then
+		return -- one pending retry per player and pass
+	end
+	task.delay(PassOwnership._failedCheckRetryDelay, function()
+		unmark(retryPending, player, pass.key)
+		check(player, pass)
+	end)
+end
+
+function check(player, pass: Constants.Gamepass)
 	if not PassOwnership._inGame(player) then
 		return
 	end
@@ -58,7 +107,7 @@ local function check(player, pass: Constants.Gamepass)
 	publishAnswer(player, pass, owns)
 	if not answered then
 		warn(`PassOwnership: ownership check failed for gamepass "{pass.key}"; asking again in {PassOwnership._failedCheckRetryDelay} s`)
-		task.delay(PassOwnership._failedCheckRetryDelay, check, player, pass)
+		retryLater(player, pass)
 	end
 end
 
@@ -85,37 +134,44 @@ local function passForId(gamepassId: any): Constants.Gamepass?
 	return nil
 end
 
+-- true: answered "not owned" every time; false: the last try could not answer; nil: owned or left.
+local function confirm(player, pass: Constants.Gamepass): boolean?
+	local answered = false
+	for attempt = 1, Constants.CONFIRM_ATTEMPTS do
+		if attempt > 1 then
+			task.wait(PassOwnership._confirmRetryDelay)
+		end
+		if not PassOwnership._inGame(player) then
+			return nil
+		end
+		local owns
+		answered, owns = ask(player, pass)
+		if not PassOwnership._inGame(player) then
+			return nil
+		end
+		if owns then
+			publishAnswer(player, pass, true)
+			return nil
+		end
+	end
+	return answered
+end
+
 function PassOwnership.onPurchaseFinished(player, gamepassId: any, wasPurchased: any)
 	if wasPurchased ~= true then
 		return
 	end
 	local pass = passForId(gamepassId)
-	if not pass then
+	if not pass or PassOwnership.owns(player, pass.key) or not mark(confirming, player, pass.key) then
 		return
 	end
 	task.spawn(function()
-		local answered = false
-		for attempt = 1, Constants.CONFIRM_ATTEMPTS do
-			if attempt > 1 then
-				task.wait(PassOwnership._confirmRetryDelay)
-			end
-			if not PassOwnership._inGame(player) then
-				return
-			end
-			local owns
-			answered, owns = ask(player, pass)
-			if not PassOwnership._inGame(player) then
-				return
-			end
-			if owns then
-				publishAnswer(player, pass, true)
-				return
-			end
-		end
+		local answered = confirm(player, pass)
+		unmark(confirming, player, pass.key)
 		-- "Not owned" three times is an answer: nothing more. A last try that could not answer at all is
 		-- a failed check, asked again later like one at join.
-		if not answered then
-			task.delay(PassOwnership._failedCheckRetryDelay, check, player, pass)
+		if answered == false then
+			retryLater(player, pass)
 		end
 	end)
 end
