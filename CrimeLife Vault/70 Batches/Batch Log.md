@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [batch, moc]
-updated: 2026-11-17
+updated: 2026-11-18
 sources: ["git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-18 | City | [[2026-11-18 Open Items Pass]] | Rules (vault skills only, Opus + Sonnet); heist-layers final review (C1 deposit-box lockpick from anywhere) and its fixes; police reset keeps stars, last-seen search; burst after idle 12 -> 3, third-person long-gun shots fixed, 12 muzzle flashes, APS machine pistol; DeathScreen Sibling, chip confirm, text sweep; heist test gaps, Zone flake and 1,680 warnings gone; one gamepass system and one notification style; city 315 / 315, heist 740 / 0; not saved |
 | 2026-11-17 | City | [[2026-11-17 Heist Layers]] | One optional signature layer in each robbery: SlowFoods fleeing Manager and key (safe 3000), Gas2Go ATM rip-out (9000 heavy carry), NewsStation broadcast takeover (6000 each), Bank deposit boxes (1500 cash, gold bar 8000 heavy carry); shared bonus loot over the cap and a speed-12 carry banked at 200 studs; carrier-only obby ledges; city 262 / 262, heist 707 / 0; not saved |
 | 2026-11-17 | Tycoon | [[2026-11-17 Compound Floor Plan]] | New builder drawing set for the tycoon base on a 361 × 300 plot: rooms ring an open yard (spawn + fight pit), G + F2 + roof terrace + bunker, east drive lane, skybridge to a Watchtower; every room from the HQ blueprint kept; 3D block model; OBT BUILD menu (no buttons), build in order with no temporary caps; labels clear (0 overlaps); artifact published privately; no Studio change |
 | 2026-11-17 | City | [[2026-11-17 Known Issues Pass]] | Open Items closed: `Workspace.HQ` quarantined, four prompts `Custom`, NewsWorker `Invulnerable`, removal toast, re-slot copy, unowned skins, Spraypaint join toast, 38 weapon descriptions, shotgun reload readout, dry-fire cue, RPG blast as a particle burst, three muzzles at the barrel end, `WalkSpeed` swing (backward clamp keyed on input), level-up popup placed clear of the heist HUD; stuck Thug did not reproduce; pump fore-ends need a mesh upload; five clean Plays, city 262 / 262, heist 620 / 1 (`Zone` timing); fix wave `Batch: known issues pass fixes`; Tasks 1-2 on disk (saved mid-run, file written 15:04), Tasks 3-4 and the fix wave not saved |

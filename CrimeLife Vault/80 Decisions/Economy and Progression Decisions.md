@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, economy, progression, persistence, quests]
-updated: 2026-11-14
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Shop-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Pistol-3D-Display-Fix-Persistent-Loadout-Slots.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-persistence-phase-3-design.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md"]
 ---
 
@@ -11,6 +11,7 @@ Calls about Cash, XP, levels, quests and saving. The code is in [[Economy and Ca
 
 ## Newest first
 
+- **2026-11-18: no lifetime "cash earned" stat** on the player card for now; the pill keeps the current balance. [[2026-11-18 Open Items Pass]]
 - **2026-09-24: seven criminal ranks of ten levels each**; a player never sees their own overhead plate. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - **2026-09-24: a fresh buy goes straight to the slot picker.** [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - **2026-09-24: the save schema only moves forward.** When per-weapon Spraypaint was reverted, the schema went to version 3, not back to 1, so profiles already on version 2 are not locked out. Never roll the version back. [[Revert-Global-Spraypaint-Balance]]

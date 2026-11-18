@@ -2,12 +2,12 @@
 type: batch
 tags: [batch, city, heist, robbery, carry, layers]
 updated: 2026-11-18
-sources: [".superpowers/sdd/2026-11-17-heist-layers/progress.md", ".superpowers/sdd/2026-11-17-heist-layers/task-1-report.md to task-7-report.md", "docs/superpowers/specs/2026-11-17-heist-layers-design.md", "docs/superpowers/plans/2026-11-17-heist-layers.md", "CityMerge/after-import.md (section Heist layers 2026-11-17)"]
+sources: [".superpowers/sdd/2026-11-17-heist-layers/progress.md", ".superpowers/sdd/2026-11-17-heist-layers/task-1-report.md to task-7-report.md", "docs/superpowers/specs/2026-11-17-heist-layers-design.md", "docs/superpowers/plans/2026-11-17-heist-layers.md", "CityMerge/after-import.md (section Heist layers 2026-11-17)", ".superpowers/sdd/2026-11-17-heist-layers/final-review.md", ".superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # 2026-11-17 Heist Layers
 
-Seven tasks, commits `0de8260..8698e1a` plus this note (state as of 2026-11-18; a whole-branch final review and a fix wave run after it and will amend this note). One optional signature layer inside each of the four robberies, so they stop feeling "samey". Casino and Warehouse wait.
+Seven tasks, commits `0de8260..8698e1a` plus this note (state as of 2026-11-18; the whole-branch final review ran on 2026-11-18 (Ready with fixes: 1 Critical, 2 Important, 4 Minor) and every finding was fixed in [[2026-11-18 Open Items Pass]] Task 2). One optional signature layer inside each of the four robberies, so they stop feeling "samey". Casino and Warehouse wait.
 
 ## Asked for
 The developer: robberies "feel samey". Approach A (one signature layer per location, built mostly from existing pieces) and the four layers were approved; the developer told the controller to proceed to the end while away, so the spec's open points are controller rulings ([[CrimeLife Tycoon Decisions]]). Anti-goals: the base robbery plays exactly as today when a layer is ignored, no payout that skips the getaway, no client-trusted payout.
@@ -71,7 +71,7 @@ After: Edit shows 1 enabled `SpawnLocation`, no `Tmp` script or Workspace instan
 **Place file.** `stat` reads `Nov 17 16:56:20 2026` for `Roblox Games/Crimelife city.rbxl`; the batch's first commit (`0de8260`) is Nov 17 19:24 and the last (`8698e1a`) Nov 18 01:51. So the file on disk predates every commit of this batch: it holds none of it.
 
 ## Not verified
-- The full Bank gold route was last walked for real before the fix round; after it, only scripted capped trials (not human input). The z 2472 jump went 10/10 there, but the inbound jump at base speed, and the whole route as one real carry, were not re-walked in a closing Play.
+- The full Bank gold route was last walked for real before the fix round; after it, only scripted capped trials (not human input). The 10 / 10 at z 2472 is jump J5, but the inbound jump at base speed, and the whole route as one real carry, were not re-walked in a closing Play.
 - Two players: a crew racing a key, a rip, a box, a desk. Specs cover the box race and the box seal only.
 - Never seen by eye: prompts and the OFF AIR billboard did not render in captures taken with a scripted camera (read from events and properties).
 - A person in the game: no layer was played by hand; a leaver mid-broadcast; the broadcast `Alert()` effect (guards were already active in the run).
@@ -80,6 +80,16 @@ After: Edit shows 1 enabled `SpawnLocation`, no `Tmp` script or Workspace instan
 
 ## Left open
 In [[Open Items]], section "Heist layers leftovers (2026-11-17)": no getaway widget for heavy loot, the ATM that vanished once, the obby carrier ledges' queries and collision-group order, a hands-full gold bar despawning, the parked minors of tasks 1 to 6, and the save.
+
+## Final review (2026-11-18)
+Whole-branch review by Opus (`CrimeLifeRoblox/.superpowers/sdd/2026-11-17-heist-layers/final-review.md`): Ready with fixes. Every finding was fixed in [[2026-11-18 Open Items Pass]] Task 2 (commit `7c0309c`).
+- **C1 (Critical):** a deposit-box lockpick could be finished from anywhere, skipping the carry out of the vault. Fixed in `LockedDoor`: every click re-checks `canAttempt`, a living character and reach (`MaxActivationDistance + 6`); otherwise the attempt drops and the screen closes.
+- **I1 (Important):** carriers collected layer payouts. Fixed: carriers are refused at the storage safe, the deposit boxes and the broadcast desk.
+- **I2 (Important):** the seal eject carried a gold-bar holder out of the vault. Fixed by ruling: `Forfeit:Eject` consumes a heavy carry inside the building.
+- **M1:** the storage safe hold was client-timed. Fixed: opt-in `enforceHold` on `RobbableObject`.
+- **M2:** the 1 s `LockedDoor` click window guarded money. Fixed: opt-in `maxLatencyCompensation`, deposit boxes use 0.25 s.
+- **M3:** three new prompts relied on the engine's range check. Fixed: opt-in `checkReach` on `SupplyObject` and `RobbableObject`.
+- **M4:** a leaver's lockpick attempt stayed referenced until Seal. Fixed: `LockedDoor:Forget` on leave.
 
 ## Links
 [[Robbery Heists and Getaway]] [[Robbery Puzzles]] [[Movement and Stamina]] [[Police and Wanted]] [[Notifications]] [[Open Items]] [[CrimeLife Tycoon Decisions]] [[2026-11-17 Police and Wanted]]

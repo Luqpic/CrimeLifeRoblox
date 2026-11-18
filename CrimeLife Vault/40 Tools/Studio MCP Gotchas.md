@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tools, mcp, testing, gotchas]
-updated: 2026-11-15
+updated: 2026-11-18
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "70 Batches/FPS System/FPS-Skins-Card-Sticky-Fix-Responsive-Scale-Budget.md", ".superpowers/sdd/uploaded-asset-ids.md", "OBT Vault/40 Tools/Studio MCP Gotchas.md (generic parts)"]
 ---
 
@@ -45,6 +45,12 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 - **`SerializationService` + `EncodingService` Base64 + `HttpService:RequestAsync` to a localhost store.** The source window serializes (`SerializationService:SerializeInstancesAsync`), encodes (`EncodingService` Base64) and posts to a localhost-only store on this Mac (`CrimeLifeRoblox/CityMerge/transfer/server.py`); the other window fetches, decodes and deserializes (`export.luau`, `import.luau` in the same folder). Nothing passes through the agent's context and no source is retyped, so the copy is exact. Proven: `ReplicatedStorage.Blaster` serialized to 873,531 bytes and posted as a 1,164,708-character Base64 body, and arrived as 1,554 descendants and 21 scripts; 88 roots (3,559,520 Base64 bytes) moved this way. Keep one root over 100,000 bytes per `execute_luau` call and yield between roots. A service itself (`StarterGui`) cannot be serialized; its children can.
 - **A cloud place's window can refuse `127.0.0.1`.** Test30.4's window answered that localhost is not in the Assistant HTTP allowlist, while the local-file windows (the FPS and city places) accepted it. It was not worked around: the developer pasted the instance by hand ([[2026-11-15 FPS Systems Into City]]).
 - **`screen_capture` timed out repeatedly late in the 2026-11-15 session** (several tries, with and without markers, for the implementer and for the controller). Why is not recorded. Property read-back stood in for the look ([[Screen Captures]]).
+
+## Studio updates itself mid-batch (2026-11-18)
+
+- Studio can auto-update and restart while a task runs. On 2026-11-18 it restarted at 19:52:50 and the updater wrote the place file one second before (19:52:49), mid-task, so the file on disk held a half-applied change and the Studio id changed (82377353-... to de451648-...).
+- After any restart: re-resolve the instance by name, then compare every `CityScripts/` file with Studio by Adler-32 (152 / 152 matched that day) and spot-check the instance edits before going on. Tell the developer to save again: the updater's write is not a checkpoint you chose. [[2026-11-18 Open Items Pass]]
+- `RunAll` (heist suite) returns its result: read the return value. The console and `LogService` are flooded with asset-permission lines, so a printed `TOTAL:` line can be lost.
 
 ## Moving the tester
 

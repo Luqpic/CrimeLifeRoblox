@@ -2,7 +2,7 @@
 type: system
 tags: [system, movement, stamina, camera, fps]
 updated: 2026-11-18
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md"]
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Movement and Stamina
@@ -28,7 +28,8 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - **Every landing** (sprint-jump, standing hop, kerb) drops `WalkSpeed` to `LANDING_RECOVERY_WALK_SPEED` = 0, holds `LANDING_RECOVERY_HOLD` = 0.12 s, then ramps at `LANDING_RECOVERY_ACCELERATION` = 50 back to the baseline; the window is `LANDING_RECOVERY_DURATION` = 0.55 s, sized to outlast the curve. Sprint is revoked for the window. Measured: dead stop by ~0.12 s, walk pace by ~0.5-0.57 s, sprint re-granted ~0.63 s.
 - Client (`Animate2`) and server (`SprintAuthority`) read the **same constants**, and the server clamp follows the ramp upward as well as down, so its release does not stamp the client's rebuilt speed back.
 - **Camera bob.** Lean divides by `max(WalkSpeed, WALK_SPEED_BASELINE)` so a 0 `WalkSpeed` on landing cannot blow it up; rotation frame time is clamped to the 30 fps value, and the hitch-reset guard reads the unclamped value.
-- **Fall / climb** use Roblox default R15 animations (`507767968`, `507765644`); the rig is R15.
+- **Fall / climb** use Roblox default R15 animations (`507767968`, `507765644`); the rig is R15. The developer decided on 2026-11-18 that the defaults are fine, so the custom-animation item is closed.
+- **Heavy carries.** `Crouching` `Stop()` sets `WalkSpeed = carryCapped(originalSpeed)`, so a carrier standing up from a crouch is capped on the same frame (2026-11-18). Carriers use the collision group `Carrier`, which is what lets them cross the Bank's carrier-only ledges ([[Robbery Heists and Getaway]]).
 - **Stamina bar** is a `CanvasGroup`; its `UIStroke` is tweened alongside `GroupTransparency` (a group's own stroke is not faded by the group) and starts at `Transparency = 1`. Opening a panel hides `StaminaGui` with the rest of the HUD ([[HUD and UI Shell]]).
 
 ## Extend it
@@ -39,6 +40,7 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 ## Watch out
 - Test animation assets with `ContentProvider:PreloadAsync` then poll `AnimationTrack.Length`; `Length` reads 0 until the asset resolves, which faked "dead" for every id once.
 - Anything dividing by `WalkSpeed` breaks now that landing sets it to exactly 0.
+- The `Crouching` stand-up clamp (carry cap on the same frame) was not measured: key input was not driven in the Play (2026-11-18).
 - Sprint detection on the server must read `IsSprinting`, not server-side velocity (server read below 22 on a 25.4 studs/s landing).
 - Lean/turn effect has been **off, not fixed** since 2026-09-11 (old rig assumptions threw every frame); a rewrite for the current rig is outstanding.
 - Explained and fixed 2026-11-17: the 20.00 / 25.83 swing came from `Animate2`. Pressed against a wall, collision made the velocity read backward, so the backward clamp (`min(WalkSpeed, 20)`) fired, and the `move()` ramp (+50 per second on a 0.1 s tick, 20 + 5.83) lifted it again. The clamp now keys on input (`isInputBackwards`, `Humanoid.MoveDirection` against the look vector); walking backwards still clamps to 20. Inside the 0.55 s landing window the client ramp and the server's replicated cap still interleave in a small sawtooth (not changed).
@@ -47,6 +49,7 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-18: `Crouching` `Stop()` caps `WalkSpeed` at once for a carrier (`carryCapped`); not measured in Play; carriers cross the Bank ledges through the `Carrier` collision group; fall and climb defaults confirmed as fine by the developer. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: character attribute `CarrySpeedCap` (12, `Movement.Constants`) set by `CarryState` for heavy loot: `Animate2`, `SprintAuthority` and `Crouching` cap WalkSpeed at it and grant no sprint; clearing it hands back 20. Measured sprint 38 uncapped, 12 capped. [[2026-11-17 Heist Layers]]
 - 2026-11-17: `Animate2` backward clamp keys on input, not velocity: the 20 / 25.83 `WalkSpeed` swing against a wall is gone. [[2026-11-17 Known Issues Pass]]
 - 2026-09-20: every landing is a dead stop; soft floor (12) and sprint detection deleted. [[FPS-All-Landings-Dead-Stop]]

@@ -1,15 +1,15 @@
 ---
 type: rule
 tags: [rule, writing, text]
-updated: 2026-11-14
-sources: ["OBT Vault/10 Rules/Player-Facing Text.md (adapted)", "70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md"]
+updated: 2026-11-18
+sources: [".superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md (Fix round 1)", "OBT Vault/10 Rules/Player-Facing Text.md (adapted)", "70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md"]
 ---
 
 # Player-Facing Text
 
 ## Rule
 
-- **No dash as punctuation.** Anything a player reads (dialogue, quest text, GUI labels, toasts, prompts, billboards) never uses a spaced dash (" - ", en dash, em dash) as punctuation. Write "." (a new sentence) or "," instead. Hyphenated words, ranges and minus signs stay. Code comments are not player text.
+- **No dash as punctuation.** Anything a player reads (dialogue, quest text, GUI labels, toasts, prompts, billboards) never uses a spaced dash (" - ", en dash, em dash) as punctuation. Write "." (a new sentence) or "," instead. Hyphenated words, ranges and minus signs stay, and so does a dash that separates a name from its tag or price on a nameplate or label ("OFC. DOYLE - LV 1", "Name - [$Price]"). Code comments and developer-only `warn` text are not player text. The 2026-11-18 sweep (392 scripts, 469,035 instances) fixed 9 strings ([[2026-11-18 Open Items Pass]]).
 - **No text may overlap or clip anywhere.** Size boxes to the longest label; check with `TextBounds` or `TextService:GetTextBoundsAsync` at the label's real size ([[UI Layout Traps]]).
 - **Markup needs `RichText`.** A label that receives `<font>` tags must have `RichText` on, or players read the tags ([[FPS-Figma-UI-Bugfix-Pass]]).
 - **Text baked into art is changed in the art.** Banner titles and the death screen's words are Figma slices ([[GUI Rules]]).

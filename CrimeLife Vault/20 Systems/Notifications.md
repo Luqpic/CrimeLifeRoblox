@@ -2,7 +2,7 @@
 type: system
 tags: [system, ui, notifications]
 updated: 2026-11-18
-sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md"]
+sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md", ".superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Notifications
@@ -10,13 +10,13 @@ sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "Cr
 **Skills:** `roblox-ui` (load this for work here)
 
 ## What it does
-Toast cards for gains and events: quest completion, Spraypaint gains, and the kill toast ("KILLED SABOTEUR" / "+2 Spraypaint" / "+20 EXP"). Cards stack bottom-right like a pile (max 3 visible), and queue while a panel is open. The heists have their own global notifications for location reopen / robbery triggered. In the city **two notification styles are on screen**: the city's bottom-right stack (`NotificationController`, [[Quests and Dialogue]]) and the heist cards (`HeistNotificationGui`); unifying them is open ([[Open Items]]).
+Toast cards for gains and events: quest completion, Spraypaint gains, and the kill toast ("KILLED SABOTEUR" / "+2 Spraypaint" / "+20 EXP"). Cards stack bottom-right like a pile (max 3 visible), and queue while a panel is open. The heists' global notifications (location reopen, robbery triggered, broadcast hijacked) go through the same city stack since 2026-11-18: one notification style (`NotificationController`, [[Quests and Dialogue]]).
 
 ## Where it lives
 - `ReplicatedStorage.Modules.NotificationController` (mirror: `CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau`).
 - `ReplicatedStorage.GuiTemplates.Notification` (`AccentEdge`, `TitleLabel`, `MessageLabel`).
 - Callers: `StarterPlayerScripts.QuestFeedbackController` ([[Quests and Dialogue]]), `StarterPlayerScripts.SpraypaintHud` ([[Spraypaint]]); kill name from `ReplicatedStorage.Blaster.Remotes.KillConfirmed`.
-- Heists: `StarterGui.HeistNotificationGui` (renamed from the Robbery place's `NotificationGui` on 2026-11-16 because the city already has a `NotificationGui` container; `NotificationTemplate` with `Header`/`Body`), `StarterPlayerScripts.NotificationClient` (waits `HeistNotificationGui`; `INSET_Y` 108 so its stack's bottom sits on the top edge of the city container, measured card bottom 551 = container top 551), `UiButtonEffects` (its two panel references renamed), remotes `LocationOpened` / `RobberyTriggered` in `Net.lua`.
+- Heists (since 2026-11-18 only `StarterPlayerScripts.NotificationClient` and the remotes are live; `HeistNotificationGui` is quarantined in `ServerStorage.CityQuarantine.ReplacedByUnifiedNotifications`, attributes `OriginalPath`, `OriginalParent`, `QuarantinedBy`, and the `INSET_Y` stack below no longer exists). History: `StarterGui.HeistNotificationGui` (renamed from the Robbery place's `NotificationGui` on 2026-11-16 because the city already has a `NotificationGui` container; `NotificationTemplate` with `Header`/`Body`), `StarterPlayerScripts.NotificationClient` (waits `HeistNotificationGui`; `INSET_Y` 108 so its stack's bottom sits on the top edge of the city container, measured card bottom 551 = container top 551), `UiButtonEffects` (its two panel references renamed), remotes `LocationOpened` / `RobberyTriggered` in `Net.lua`.
 
 ## How it works
 - API: `NotificationController.show(message, title?, detail?)`. `title` defaults to `"NOTICE"`; `message` is `string | Line`, `detail = { text, icon, iconColor? }` adds one icon-led line and grows the card 64 -> 84 px upward.
@@ -25,6 +25,13 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - Its `ScreenGui` is built once per client with `ZIndexBehavior = Sibling` and its own `UIScale` (`Scale = 1`) so `UIScaleController` skips it.
 - While `UI.Panels.current()` is non-nil, `show` queues (cap 8, oldest dropped); on close the queue flushes 0.12 s apart; a reopen mid-flush cancels the flush.
 - `SpraypaintHud` batches one kill's separately replicated attributes into one card (one read 0.1 s after a change); XP is derived from `Leveling.Constants.totalXp`, not sent. Several kills at once read "KILLED BANDITS ×3"; a Spraypaint gain with no kill keeps "SPRAYPAINT".
+
+## Heist cards through the city stack (2026-11-18)
+- `NotificationClient` is a thin listener over `Modules.NotificationController`. Texts unchanged (RichText bold name kept): reopen "<b>The Bank</b> is open." with the default title "NOTICE"; robbery "<b>name</b> is robbing the Gas Station." and hijack "<b>name</b> hijacked the News Station broadcast!" with the title "ALARM TRIGGERED" (the heist card's red alarm box). Each remote waits at most 30 s (`BroadcastHijacked` is created by the server at run time); the 3 top-level waits are bounded the same way.
+- Same rules as every card: at most 3 on screen (`MAX_VISIBLE`), queued while a panel or puzzle is open. Measured at 1100 x 679: a real Gas2Go alarm card arrived 1.16 s after the heist start at (800, 533), 280 x 64; 5 heist cards plus a city toast show at most 3, x >= 800, y 513..597 (before: up to y -137, over the star meter, the duffel and the level-up popup).
+- A message that wraps grows the card by its extra height, measured with `GetTextBoundsAsync` (RichText on, the label's real width after any icon); the accent edge and a detail line follow; a failed measure grows nothing. Long names wrap one more line (heist cards 72 tall).
+- `UiButtonEffects` lost its two `HeistNotificationGui` references; the stack's own panel-open queue holds cards while a modal is up.
+- Open: on a phone (844 x 390, computed) the heist toast and the bottom-right stack overlap at x 544..632 when both show; only the 3 newest heist cards show in a burst; `GetTextBoundsAsync` yields in `displayNow`, so same-frame cards may stack out of order ([[Open Items]]).
 
 ## Extend it
 - New caller: just `require` and `show`; the module table is shared per client. Use `detail` / `Line` for icons.
@@ -39,6 +46,7 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - Writing the same attribute from Server then Client `execute_luau` in one session threw `Unable to cast Font to Font` and ended Play.
 
 ## History
+- 2026-11-18: heist cards go through the city stack (titles "ALARM TRIGGERED" and "NOTICE", text unchanged, 3-card cap, 30 s waits); `HeistNotificationGui` quarantined; a wrapping message grows its card. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: `Net` remote `BroadcastHijacked` and a `NotificationClient` listener show a city-wide card "<name> hijacked the News Station broadcast!" on the existing heist template. [[2026-11-17 Heist Layers]]
 - 2026-11-16 (city): Robbery's `NotificationGui` renamed `HeistNotificationGui`, its stack moved clear of the city's. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: kill toast titled "KILLED <Name>". [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]

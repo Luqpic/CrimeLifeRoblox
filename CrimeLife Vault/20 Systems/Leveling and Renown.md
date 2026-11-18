@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, leveling, progression, ranks]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-renown-phase-2/spraypaint-rename-report.md", "CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Kill-Leveling-System.md"]
+updated: 2026-11-18
+sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-renown-phase-2/spraypaint-rename-report.md", "CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Kill-Leveling-System.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md"]
 ---
 
 # Leveling and Renown
@@ -34,6 +34,9 @@ Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a s
 - Admin: `SetLevelRequest` is gated server-side to one UserId (the developer's); clamps to 1..cap.
 - Persisted since 2026-09-23: `level` and `xp` mirror into the profile; `NextLevelXP` is derived and recomputed on load ([[Persistence and Saves]]).
 
+## The level-up popup layout (2026-11-18)
+`LevelingHud.placePopup` scales with the heist HUD's `UIScale` (`fullScale = heistScale / levelingScale`, the small-screen fit clamped to it) and places the popup again on a `ViewportSize` change while it is shown; it follows the camera as `WantedHud` does. `UIScaleController` caps every scale at 1 (read back 1.000), so the popup never grows above the heist card. At 1100 x 679 it sits at (370, 262) 360 x 90, scale 1, overlapping nothing. The phone branch (844 x 390: 256 x 64, scale 0.71, 2 px under the star meter) is computed, and the resize re-place was not exercised live ([[HUD and UI Shell]], [[Open Items]]).
+
 ## Extend it
 - Rename a rank or recolour it: one line in `RANKS`.
 - New XP source: call into `LevelingService` from the server; never trust the client. Read `Eliminated` rather than adding a second kill signal.
@@ -41,13 +44,14 @@ Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a s
 
 ## Watch out
 - Templates rest in their authored state: the popup template must rest fully transparent, and `LevelingHud` forces all four transparencies to 1 at startup (2026-09-18 regression, twice).
-- `LevelingService`'s header comment still says "Session-only ... does not add a DataStore": stale since [[FPS-Persistence-Phase-3]].
+- `LevelingService`'s header comment said "Session-only ... does not add a DataStore" (stale since [[FPS-Persistence-Phase-3]]); fixed on 2026-11-18 with `Stats.Constants`' matching comment. [[2026-11-18 Open Items Pass]]
 - Spraypaint pays 25 per level gained off the `Level` attribute; hydration on join once paid a phantom award on every rejoin (Critical, fixed 2026-09-23). Any change to how `Level` is set on join must be re-checked against that.
 - You never see your own overhead plate; your rank shows on your card.
 - The level-up rig's `PointLight` (brightness 300, range 6) may read as a flashbang up close: needs an eye.
 - The XP and spray icon ids were uploaded as white glyphs so `ImageColor3` can tint them.
 
 ## History
+- 2026-11-18: `LevelingHud.placePopup` re-lays out on a viewport resize and follows the heist HUD's scale; `UIScaleController` cap 1 confirmed. [[2026-11-18 Open Items Pass]]
 - 2026-09-24: criminal ranks on the card and overhead; XP icon inside the bar, white. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - 2026-09-24: `+N EXP` line on the kill toast; Experience icon on every leveling readout; `totalXp`. [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]
 - 2026-09-23: level and XP persist through `ProfileGateway`; phantom rejoin level-up award found and fixed. [[FPS-Persistence-Phase-3]]

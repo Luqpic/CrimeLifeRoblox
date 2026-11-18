@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, monetisation, gamepass, fps]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Gamepass-Shop-Scrolling-Grid.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md"]
+updated: 2026-11-18
+sources: ["CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Gamepass-Shop-Scrolling-Grid.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md", ".superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Gamepasses
@@ -27,6 +27,12 @@ Robux sales in the FPS place: game passes shown in the Gamepasses panel, and dev
 - **Vip** no longer grants anything: its skins were moved to Spraypaint ("Vip is on hold", [[Cosmetics and Skins]]). It still advertises "Exclusive weapon skins".
 - **Developer products:** six Cash tiers, 5,000 to 1,000,000 Cash, granted straight into `leaderstats.Cash`; `Cash100K` is the best-value tier.
 
+## One ownership path (2026-11-18)
+- **`ServerScriptService.Monetization.Scripts.PassOwnership`** is the one ownership path for every pass. The player attribute `GamepassOwned_<key>` is the only record (no table cache; it leaves with the Player, so a leaver leaves nothing). `publish(player)` at join checks a configured pass (pcalled); an id of `0` is "not configured": set false, never prompts, no web call. A failed check reads false and is asked again after 30 s (`FAILED_CHECK_RETRY_SECONDS`), never on a read; a stale false never overwrites a true.
+- **One purchase confirm for every pass.** `onPurchaseFinished(player, id, purchased)` sets the attribute only after `UserOwnsGamePassAsync` agrees (`CONFIRM_ATTEMPTS` 3, `CONFIRM_RETRY_SECONDS` 2, off the event thread, stops if the player left). An event for id 0 or for an id outside the pass list matches nothing and makes no call; an owned or in-flight event makes no web call; one pending retry per player and pass; `PassOwnership.forget` on `PlayerRemoving`. Before, the city handler set true on the event alone and matched an id-0 event to `DoubleCash`.
+- **The heist duffel passes live here too.** `DuffelCapacityX2`, `DuffelCapacityX4` and `DuffelSpeedBoost` are entries in `Monetization.Constants.Gamepasses` with `shop = false` (id `0`, never shown; `GamepassShopController` skips them, the panel stays 7 tiles). **Paste each real id in `ReplicatedStorage.Monetization.Constants.Gamepasses` and nowhere else** (RPG's stand-in 10904398 is still to swap). `SharedSystems.GamepassManager` is now a thin adapter: multipliers by pass key, `PlayerOwnsGamepass` reads the attribute (x4 first, no stacking); no ids, cache or network.
+- The duffel dialog's X2 / X4 buttons fire `Monetization.Remotes.PromptGamepassPurchase` with the pass key; the server prompts only a configured id (an unconfigured one logs "has no id configured yet" and does nothing). Specs: `ServerStorage.UnitTest.Cases.PassOwnership_Test` (city) and the heist suite's `GamepassManager` spec.
+
 ## Extend it
 - New pass: add an entry to `Monetization.Constants.Gamepasses`; the panel grid scrolls, so more passes just add rows.
 - New gamepass weapon: Tool attribute `Gamepass = "<key>"`, no `Price` ([[Weapon Shop and Upgrades]]).
@@ -39,6 +45,7 @@ Robux sales in the FPS place: game passes shown in the Gamepasses panel, and dev
 - Server-applied knockback from a gamepass weapon may land softer on another player (client-owned physics); not verified.
 
 ## History
+- 2026-11-18: one ownership path (`PassOwnership`, one confirm by `UserOwnsGamePassAsync`, id 0 means not configured), duffel x2 / x4 and `DuffelSpeedBoost` as `shop = false` entries, `GamepassManager` a thin adapter; join readings unchanged (RPG OWNED, six COMING SOON, 7 tiles); city 315 / 315 and heist 740 / 0 at the close. [[2026-11-18 Open Items Pass]]
 - 2026-09-25: Gamepasses grid scrolls (canvas 662 px vs 438 px window); column padding 12 -> 10. [[FPS-Gamepass-Shop-Scrolling-Grid]]
 - 2026-09-24: Vip on hold, its skins sold for Spraypaint. [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
 - 2026-09-24: RPG pass uses stand-in id 10904398 for testing; Gamepass tab logo. [[FPS-RPG-Preview-Flip-Real-Pass-Sounds-Icons]]

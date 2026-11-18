@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, sound, assets, animation, images]
-updated: 2026-11-14
-sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/Robbery System/Slice-Transparency-And-Anchor-Fixes.md", "70 Batches/FPS System/FPS-Weapon-Icon-Decals.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "OBT Vault/50 Engine Traps/Sound and Asset Traps.md (generic traps)"]
+updated: 2026-11-18
+sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/Robbery System/Slice-Transparency-And-Anchor-Fixes.md", "70 Batches/FPS System/FPS-Weapon-Icon-Decals.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "OBT Vault/50 Engine Traps/Sound and Asset Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Sound and Asset Traps
@@ -26,6 +26,9 @@ Audio, images, decals and animation assets. Pipelines: [[Icon Pipeline]], [[Figm
 - A Sound under a Folder or Model plays 2D for every client. A sound for one player plays on their client; a world sound hangs on a part.
 
 ## Animation
+
+### The Tools' hold clips fail to load in Studio, so a Studio hold pose is the default hold
+- Measured 2026-11-18: the third-person hold clips 6170771161 (rifle idle) and 6170792878 (pistol idle) fail to load on the unpublished file ("Requester does not have permission", `serverplaceid=0`). Every hold pose or muzzle distance measured in Studio is therefore the default tool hold, which points guns down and to the right; a published place may hold them differently and was not measured. Same class as the weapon-sound warning above. [[2026-11-18 Open Items Pass]], [[Weapons and Blaster]].
 
 ### A dead animation asset plays as nothing
 - **Symptom:** no fall animation, no climb animation.

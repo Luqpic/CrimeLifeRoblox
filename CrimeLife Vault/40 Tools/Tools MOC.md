@@ -27,7 +27,7 @@ Everything Claude uses to read, change and test CrimeLife. All of it runs throug
 - [[Screen Captures]]: when `screen_capture` returns magenta or blank, and what to read instead.
 - [[Studio Host and Instance Id]]: the last recorded Studio ids and the Mac side.
 
-- [[Model Assignment]]: which Claude model (Fable, Opus, Sonnet) does which CrimeLife Tycoon work.
+- [[Model Assignment]]: which Claude model (Opus 5.5 or Sonnet 5.5, from 2026-11-18) does which CrimeLife work.
 
 ## Related
 

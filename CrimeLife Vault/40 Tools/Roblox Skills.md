@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tool, skills, workflow]
-updated: 2026-11-14
+updated: 2026-11-18
 sources: ["Documents/Roblox/.claude/skills/roblox-*/SKILL.md (symlinked at CrimeLifeRoblox/.claude/skills)", "~/.claude/skills/roblox-blender-modelling", "CrimeLifeRoblox/FPSSystem/**/*.luau (grep counts, 2026-11-14)", "OBT Vault/40 Tools/Roblox Skills.md (shape)"]
 ---
 
@@ -10,6 +10,8 @@ sources: ["Documents/Roblox/.claude/skills/roblox-*/SKILL.md (symlinked at Crime
 The project has 23 `roblox-*` skills in `Documents/Roblox/.claude/skills/` (also reachable as `CrimeLifeRoblox/.claude/skills`, a symlink to that folder) and one user-level `roblox-blender-modelling` in `~/.claude/skills/`. They are **generic Roblox knowledge**: APIs, pitfalls, recipes. This note routes a CrimeLife task to the right ones.
 
 ## How to use them
+
+0. **These are the only skills.** Never load an Anthropic skill (`anthropic-skills:*`) or any other skill outside this list unless the developer names it for that request ([[Vault Skills Only and Model Routing]]).
 
 1. **Load only the 1 to 3 skills that match the task.** Find the task's row in [[#Pick by task]] or the `Skills:` line on the system note it touches, then invoke them with the Skill tool before building. Never load the whole set.
 2. **CrimeLife's way wins.** A skill teaches technique and catches bugs; it never justifies rewriting a working CrimeLife system to the skill's pattern. Where they differ, follow [[#Where CrimeLife differs from the skills]] and the neighbouring code ([[Shared Code Extended by Attributes]]).

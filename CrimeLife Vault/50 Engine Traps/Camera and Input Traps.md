@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, camera, input, prompts, mouse]
-updated: 2026-11-16
-sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "OBT Vault/50 Engine Traps/Camera and Input Traps.md (generic traps)"]
+updated: 2026-11-18
+sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "OBT Vault/50 Engine Traps/Camera and Input Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Camera and Input Traps
@@ -34,6 +34,11 @@ Engine behaviour of cameras, the mouse, keys, touch and ProximityPrompts. Harnes
 
 ### A camera claim must be released with the thing that took it
 - The dialogue reply panel and the conversation's camera are released at the same moment; a panel rebuilt on respawn while the engine kept the old one left the player "stuck zoomed in after dying". Route camera claims through `Modules.CameraAuthority`. [[FPS-Dialogue-Responses-Clickable-Fix]].
+
+### In third person the gun muzzle is too far from the root part to be a shot origin
+- **Symptom:** in third person, standing still, shots with long guns were refused (AK47 ammo 30 to 30; Itacha Mag-10 4 to 4, while a control origin 2 studs ahead was accepted).
+- **Cause:** `BlasterController` sent the Tool's muzzle as the shot origin, and `validateShot` refuses an origin more than 5 + 0.4 x speed studs from the root part. In Studio's hold pose the muzzle sits 5.16 to 7.06 studs from the root part on 11 long guns (AK47 5.47, AMB-17 5.16, Benelli M4 5.22, HCAR 5.24, M16A1 6.11, MP-153 5.85, Mossberg 590 5.55, RPG 7.06, Remington 870 5.18, SPAS-13 5.58, Spas 12 5.58); every pistol is 2.5 to 3.4. Moving 5 more muzzles to their barrel ends would have refused those guns too.
+- **Fix:** a head origin: third-person shots start at the head and aim at the crosshair hit point (`Blaster.Utility.thirdPersonAim`); the server check was not loosened. Measured: AK47, Spas 12, Itacha Mag-10, Glock 18 and RPG accepted and hit a target 50 studs ahead from an origin 1.40 to 1.42 studs from the root part. The hold pose is Studio's default tool hold ([[Sound and Asset Traps]]), so a published place may differ. [[2026-11-18 Open Items Pass]], [[Camera Authority]].
 
 ### A character PivotTo does not turn the camera (OBT)
 - Move the camera yourself, or pass a camera to the capture.

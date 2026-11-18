@@ -1,7 +1,7 @@
 ---
 type: howto
 tags: [start, workflow]
-updated: 2026-11-15
+updated: 2026-11-18
 sources: ["OBT Vault/00 Start/Batch Workflow.md (adapted)", "CLAUDE.md (How to work in this project)", "docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)"]
 ---
 
@@ -14,7 +14,8 @@ One batch = one request from the developer (one or several items). Run every bat
 - Read the request, [[Open Items]] and the `20 Systems` notes it touches. For the original intent behind a system, read its prompt in [[Original Prompts]].
 - Put every question the developer has to answer in one round of pickers, recommended option first, then build to the end. [[Ask First Then Build]]
 - Confirm the attached Studio instance is the Crimelife City place before any write (FPS System is frozen from 2026-11-15). [[Which Project This Is]]
-- Load the 1 to 3 Roblox skills the task touches (the system note's `Skills:` line, or [[Roblox Skills]]). CrimeLife's way wins over a skill's generic advice.
+- Load the 1 to 3 Roblox skills the task touches (the system note's `Skills:` line, or [[Roblox Skills]]). CrimeLife's way wins over a skill's generic advice. **No other skill, ever**, unless the developer names it ([[Vault Skills Only and Model Routing]]).
+- Pick the model per piece of work: Opus for judgement, Studio and code; Sonnet subagents for searches, per-task reviews and vault drafts ([[Model Assignment]]).
 
 ## 2. Reproduce and measure
 

@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [moc, rules]
-updated: 2026-11-15
+updated: 2026-11-18
 sources: ["CLAUDE.md (How to work in this project)", "OBT Vault/10 Rules/ (generic rules carried over)"]
 ---
 
@@ -26,6 +26,7 @@ Read [[Which Project This Is]], [[Safety and Security Rules]] and [[Save and Pub
 - [[Measure Before and After]]: read before you edit, reproduce with numbers, root cause, re-measure.
 - [[Verify in Edit and by Screenshot]]: verify the result, not the arithmetic; `AbsolutePosition` is the witness.
 - [[Reporting Rules]]: verified vs not verified, the vault updated, one `Batch:` commit.
+- [[Vault Skills Only and Model Routing]]: only the vault's Roblox skills (never Anthropic or other skills unless the developer names one); Opus for judgement, Sonnet for finding and drafting.
 
 ## How things are built
 

@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, melee, combat]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Shop-View-And-Bleed-Effect.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Hit-And-LevelUp-VFX.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Crowbar-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Melee-Display-Fixes-And-Baton.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau"]
+updated: 2026-11-18
+sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Shop-View-And-Bleed-Effect.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Hit-And-LevelUp-VFX.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Crowbar-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Melee-Display-Fixes-And-Baton.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Melee
@@ -22,7 +22,9 @@ Crowbar, Baton and Knife swing on the shared blaster ([[Weapons and Blaster]]) a
 ## How it works
 - Melee = `infiniteAmmo` + `meleeHitEffect`; an empty `MuzzleAttachment` is expected.
 - Swing is a multi-ray cone; damage is capped at the configured value however many rays connect. On-hit sound / VFX once per target per swing.
-- `swingDelay` resolves damage at visual contact, for players and (since 2026-09-11) enemies. Recorded values: 0.25 for the Crowbar (2026-09-20 easing log) and 0.2 in the export log the same day; unresolved which is current.
+- `swingDelay` resolves damage at visual contact, for players and (since 2026-09-11) enemies. Read in Studio on 2026-11-18: Crowbar 0.2 (on `ServerStorage.Weapons.Crowbar` and the enemy copy `ServerStorage.EnemyTemplates.Thug.Crowbar`), Knife 0.2, Baton 0.2; the older 0.25 in the 2026-09-20 easing log is not current.
+- **The shot is stamped at the press (2026-11-18).** `BlasterController:shoot` takes `now` (the timestamp and the spread seed) before `resolveHit`, so a `swingDelay` no longer moves the stamp; guns have no delay and are unchanged. Live: Knife pressed at server time 524.387 and 525.220, the Shoot events claimed exactly those and arrived 0.233 and 0.217 s later. With the receive clock a swing tolerates about 0.167 s of hitch plus jitter (0.667 minus 0.5 s) where the contact stamp tolerated 0.067 s ([[Weapons and Blaster]]).
+- **Third-person aim.** A third-person swing starts at the head and aims at the crosshair point (`thirdPersonAim`); a miss aims along the camera look (0.30 degrees off with the camera pitched 30 degrees up, 25.92 before). Live: a Knife swing at a dummy about 3.5 studs ahead landed (100,000 to 99,950) from an origin 1.40 studs from the root.
 - Tuning as recorded: Crowbar and Baton `damage` 45, `knockbackForce` 90, `range` 6; Knife `damage` 30, `knockbackForce` 20, Price 350, `rateOfFire` 90. Baton Price 500. Security guard's Baton `knockbackForce` 15 (deliberate).
 - **Baton stun:** `stunDuration` 1 s stamps `StunnedUntil` on the root part and calls `RagdollController.stagger` for the same duration. Only the Baton (player and Security guard) stuns; the Crowbar does not.
 - **Knife bleed:** five ticks of 4 (20 total) over 5 s through the same `TakeDamage` / `Tagged` / `Eliminated` path, so bleed kills pay. `BleedingUntil` on the root part; a new cut refreshes, never stacks. A server-side `BloodParticle` on `UpperTorso`; each tick shows a damage number.
@@ -40,9 +42,12 @@ New melee: clone the Baton / Crowbar Tool and viewmodel, keep `Body` as the invi
 - A stunned enemy must restart its automatic fire loop when the stun lifts (fixed 2026-09-15).
 - Stun and the landing slowdown share one release in `SprintAuthority`; a server-only zero speed would freeze a player forever.
 - Melee viewmodels ship the gun `Shoot` ids (recoil); the swing is procedural.
+- `ServerStorage.EnemyTemplates.Security.Baton` has no `swingDelay` (it hits at once). Not changed.
+- Melee acceptance under a real frame hitch was not reproduced live (melee has infinite ammo, so the ammo read-back does not work); the server side is covered by the `ShotRate_Test` Knife case, stamped at the press versus at contact.
 - Not verified by eye: Knife blade roll and third-person hold, the bleed damage number, `MeleeImpact` look in motion, the procedural swing from a real click.
 
 ## History
+- 2026-11-18: the melee shot is stamped at the press, not at contact; third-person melee aims from the head at the crosshair; Crowbar, Knife and Baton `swingDelay` read as 0.2 in Studio; `Security.Baton` has none. [[2026-11-18 Open Items Pass]]
 - 2026-09-24: Knife backstab ×2. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-21: Knife upright in the shop, visible bleed, tick numbers. [[FPS-Melee-Shop-View-And-Bleed-Effect]]
 - 2026-09-21: the Knife, with bleed. [[FPS-Knife-Bleed-Melee]]

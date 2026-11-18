@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, currency, spraypaint, cosmetics, fps]
-updated: 2026-11-17
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Badge-Beside-Price-Label.md", "CrimeLifeRoblox/.superpowers/sdd/per-weapon-spraypaint-report.md", "CrimeLifeRoblox/.superpowers/sdd/revert-global-spraypaint-report.md", "CrimeLifeRoblox/FPSSystem/Spraypaint/Constants.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintService.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintHud.luau"]
+updated: 2026-11-18
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-renown-phase-2-design.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Spraypaint-Badge-Beside-Price-Label.md", "CrimeLifeRoblox/.superpowers/sdd/per-weapon-spraypaint-report.md", "CrimeLifeRoblox/.superpowers/sdd/revert-global-spraypaint-report.md", "CrimeLifeRoblox/FPSSystem/Spraypaint/Constants.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintService.luau", "CrimeLifeRoblox/FPSSystem/Spraypaint/SpraypaintHud.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
 # Spraypaint
@@ -22,7 +22,7 @@ The cosmetic currency. Earned only by killing NPCs and levelling up, spent only 
 ## How it works
 - **Earn.** `SpraypaintService` listens to the existing `ServerScriptService.Blaster.Events.Eliminated` BindableEvent and to the `Level` player attribute; no existing file was edited to add the earn path. Criminal kill +2, Police kill +5 (keyed by the victim's `Faction` attribute), +25 per level gained. Anything that is not a recognised NPC faction pays 0, including `nil` — players carry no `Faction`, so PvP pays nothing (anti-farming).
 - **Balance.** A single `Spraypaint` player attribute, persisted as the scalar `spraypaint` in the profile ([[Persistence and Saves]], schema v3).
-- **Spend.** `BuySkinRequest(paletteKey)` -> server checks the palette is a Spraypaint palette, the player does not own it and can afford it, spends, sets `SkinOwned_<key>`, auto-equips. Ownership is global across weapons.
+- **Spend.** A locked chip needs a confirm click ("Buy for N?", 4 s, [[Cosmetics and Skins]]); the server is unchanged. `BuySkinRequest(paletteKey)` -> server checks the palette is a Spraypaint palette, the player does not own it and can afford it, spends, sets `SkinOwned_<key>`, auto-equips. Ownership is global across weapons.
 - **Toast.** Kill card titled "KILLED <NAME>" (or "KILLED BANDITS ×3"), "+N Spraypaint" with the spray icon, and a second "+N EXP" line. A gain with no kill behind it keeps the title "SPRAYPAINT". Rewards and `KillConfirmed` names are gathered in a 0.1 s settle window.
 - Rates are "a play-testing starting point, not a balance claim" (comment in `Constants`).
 
@@ -36,10 +36,13 @@ The cosmetic currency. Earned only by killing NPCs and levelling up, spent only 
 - Attribute-changed signals fire deferred in this place: write `Level`, then `task.wait()` before reading `Spraypaint`.
 - `Eliminated` is shared with `LevelingService`; a kill test can cross a level and add +25, which once looked like a broken PvP rule. Test the rule through `awardForVictim` directly.
 - `ShotResolver` still passes a weapon name as a 4th `Eliminated` argument from the per-weapon era; it is unread and was left on purpose.
-- `RunUnitTest`'s filter is an unanchored substring match: a case name containing another's name runs both (fixed by renaming, the filter is unchanged).
+- `RunUnitTest`'s plain filter is still an unanchored substring match, so a case name containing another's name runs both; since 2026-11-18 a filter starting with "=" matches the whole case name ([[Unit Test Runner]]).
+- Developer decisions, 2026-11-18: skin prices stay as they are until a playtest (a tuning item, not changed); a lifetime-cash stat is not wanted now.
+- The "rejoin-bonus fix may drop one legitimate level-up award during a slow load" worry is not real (read in `SpraypaintService.onLevelChanged`, `ProfileGateway.onPlayerAdded` and the four hydrators): the award is refused only while `ProfileGateway.get(player)` is nil, and everything earned in that window is overwritten by the hydrators before the bind (`CashService.hydrate` wipes the level-up's +25 cash, `LevelingService.hydrate` resets Level and XP). Paying it would inflate an attribute the hydrator then overwrites. The real loss in a slow load is the whole unbound window's progress, by design ([[Persistence and Saves]]).
 - Join toast fixed: `SpraypaintService.hydrate` sets `SpraypaintRestored` (`Constants.RESTORED_ATTRIBUTE`) last, and `SpraypaintHud` re-seeds its previous balance and XP at every change while the flag is not true. The join was emulated with an attribute sequence in one Play; a real rejoin with a saved balance was not run.
 
 ## History
+- 2026-11-18: locked skin chips gained a "Buy for N?" confirm; prices kept until a playtest; the rejoin-bonus drop was checked and is not real; `RunUnitTest` gained an exact-match filter. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: no more join toast: `SpraypaintRestored` flag; `handleBuySkinRequest` refuses a weapon the player does not own before it charges. [[2026-11-17 Known Issues Pass]]
 - 2026-09-24: back to one global balance (schema v2 -> v3 migration sums per-weapon balances plus the shared bucket); prices raised: Cobalt 500, Verdigris 700, Ember 900, RoseGold 1200. [[Revert-Global-Spraypaint-Balance]]
 - 2026-09-24: per-weapon balances (schema v1 -> v2, `spraypaintShared` grandfather bucket). Reverted the same day. [[Per-Weapon-Spraypaint]]

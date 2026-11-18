@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, weapons, combat, melee]
-updated: 2026-11-14
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Remove-Sniper.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Loadout-Melee-Shotgun-Sniper.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Loadout-Expansion-10-New-Guns.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Eight-New-Pistols-And-Shotguns.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "CLAUDE.md (How to work in this project, rule 7)"]
 ---
 
@@ -16,6 +16,8 @@ Calls about guns, melee and how hits land. The code is in [[Weapons and Blaster]
 
 ## Newest first
 
+- **2026-11-18: the APS is the Stechkin machine pistol**, not the underwater rifle: Pistol category, full-auto 750 rpm, magazine 20, Price 650. Its mesh is still a 7.02-stud rifle with rifle hold clips; a pistol mesh is the developer's call. Reverses the 2026-09-15 rifle reading. [[2026-11-18 Open Items Pass]]
+- **2026-11-18: the default fall and climb animations stay**; the original 2026-09-19 ones were not custom work, so nothing is re-uploaded. [[2026-11-18 Open Items Pass]] [[FPS-Fall-Animation-Dead-Asset]]
 - **2026-09-24: the RPG is a gamepass weapon.** Unlocked by a R$499 pass, never buyable with Cash; the shop's All tab became a Gamepass tab and the shop opens on Melee. [[FPS-RPG-Gamepass-Launcher]] (pass ids: [[Cosmetics and Monetisation Decisions]])
 - **2026-09-24: the two clashing new guns ship as Glock 18 and SPAS-13**, "at the user's direction"; the Glock 18 got the real gun's full-auto. [[FPS-Eight-New-Pistols-And-Shotguns]]
 - **2026-09-24: the Knife gets a x2 backstab instead of the x2 headshot.** A hit on the Smuggler's duffel bag counting as "back" is kept on purpose. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]

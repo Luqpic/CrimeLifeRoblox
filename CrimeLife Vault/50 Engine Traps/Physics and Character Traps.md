@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, physics, character, humanoid, raycast]
-updated: 2026-11-14
-sources: ["70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "OBT Vault/50 Engine Traps/Physics and Character Traps.md (generic traps)"]
+updated: 2026-11-18
+sources: ["70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "OBT Vault/50 Engine Traps/Physics and Character Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md"]
 ---
 
 # Physics and Character Traps
@@ -36,6 +36,12 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 
 ### Movement locks do not change the pose
 - A stun that only zeroes `WalkSpeed` leaves the rig idling on the spot; a stagger needs an animation or ragdoll state. [[FPS-Baton-Stun-Becomes-A-Stagger]].
+
+### A client's partial `Humanoid.Health` changes never reach the server, only the death does
+- Measured 2026-11-18 ([[2026-11-18 Open Items Pass]]): the client set `Health = 50` and called `TakeDamage(20)`, the server stayed at 100 with no `HealthChanged`. A client `Health = 0` (what the reset button does) reached the server as `HealthChanged 0` at +4.875 s and `Died` at +4.876 s (`Died` fired three times). A server `TakeDamage(500)` gave `HC -400` in the same frame, then `HC 0` and `Died` on the next. So the server cannot tell a self-reset from a lethal blow that came with no other record; keep a server-side damage record ([[Police and Wanted]]).
+
+### `CanQuery = false` does nothing while `CanCollide` is true
+- Measured 2026-11-18 in Edit on a probe part in collision group `CarrierLedge`: a ray in group `Carrier` hit it before and after setting `CanQuery = false`; the Default-group ray and `GetPartBoundsInBox` already missed it, because of the collision group. Only the group keeps queries off. `Mouse.Target` was not measured. The Bank's carrier ledges carry both settings for that reason ([[Robbery Heists and Getaway]], [[2026-11-18 Open Items Pass]]).
 
 ### A Humanoid restores its limbs' CanCollide (OBT)
 - To stop a body colliding, move its parts to a collision group, not `CanCollide = false`.

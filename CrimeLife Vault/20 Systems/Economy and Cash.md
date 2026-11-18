@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, economy, cash, fps, robbery]
-updated: 2026-11-16
-sources: ["CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau", "CrimeLifeRoblox/FPSSystem/UI/CashBurst.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Cash-Spend-Burst-Replaces-Price-Label.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-4.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Cash-Burst-Emitter-Icon.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CLAUDE.md (Systems: Economy)"]
+updated: 2026-11-18
+sources: ["CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau", "CrimeLifeRoblox/FPSSystem/UI/CashBurst.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Cash-Spend-Burst-Replaces-Price-Label.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-4.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Cash-Burst-Emitter-Icon.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CLAUDE.md (Systems: Economy)", ".superpowers/sdd/2026-11-18-open-items-pass/task-5-report.md"]
 ---
 
 # Economy and Cash
@@ -43,10 +43,13 @@ Cash is the combat currency in the FPS place: earned from enemy cash drops, leve
 - TweenService is render-driven; with the Studio viewport collapsed the burst does not animate (environmental, not a bug).
 - Robbery had two independent cash bursts; updating the module did not update the 19 pre-placed `CashBurstEmitter` textures. Anything authored per object needs its own sweep.
 - Robbery's `CashClaimVFX` unit tests failed (a lazy `require` after the test runner destroys its clone). Fixed in the city on 2026-11-16: `UITheme` is required at module scope, and the module no longer builds its own `CashDisplay` (G5); its spec was rewritten for that.
-- `CurrencyService.Add` has no upper bound (an absurd amount reaches an `IntValue`); no caller can send one today.
+- `CurrencyService.Add` refuses amounts above `HeistShared.Config.MaxCashCredit` (1,000,000; the largest real credit is a full x4 Bank bag with box cash, about 72,000). Before 2026-11-18, `Add(1e300)` set Cash to 9,223,372,036,854,776,000.
+- `CashService.onPlayerAdded` marks the Cash it creates with attribute `PreBindBase` (the starting cash); `hydrate` sets Cash to saved + (Cash - `PreBindBase`), floored at 0, and clears the marker, so a credit made before the profile binds is kept (before: the saved balance overwrote it). It assumes no other hydrator writes Cash first.
+- `CashClaimVFX`'s passive listener waits up to 10 s (`CASH_WAIT_TIMEOUT`) for `leaderstats.Cash`, and looks its target up again when the stored cash frame is no longer under the PlayerGui (spec only, not seen live).
 - Leaderstats setup once depended on service init order; `CashService` is now robust to either order.
 
 ## History
+- 2026-11-18: `CurrencyService.Add` bound (`MaxCashCredit` 1,000,000), `CashService.hydrate` `PreBindBase` merge, `CashClaimVFX` waits for `leaderstats.Cash`. [[2026-11-18 Open Items Pass]]
 - 2026-11-16 (city): Robbery cash bridged onto `leaderstats.Cash`; one cash display. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: `CashBurst` takes an optional style (spray-can burst for skins). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]
 - 2026-09-23: cash persists through `ProfileGateway`; starting cash read from the schema (500). [[FPS-Persistence-Phase-3]]

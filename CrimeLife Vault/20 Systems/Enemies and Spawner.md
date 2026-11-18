@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, enemies, npc-ai, fps]
-updated: 2026-11-17
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md"]
+updated: 2026-11-18
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-review.md"]
 ---
 
 # Enemies and Spawner
@@ -16,7 +16,7 @@ Keeps a criminal-side enemy population alive around the map: each spawn point to
 
 ## Where it lives
 - `ServerScriptService.Enemy.Scripts.EnemySpawner`, `ServerScriptService.Enemy.Scripts.EnemyAI`, `ServerScriptService.Enemy.Scripts.EnemyRig` (city, 2026-11-17: `build` and `place`, the rig half of the spawner, shared with the police dispatcher).
-- `ReplicatedStorage.Enemy.Constants` (`MAX_CONCURRENT_ENEMIES_PER_TYPE`, recoil-decay constants), `ReplicatedStorage.Enemy.AimConfig`, `ReplicatedStorage.Enemy.templateConfig` (per-type accuracy ceiling and recoil overrides).
+- `ReplicatedStorage.Enemy.Constants` (`MAX_CONCURRENT_ENEMIES_PER_TYPE`, recoil-decay constants, `ALLY_SIDESTEP` 4), `ReplicatedStorage.Enemy.AimConfig`, `ReplicatedStorage.Enemy.templateConfig` (per-type accuracy ceiling and recoil overrides).
 - `ServerStorage.EnemyTemplates.*`: nine rigs (see below), each with its weapon Tool inside.
 - `Workspace.EnemySpawns`: six `<Type>Spawner` parts, each with an `EnemyType` `StringValue` child.
 - `ReplicatedStorage.GuiTemplates.EnemyGUI`: the overhead name and health display, attached at spawn.
@@ -29,6 +29,7 @@ Keeps a criminal-side enemy population alive around the map: each spawn point to
 - **Damage and aim.** Each template carries `DamageOverride` (set to 20% of its weapon's stock damage on 2026-09-11; the shared config otherwise forces a debug value of 3). Melee types carry `EngageRangeFraction`. Ranged enemies accumulate and decay recoil from their weapon's own recoil attributes; Armed Police / Armed Criminal (now Disrupters) have extra accuracy-ceiling and recoil overrides.
 - **AI states.** Patrol, Chase, Attack, Search; it reconsiders four times a second. Losing a living target: go to last-seen spot, turn once (about 50 degrees), then hold. A dead target ends pursuit on the spot and returns to Patrol. Melee damage waits for the swing delay, matching the player side.
 - **Line of sight** skips past allies: `hasLineOfSight` steps `LINE_OF_SIGHT_ALLY_STEP` = 2.5 studs past anything with a Humanoid in its ancestry, up to `LINE_OF_SIGHT_MAX_ALLY_SKIPS` = 8; walls still block. Bullets themselves still stop on an ally.
+- **Ally in the line (2026-11-18).** `EnemyAI:_allyInLine(from, to, target)` runs in `_fireOnce` after the muzzle line-of-sight check: one cast at the bullet's own `rayRadius` from the muzzle to the aim point, with the shot's `castRays`. If the first hit is a humanoid that is not the target and that this shooter cannot damage (another enemy, police, a Witness or Invulnerable NPC), the shot is held and the ally's position and time are recorded. While an ally was in the line within the last two thinks, `_thinkAttack` calls `_sidestep` (a `MoveTo` to a point `ALLY_SIDESTEP` 4 across the line, on the side away from the ally) instead of stopping or following. Melee is exempt (a swing fans its rays, and a ring of melee enemies is the 2026-09-21 case). `hasLineOfSight` is unchanged. Police use the same path.
 - **Stun.** `ShotResolver` stamps `StunnedUntil`; EnemyAI sets `WalkSpeed = 0`, cancels movement and fire loop once, and restarts an automatic weapon's fire loop when the stun lifts. The baton stun is also a 1 s ragdoll stagger ([[Ragdoll]], [[Melee]]).
 - **Rewards.** A kill has a 30% chance to drop a physical cash pickup scaled by the enemy's weapon tier ([[Economy and Cash]]); quest credit comes from the spawn-kind tag ([[Quests and Dialogue]]).
 
@@ -56,12 +57,15 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - In `EnemyGUI` the label `Name` and the script `Text` collide with built-in properties; the scripts deliberately never index them by name. Keep it that way.
 - A Tool's geometry sits in its own Model inside the Tool: one `Parent` hop from a hit part does not reach the character. Always use `findOwningHumanoid`.
 - Cash/XP tier comes from the weapon's firing mode; there is no shotgun tier, so Smuggler and Bandits pay at pistol rate (accepted).
-- An enemy now fires with an ally in its line; the ally absorbs the shot without damage. If that reads badly, add a "don't fire through an ally" check in `_tryFire`, not a change to line of sight.
+- An enemy no longer fires through an ally (2026-11-18): it holds the shot and sidesteps. Measured, a back enemy 35 studs out behind a front enemy at 20 (Disrupters, AKM, 15 s): before 89 shots, 58 into the ally, 0 on the target; after 84 shots, 0 into the ally, 19 on the target, 9.1 studs sidestepped. Police (Mateba): 16 of 18 shots into the ally before, 1 after. A ring of 6 Offenders at 8 studs: 4 of 6 hitting before, 6 of 6 after; 7 Thugs at 3 studs (melee) all still hitting. Still true: `_sidestep` has no ledge or wall check and its extra ray per shot is unmeasured, and `allyInLine` is not cleared when the target changes.
+- Armed Police may not fire when standing idle on flat ground: the Scar L muzzle is about 1.5 studs under the floor ([[Police and Wanted]]).
 - `CLAUDE.md`'s instance tree still lists `StandardEnemy`; it was removed on 2026-09-11.
 - The enforcement spawn positions were recorded before deletion (2026-09-17) in case the Robbery place wants them; where they were recorded is not stated.
-- A staging folder of downloaded outfit assets was left in `ServerStorage` (2026-09-16), to remove once outfits were seen on spawned enemies; whether it was removed is not recorded.
+- The staging folder of downloaded outfit assets (`ServerStorage.EnemyOutfitStaging`, 2026-09-16) does not exist in the city: searched in every service by exact name and by "outfitstaging" on 2026-11-18, nothing found, nothing moved. `ServerStorage.CityQuarantine.LooseTycoon` and `CityQuarantine.WorkspaceHQ` hold tycoon display outfits, a different thing.
+- The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
 ## History
+- 2026-11-18: enemies hold a shot with an ally in the line and sidestep (`_allyInLine`, `_sidestep`, `ALLY_SIDESTEP` 4; melee exempt); the outfit staging folder does not exist in the city. Tests: Play measurements only, no unit spec. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: the Thug that stood stuck at the east road end did not reproduce (185 s Play, five Thugs sampled every 10 s, none within 2 studs for 30 s); no change, because every other point breaks a placement rule. [[2026-11-17 Known Issues Pass]]
 - 2026-11-17 (city): target filter, preferred target, `canSee`, `investigate`, `getLive` on `EnemyAI`; `EnemyRig` extracted; Police and Armed Police spawn for wanted players. [[2026-11-17 Police and Wanted]]
 - 2026-11-15: ported into the city as an exact copy; the six points moved onto the city's roads. [[2026-11-15 FPS Systems Into City]]

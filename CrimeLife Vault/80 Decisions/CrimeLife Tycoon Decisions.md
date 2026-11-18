@@ -9,6 +9,19 @@ sources: [".superpowers/sdd/2026-11-17-known-issues-pass/progress.md", ".superpo
 
 The product calls for **CrimeLife Tycoon**: the game made by merging FPS System, Robbery System and the tycoon building into Crimelife City. Evidence: [[Tycoon Market Research 2026-11]] and [[Four Places Survey 2026-11-14]]. The design is `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`, approved by the developer on 2026-11-14 ("Approve design"). Build plans are written one phase at a time in `docs/superpowers/plans/`.
 
+## 2026-11-18: the open items pass and the heist-layers final review
+
+The developer asked to complete every open item and finish the heist-layers branch review; their picker answers are in the topic notes ([[Weapon and Combat Decisions]], [[Enemy and World Decisions]], [[Robbery Decisions]], [[Cosmetics and Monetisation Decisions]], [[UI and HUD Decisions]], [[Economy and Progression Decisions]], [[Vault and Documentation Decisions]]). Claude's rulings while building ([[2026-11-18 Open Items Pass]]):
+
+- **Ruling: the seal eject never moves loot.** A heavy carry (gold bar, ripped ATM) held by a player the timer ejects is consumed, lobby carriers included: the spec's anti-goal "no payout that skips the getaway", and the vault climb is part of the Bank's getaway (final review I2). Cost if wrong: one condition to remove.
+- **Ruling: the lockpick reach check sits in the shared `LockedDoor`,** so it also covers the SlowFoods, Gas2Go and NewsStation doors. Cost if wrong: a player who walks away from a door mid-lockpick restarts it.
+- **Ruling: "real damage" for the wanted level is a server `HealthChanged` drop the player survives, or a Blaster `Tagged` hit without a ForceField.** A drop to 0 from full health reads as a self-reset (stars kept): no client can fake damage or clear its own stars. The Bank death pit marks the robber hurt first. Cost if wrong: a rare one-shot death keeps the stars.
+- **Ruling: a squad that never saw the robber gets no target position** in the search window; it patrols around where it spawned. Cost if wrong: such squads find a robber who moved only by sight.
+- **Ruling: third-person shots are cast from the head toward the crosshair hit point;** the tracer and flash start at the muzzle, and the server's 5-stud origin check is not loosened. Cost if wrong: near a wall corner a third-person shot hits what the head sees, not what the barrel touches.
+- **Ruling: the server's arrival slack is 0.25 s** (was 0.1 in the first fix): phones first, a 250 ms hitch costs no honest shot; the idle burst stays at 3 shots at 600 rpm (12 before the batch). Cost if wrong: one number in `Blaster.Constants`.
+- **Ruling: the chip confirm timeout ends only the "Buy for N?" question, never the 3D preview,** which the 2026-09-24 design kept on purpose. Cost if wrong: one condition.
+- **Ruling: tasks ran in risk order with one Studio writer at a time:** police, the heist fix wave (the deposit-box lockpick was a money exploit), weapons, UI and saves, heist tests, then the gamepass and notification unification. Cost if wrong: none.
+
 ## 2026-11-17: heist signature layers
 
 The developer's calls: approach A (one signature layer per location, built mostly from existing pieces) and the four layers as proposed; SlowFoods uses its storage room, the Bank layer goes in open space already in the Bank; "proceed until you finish" while away, so everything below is the controller's call unless marked. On 2026-11-18, mid-batch, the developer gave a standing instruction: **reuse assets already in the game (gold, money, props) instead of building from parts.** It is applied from Task 6 on; the earlier tasks were already clone-first. Evidence and numbers: [[2026-11-17 Heist Layers]].

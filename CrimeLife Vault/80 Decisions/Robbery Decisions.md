@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, robbery]
-updated: 2026-11-14
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Getaway-Distance-Replaces-Claim-Zone.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Prompt-Circle-Liquid-And-Glow.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Post-Move-Fixes-And-GUI-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/NewsStation-Hacking-Randomize-Word-Button.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Close-Button-Unified-With-FPS.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Timer-Hourglass-And-Duffel-Upgrade-GUI.md"]
 ---
 
@@ -11,6 +11,7 @@ Calls about the **Robbery System** place. The code is in [[Robbery Heists and Ge
 
 ## Newest first
 
+- **2026-11-18: heavy carries get the getaway distance widget**: the ripped ATM and the gold bar show the same 200-stud widget as the duffel. [[2026-11-18 Open Items Pass]]
 - **2026-09-20: cash banks by getting 200 studs away**, not by walking into a claim zone; losing the escape to the timer is the intended failure, decided explicitly. [[Getaway-Distance-Replaces-Claim-Zone]]
 - **2026-09-19: one dialogue engine for both places.** The Illegal Supplier moved onto the FPS dialogue engine and copies its behaviour (FOV pull with no blur; the HUD stays up). [[Supplier-Dialogue-On-Shared-Billboard-Engine]]
 - **2026-09-19: the prompt shows only the key letter**, as a circle with a liquid fill; the developer confirmed it by eye. Same prompt in both places. [[Prompt-Circle-Liquid-And-Glow]]

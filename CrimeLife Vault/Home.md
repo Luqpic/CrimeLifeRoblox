@@ -33,13 +33,14 @@ From 2026-11-14 this vault replaces the old routine of one change log per change
 | Decisions | [[Decisions MOC]] | The developer's product calls |
 | Reference | [[Reference MOC]] | Places, pipelines, original prompts, index of outside docs |
 
-## The five rules that matter most
+## The six rules that matter most
 
 1. Reproduce with numbers first, then fix, then measure again. [[Measure Before and After]]
 2. Verify the result, not the arithmetic: read `AbsolutePosition` and friends back. [[Verify in Edit and by Screenshot]]
 3. Say plainly what was verified and what was not; end with "NOT saved / NOT published". [[Reporting Rules]]
 4. Prefer the shared module; extend weapons by attribute, never by fork. [[Shared Code Extended by Attributes]]
 5. Crimelife City is the target (from 2026-11-15; FPS System is frozen); never edit Robbery System or OBT unless named. [[Which Project This Is]]
+6. Only the vault's Roblox skills, never an Anthropic or other skill unless the developer names it; juggle Opus and Sonnet. [[Vault Skills Only and Model Routing]]
 
 ## Keeping the vault true
 

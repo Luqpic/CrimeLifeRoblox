@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, ui, hud]
-updated: 2026-11-14
+updated: 2026-11-18
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Hover-Sound.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-4.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Death-Screen-You-Died-And-Alignment.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CLAUDE.md (How to work in this project, rule 6; Systems, UI)"]
 ---
 
@@ -16,6 +16,9 @@ Calls about panels, the HUD, toasts and the camera. The code is in [[HUD and UI 
 
 ## Newest first
 
+- **2026-11-18: one notification style.** The heist cards render through the city's notification stack. [[2026-11-18 Open Items Pass]]
+- **2026-11-18: `DeathScreenGui` is renumbered and runs `ZIndexBehavior.Sibling`** like the other flipped ScreenGuis. [[2026-11-18 Open Items Pass]]
+- **2026-11-18: the failed-load kick text stays specific** and tells the player to rejoin (it already ends "Please rejoin in a moment."). [[2026-11-18 Open Items Pass]]
 - **2026-09-24: the kill toast reads "KILLED <Name>"**; the XP line appears only on the Spraypaint kill toast. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]] [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]
 - **2026-09-23: notifications queue while a panel is open** instead of being dropped, and flush on close. [[Notification-Queue-While-Panel-Open]]
 - **2026-09-23: the weapon HUD moves to middle-right**, "at the user's request". [[Notification-Card-Fix-And-Weapon-HUD-Move]]
