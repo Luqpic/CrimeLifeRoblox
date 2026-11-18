@@ -182,6 +182,7 @@ html{scroll-behavior:smooth}
  <p class="print-only">Every room from the plans as a block at its real size and height, seen from the south-east. Open the HTML version of this plan to spin the model, pull the levels apart and hover rooms for their names.</p>
  <div class="m3bar">
   <div class="m3bar" role="group" aria-label="Levels" id="m3lv"></div>
+  <div class="m3bar" role="group" aria-label="View" id="m3views"></div>
   <div class="m3bar"><button type="button" id="m3fx" aria-pressed="false">Fixtures</button><button type="button" id="m3ex" aria-pressed="false">Explode</button><button type="button" id="m3reset">Reset view</button></div>
  </div>
  <div class="m3stage" id="m3stage"><canvas id="m3c" aria-label="3D block model of the compound"></canvas><div id="m3tip" hidden></div><div id="m3msg" hidden></div><div class="m3key">Cone points north · colours match the legend</div></div>
@@ -282,7 +283,7 @@ const SHEETS=[
   R('Chop Shop',r(216,80,268,130),'vehicle','Money line 3. Car lift by the east roll-up (cars drive in from the lane), 2 strip bays, parts conveyor to a crusher.'),
   R('Garage Bays 1–2',r(216,130,268,200),'vehicle','Two parking bays with roll-up doors onto the lane. Tool walls and tyre stacks.'),
   R('Showroom + Bay 3',SE,'vehicle','One display car on a turntable. Glass on the cut corner faces the gate. The Bay 3 roll-up on the east wall lets the car drive out.',{lx:240,lz:236,cut:1}),
-  R('Yard deck',RING,'circ','16-wide wooden walkway around the yard, roofed by the F2 gallery. Every ground room opens onto it.',{lx:136,lz:89}),
+  R('Yard deck',RING,'circ','16-wide wooden walkway around the yard, roofed by the F2 gallery. Every ground room opens onto it.',{lx:136,lz:89,hole:OCT}),
   R('Yard',OCT,'outdoor','Open to the sky. Player spawn pad on the south side by Reception, fight pit in the middle (36 × 36 ring with ropes and corner posts), benches and a flag pole. Grass with a big painted logo.',{lz:110}),
  ],
  fx:[
@@ -320,7 +321,7 @@ const SHEETS=[
   R('Exec Hall',r(216,80,268,140),'exec','Boss reception: secretary desk, trophy wall, waiting chairs. Leads north into the Penthouse.'),
   R('Lounge',r(216,140,268,200),'exec','Crew lounge: sofas, pool table, TV wall and windows over the lane.'),
   R('Meeting Office',SE,'exec','Long table for 10 and a map wall. Glass on the cut corner looks at the gate.',{lx:242,lz:214,cut:1}),
-  R('Gallery',RING,'circ','Balcony ring over the deck, with a railing on the yard side. Players watch the fight pit from here.',{lx:136,lz:89}),
+  R('Gallery',RING,'circ','Balcony ring over the deck, with a railing on the yard side. Players watch the fight pit from here.',{lx:136,lz:89,hole:OCT}),
   R('Yard (open below)',OCT,'outdoor','',{hide:1}),
   R('Skybridge',r(268,54,300,66),'circ','12-wide covered bridge over the drive lane to the Watchtower, 20 clear underneath.',{nodim:1,nolabel:1}),
  ],
@@ -461,7 +462,11 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  const scene=new THREE.Scene();scene.background=css('--sheet');
  const camera=new THREE.PerspectiveCamera(38,1,1,4000);
  const controls=new THREE.OrbitControls(camera,canvas);controls.maxPolarAngle=Math.PI*.495;controls.minDistance=40;controls.maxDistance=1400;
- const home=()=>{camera.position.set(330,330,420);controls.target.set(0,0,0);controls.update()};home();
+ // Camera presets: [camera x,y,z, target x,y,z]. Top looks straight down with north up; South and East are elevations.
+ const VIEWS={Iso:[330,330,420,0,0,0],Top:[0,760,.01,0,0,0],South:[0,70,640,0,18,0],East:[680,70,0,0,18,0]};
+ const setView=v=>{const c=VIEWS[v];camera.position.set(c[0],c[1],c[2]);controls.target.set(c[3],c[4],c[5]);controls.update()};
+ const home=()=>setView('Iso');
+ const hv=(location.hash.match(/^#view-(\w+)$/)||[])[1];setView(VIEWS[hv]?hv:'Iso');
  scene.add(new THREE.HemisphereLight(0xffffff,css('--grid2'),.62));
  const sun=new THREE.DirectionalLight(0xffffff,.5);sun.position.set(220,320,160);scene.add(sun);
  const CX=W/2,CZ=H/2,edgeCol=css('--ink'),pick=[];
@@ -470,8 +475,9 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  const OVR={S00:{'HQ building':null,'Watchtower':{h:60},'T1':{h:48},'T2':{h:48},'T3':{h:48},'Gatehouse':{h:10},'Yard':null},
   S01:{'Yard':{h:.6},'Yard deck':{h:.5}},S02:{'Yard (open below)':null,'Gallery':{h:1.2},'Skybridge':{h:12}},S03:{'Yard (open)':null,'Stair house':{h:12}}};
  const groups={},fxGroups=[];
- function prism(p,y,h,color,op){
-  const s=new THREE.Shape(p.map(([x,z])=>new THREE.Vector2(x-CX,-(z-CZ))));
+ function prism(p,y,h,color,op,hole){
+  const v=q=>q.map(([x,z])=>new THREE.Vector2(x-CX,-(z-CZ))),s=new THREE.Shape(v(p));
+  if(hole)s.holes.push(new THREE.Path(v(hole)));
   const g=new THREE.ExtrudeGeometry(s,{depth:h,bevelEnabled:false});g.rotateX(-Math.PI/2);g.translate(0,y,0);
   const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color,transparent:op<1,opacity:op}));
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:edgeCol,transparent:true,opacity:.4}));
@@ -479,7 +485,7 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  SHEETS.forEach(s=>{const lv=LV[s.id],G=new THREE.Group(),F=new THREE.Group();G.userData.base=lv.y;groups[s.id]=G;scene.add(G);G.add(F);fxGroups.push(F);F.visible=false;
   s.rooms.forEach(rm=>{const o=(OVR[s.id]||{})[rm.n];if(o===null)return;
    const h=o?.h??lv.h,[a,b,c,d]=bbox(rm.p);
-   const[grp,m]=prism(rm.p,lv.y,h,css('--k-'+rm.k),rm.k=='outdoor'||rm.k=='road'?.85:1);
+   const[grp,m]=prism(rm.p,lv.y,h,css('--k-'+rm.k),rm.k=='outdoor'||rm.k=='road'?.85:1,rm.hole);
    m.userData={n:rm.sn||rm.n,lv:lv.name,dim:`${c-a} × ${d-b} · Y ${lv.y} → ${+(lv.y+h).toFixed(1)}`};pick.push(m);G.add(grp)});
   (s.fx||[]).forEach(f=>{const[grp]=prism(f.p,lv.y+(lv.h>2?0:lv.h),f.t=='Fight pit'?1.5:4,css('--accent'),1);F.add(grp)});
   (s.conv||[]).forEach(c=>c.slice(1).forEach((q,i)=>{const[x0,z0]=c[i],[x1,z1]=q;const p=r(Math.min(x0,x1)-1,Math.min(z0,z1)-1,Math.max(x0,x1)+1,Math.max(z0,z1)+1);const[grp]=prism(p,lv.y+lv.h*0+(s.id=='S00'?0:0),2,css('--conv'),1);F.add(grp)}));
@@ -498,6 +504,8 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  const EX={S00:0,S04:-30,S01:0,S02:40,S03:80};
  tog('m3ex',on=>{for(const id in groups)groups[id].position.y=on?EX[id]:0});
  document.getElementById('m3reset').onclick=()=>{home();draw()};
+ const vBar=document.getElementById('m3views');
+ Object.keys(VIEWS).forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v;b.onclick=()=>{setView(v);draw()};vBar.appendChild(b)});
  // Hover
  const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();
  canvas.addEventListener('pointermove',e=>{const rc=canvas.getBoundingClientRect();ptr.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);ray.setFromCamera(ptr,camera);
@@ -507,6 +515,7 @@ document.getElementById('sheets').innerHTML=SHEETS.map((s,i)=>`
  canvas.addEventListener('pointerleave',()=>tip.hidden=true);
  function size(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();draw()}
  function draw(){renderer.render(scene,camera)}
+ window.m3={setView,groups,draw};
  controls.addEventListener('change',draw);new ResizeObserver(size).observe(stage);size();
 })();
 
