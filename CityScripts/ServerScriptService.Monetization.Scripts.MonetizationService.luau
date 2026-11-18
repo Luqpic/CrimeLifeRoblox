@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Constants = require(ReplicatedStorage.Monetization.Constants)
+local PassOwnership = require(script.Parent.PassOwnership)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 local validateNumber = require(ServerScriptService.Utility.TypeValidation.validateNumber)
 
@@ -119,38 +120,11 @@ end
 -- ============================================
 -- GAMEPASS OWNERSHIP
 -- ============================================
--- Published as player attributes so the shop UI reads ownership the same way it reads Level, Cash
--- and WeaponOwned_* -- no extra remote. Session-only like everything else here.
-local function publishOwnership(player: Player)
-	for _, pass in Constants.Gamepasses do
-		local attribute = Constants.ownedAttributeFor(pass.key)
-		if not Constants.isConfigured(pass.gamepassId) then
-			player:SetAttribute(attribute, false)
-			continue
-		end
-		-- pcall because UserOwnsGamePassAsync is a web call: it throws on a network blip, and an
-		-- unhandled throw here would abort the loop and leave later passes unpublished.
-		local ok, owns = pcall(function()
-			return MarketplaceService:UserOwnsGamePassAsync(player.UserId, pass.gamepassId)
-		end)
-		player:SetAttribute(attribute, ok and owns or false)
-		if not ok then
-			warn(`MonetizationService: ownership check failed for gamepass "{pass.key}"`)
-		end
-	end
-end
+-- Published as player attributes (GamepassOwned_<key>) so the shops read ownership the same way they
+-- read Level, Cash and WeaponOwned_* -- no extra remote. One path for every pass, the heist duffel
+-- passes included (2026-11-18): PassOwnership checks at join, re-asks a failed check after 30 s, and
+-- confirms a reported purchase with the web check before publishing it (a pass bought mid-session
+-- takes effect without a rejoin).
+safePlayerAdded(PassOwnership.publish)
 
-safePlayerAdded(publishOwnership)
-
--- A pass bought mid-session must take effect without a rejoin.
-MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, gamepassId: number, wasPurchased: boolean)
-	if not wasPurchased then
-		return
-	end
-	for _, pass in Constants.Gamepasses do
-		if pass.gamepassId == gamepassId then
-			player:SetAttribute(Constants.ownedAttributeFor(pass.key), true)
-			break
-		end
-	end
-end)
+MarketplaceService.PromptGamePassPurchaseFinished:Connect(PassOwnership.onPurchaseFinished)

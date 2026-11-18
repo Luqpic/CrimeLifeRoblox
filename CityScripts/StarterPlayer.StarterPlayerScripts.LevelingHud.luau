@@ -131,6 +131,9 @@ local lastKnownLevel: number? = nil
 -- - small screens (smaller side < UI_SMALL_SCREEN_THRESHOLD, as WantedHud): no 360 px hole exists, so
 --   the popup shrinks to fit the gap left of the duffel and centres on the duffel vertically.
 -- No heist HUD yet (HeistClient builds it at runtime): the template's place.
+-- The popup's on-screen scale follows the heist HUD's own (UIScaleController gives each ScreenGui its
+-- own ResponsiveScale, capped at 1), and a viewport resize while it is shown places it again
+-- (2026-11-18). The city notification stack is bottom-right, away from both placements.
 local SMALL_SCREEN = require(ReplicatedStorage.Blaster.Constants).UI_SMALL_SCREEN_THRESHOLD
 local POPUP_GAP_MARGIN = 8
 local templatePosition, templateAnchor = popup.Position, popup.AnchorPoint
@@ -158,6 +161,8 @@ local function placePopup()
 	-- becomes an offset in this gui by subtracting the gui's own origin and undoing its UIScale.
 	local guiScale = gui:FindFirstChildOfClass("UIScale")
 	local unscale = if guiScale and guiScale.Scale > 0 then 1 / guiScale.Scale else 1
+	local heistScale = heistHud:FindFirstChildOfClass("UIScale")
+	local fullScale = (if heistScale then heistScale.Scale else 1) * unscale -- the heist HUD's size on screen
 	local origin = gui.AbsolutePosition
 	local viewport = camera.ViewportSize
 	local small = math.min(viewport.X, viewport.Y) < SMALL_SCREEN
@@ -167,21 +172,40 @@ local function placePopup()
 		popup.AnchorPoint, popup.Position, popupScale.Scale = templateAnchor, templatePosition, 1
 	elseif small then
 		local gapWidth = duffel.AbsolutePosition.X - origin.X - 2 * POPUP_GAP_MARGIN
-		popupScale.Scale = math.clamp(gapWidth * unscale / popup.Size.X.Offset, 0.1, 1)
+		popupScale.Scale = math.clamp(gapWidth * unscale / popup.Size.X.Offset, 0.1, fullScale)
 		popup.AnchorPoint = Vector2.new(0, 0.5)
 		popup.Position = UDim2.fromOffset(
 			POPUP_GAP_MARGIN * unscale,
 			(duffel.AbsolutePosition.Y + duffel.AbsoluteSize.Y / 2 - origin.Y) * unscale
 		)
 	else
-		popupScale.Scale = 1
+		popupScale.Scale = fullScale
 		popup.AnchorPoint = Vector2.new(0.5, 0)
 		popup.Position = UDim2.new(0.5, 0, 0, (toast.AbsolutePosition.Y + toast.AbsoluteSize.Y - origin.Y) * unscale)
 	end
 end
 
+-- Placed again on a viewport resize while shown (hold + fade); the camera can be nil this early and
+-- can be replaced later, so follow workspace.CurrentCamera (as WantedHud does).
+local popupShownUntil = 0
+local viewportConn: RBXScriptConnection? = nil
+local function bindCamera()
+	if viewportConn then viewportConn:Disconnect() end
+	local camera = workspace.CurrentCamera
+	viewportConn = if camera
+		then camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+			if os.clock() < popupShownUntil then
+				placePopup()
+			end
+		end)
+		else nil
+end
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera)
+bindCamera()
+
 local function showLevelUpPopup(level: number)
 	placePopup()
+	popupShownUntil = os.clock() + POPUP_HOLD_TIME + POPUP_FADE_TIME
 	-- "LEVEL UP" is the caption; this line is just the level, per the Figma popup.
 	popupLabel.Text = `LEVEL {level}`
 	levelUpSound:Play()

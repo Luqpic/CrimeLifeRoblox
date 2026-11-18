@@ -122,7 +122,6 @@ task.spawn(function()
 		{ "HackCodeGui", "DialogFrame", "HackCode" },
 		{ "LockpickGui", "Track", "Lockpick" },
 		{ "WordScrambleGui", "MainFrame", "WordScramble" },
-		{ "HeistNotificationGui", "NotificationTemplate", "Notification" }, -- renamed in the city (phase 3 G6)
 	}
 	for _, spec in ipairs(PANELS) do
 		local gui = get(playerGui, spec[1])
@@ -164,8 +163,8 @@ task.spawn(function()
 	if hud then table.insert(ambient, hud) end
 	local inventory = get(playerGui, "Custom Inventory", 20)
 	cashFrame = inventory and get(inventory, "cashDisplay", 20) :: GuiObject?
-	local notifications = get(playerGui, "HeistNotificationGui", 20)
-	if notifications then table.insert(ambient, notifications) end
+	-- The heist cards now go through the city's notification stack, which holds them while a modal
+	-- (registered with UI.Panels) is open (2026-11-18), so there is no heist notification GUI to hide.
 	-- Bound so applyFocus's plain Enabled flip below CROSS-FADES instead of cutting. No callbacks:
 	-- the ambient HUD is not a modal, it never contributes to the focus count.
 	for _, screen in ipairs(ambient) do

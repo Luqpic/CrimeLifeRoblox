@@ -828,3 +828,31 @@ Studio objects (not scripts): `Workspace.SlowFoods.Cashier` x3 and `Workspace.Ba
 The 26 sources exported to `CityScripts/`; on-disk bytes equal the place (26 / 26). City suites 295 / 295 / 0 (288 + 7); heist 749 passed / 0 failed (733 + 16), three runs in a row plus a final one, 0 "PrimaryPart" warnings. After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 6 (one gamepass system and one notification style, developer decision 13, `Batch: unify gamepasses and notifications`). Same columns; old = the place at cd6a4a2 ("new" for new scripts; `Monetization.Constants`, `NotificationController` and `WordScrambleClient`: first export).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ReplicatedStorage.Monetization.Constants` (ModuleScript) | 3,773 / 1587927762 | 4,990 / 784951715 | The heist duffel passes `DuffelCapacityX2`, `DuffelCapacityX4`, `DuffelSpeedBoost` as pass entries (id 0, `shop = false`, no price); `Gamepass.shop`; `CONFIRM_ATTEMPTS` 3, `CONFIRM_RETRY_SECONDS` 2, `FAILED_CHECK_RETRY_SECONDS` 30. Attribute set. |
+| 2026-11-18 | `ServerScriptService.Monetization.Scripts.PassOwnership` (ModuleScript) | new | 4,549 / 2906399671 | The one ownership path for every pass: `GamepassOwned_<key>` is the only record, id 0 never owned / asked / matched, a failed check asked again after 30 s, a reported purchase confirmed by `UserOwnsGamePassAsync` (3 tries, 2 s apart, off the event thread, stops when the player left). Attribute set. |
+| 2026-11-18 | `ServerScriptService.Monetization.Scripts.MonetizationService` (Script) | 6,260 / 3620959142 | 5,542 / 4031478952 | Join publish and `PromptGamePassPurchaseFinished` through `PassOwnership` (was: event trusted, an id-0 event matched `DoubleCash`). Attribute set. |
+| 2026-11-18 | `ReplicatedStorage.SharedSystems.GamepassManager` (ModuleScript) | 6,681 / 754457998 | 2,336 / 3798875103 | Thin adapter: multipliers by pass key, ownership read from the published attribute; no ids, no cache, no `Init`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Heist.Tests.GamepassManagerSpec` (ModuleScript) | 12,231 / 3341640635 | 4,868 / 1383897097 | 20 cases -> 11 (9 kept, 2 new); 9 moved to `PassOwnership_Test`, 2 removed (see the Task 6 report). Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.PassOwnership_Test` (ModuleScript) | new | 9,008 / 325438263 | 16 cases (9 moved from `GamepassManagerSpec`, 7 new). Attribute set. |
+| 2026-11-18 | `ServerScriptService.HeistServer` (Script) | 53,153 / 2289833884 | 53,212 / 315566770 | `GamepassManager:Init()` call removed. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.HeistClient` (LocalScript) | 66,721 / 1138916754 | 66,676 / 81948207 | Duffel upgrade prompts by key through `Monetization.Remotes.PromptGamepassPurchase`; upgrade dialog, safe keypad and lockpick register with `UI.Panels` (lockpick closer = its X path); closing the keypad releases its TextBox focus. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.GamepassShopController` (LocalScript) | 4,900 / 2847555 | 5,018 / 2322766475 | Skips `shop = false` passes (panel stays 7 tiles). Attribute set. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.NotificationClient` (LocalScript) | 8,183 / 3481984699 | 3,253 / 3674103393 | Heist cards through `Modules.NotificationController` (titles "ALARM TRIGGERED" / "NOTICE", texts unchanged); bounded 30 s remote waits. Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.Modules.NotificationController` (ModuleScript) | 14,762 / 178485235 | 16,105 / 1201486866 | A wrapped message grows the card by its extra height (measured with RichText); the detail line moves down with it. Attribute set. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.UiButtonEffects` (LocalScript) | 9,933 / 3916961254 | 9,895 / 3536193229 | `HeistNotificationGui` references removed. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.WordScrambleClient` (LocalScript) | 16,275 / 1561117452 | 16,905 / 1480956601 | Word scramble and hack code register with `UI.Panels` (word scramble closer = its X path). Attribute set. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.LevelingHud` (LocalScript) | 12,131 / 4111193995 | 13,316 / 3006033539 | Popup scale follows the heist HUD's `UIScale`; placed again on a viewport resize while shown. Attribute appended. |
+| 2026-11-18 | `StarterPlayer.StarterPlayerScripts.WantedHud` (LocalScript) | 6,348 / 732449840 | 6,422 / 4281295562 | Header comment only (the heist cards no longer stack up the right edge). Attribute set. |
+
+Studio objects (not scripts): `StarterGui.HeistNotificationGui` moved to `ServerStorage.CityQuarantine.ReplacedByUnifiedNotifications` (attributes `OriginalPath`, `OriginalParent`, `QuarantinedBy`; a ScreenGui has no CFrame).
+
+The 15 sources exported to `CityScripts/`; on-disk bytes and Adler-32 equal the place (15 / 15). City suites 311 / 311 / 0 (295 + 16); heist 740 passed / 0 failed (749 - 20 + 11). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+Studio restarted itself for an update at 19:52:50 (installer log); the place file was written at 19:52:49, partway through this task (after the gamepass scripts, `HeistClient`, `WordScrambleClient`, `UiButtonEffects` and `NotificationController`; before `NotificationClient`, the quarantine move, `LevelingHud`, `WantedHud` and the keypad focus line). Not saved by Claude.
+
+NOT saved / NOT published

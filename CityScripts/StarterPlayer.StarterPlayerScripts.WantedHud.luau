@@ -5,8 +5,9 @@
 -- go blinks. Hidden at 0 and while a full-screen panel is open (UI.Panels, like the rest of the HUD).
 -- Reads only the server's player attributes WantedHeat, WantedSeen, WantedDraining.
 -- Placed top centre beside the heist column (timer, duffel, getaway, toast: within 150 px of centre): to its
--- right, clear of the chat bar (top left); on a small screen (the Blaster HUD's own rule) to its left, because
--- there a second stacked heist notification card (bottom right, growing upward) already reaches the top.
+-- right, clear of the chat bar (top left); on a small screen (the Blaster HUD's own rule) to its left. (That
+-- side was chosen when the heist cards stacked up the right edge; since 2026-11-18 they are the city's
+-- bottom-right pile of at most 3, and the left spot still overlaps nothing.)
 -- Overlaps no city or heist HUD at 1080 x 659 or 844 x 390 (measured; see the Task 4 report).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

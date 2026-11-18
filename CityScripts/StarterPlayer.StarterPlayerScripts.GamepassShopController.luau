@@ -44,6 +44,9 @@ end
 
 local function buildTiles()
 	for order, pass in Constants.Gamepasses do
+		if pass.shop == false then
+			continue -- sold elsewhere (the heist duffel passes: the duffel upgrade dialog)
+		end
 		local tile = passTemplate:Clone()
 		tile.Name = pass.key
 		tile.LayoutOrder = order

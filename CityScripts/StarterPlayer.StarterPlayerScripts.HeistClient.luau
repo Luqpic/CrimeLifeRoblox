@@ -1,5 +1,4 @@
 --!strict
-local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -18,14 +17,14 @@ local CashClaimVFX = require(ReplicatedStorage:WaitForChild("SharedSystems"):Wai
 -- Roblox's font catalogue and Font.fromName falls back SILENTLY. Only the
 -- dynamic values below are still drawn natively.
 local UITheme = require(ReplicatedStorage:WaitForChild("SharedSystems"):WaitForChild("UITheme"))
--- Required here purely to read the static GamepassConfig Ids for the purchase
--- prompt below. This is the intended client-side use, NOT a violation of the
--- module header's restriction: that rule scopes to server-side robbery logic
--- (e.g. BankInstance), which must only ever see injected multiplier RESULTS so
--- it stays unit-testable without a real MarketplaceService round-trip. Purchase
--- UI has no other way to learn a real Gamepass Id. No ownership state is read
--- client-side -- only the static config table.
-local GamepassManager = require(ReplicatedStorage:WaitForChild("SharedSystems"):WaitForChild("GamepassManager"))
+-- The duffel passes are entries in the city's gamepass config (2026-11-18): the upgrade dialog asks the
+-- server to prompt by pass KEY, exactly as the city's shops do, and the server prompts only a
+-- configured id. No id and no ownership state is read client-side.
+local promptGamepassRemote = ReplicatedStorage:WaitForChild("Monetization"):WaitForChild("Remotes"):WaitForChild("PromptGamepassPurchase")
+-- Heist modals register with the city's panel shell (2026-11-18): one panel at a time (a city panel
+-- opened over a puzzle closes it through the puzzle's own close path), the HUD and the star meter out
+-- of the way, toasts held until it closes.
+local Panels = require(ReplicatedStorage:WaitForChild("UI"):WaitForChild("Panels"))
 -- Heavy carries get the getaway widget (developer decision 2026-11-18): CarryState names the carried
 -- object's location in this character attribute while it is carried.
 local CARRY_GETAWAY_ATTRIBUTE = require(shared:WaitForChild("Config")).CarryGetawayAttribute
@@ -347,12 +346,12 @@ end
 -- purchase prompt and close. The "+" handler and the dialog it drives are kept
 -- together here deliberately rather than split across two files.
 --
--- Nothing further is needed client-side once a purchase completes, confirmed by
--- reading rather than assumed: GamepassManager:Init() (called by HeistServer)
--- connects PromptGamePassPurchaseFinished -> _setCached(userId, id, true), and
--- BankInstance:GetDuffelCap is `config.DuffelCap * self.duffelCapMultiplier(player)`
--- -- recomputed on EVERY call, never cached per session. So a purchase that
--- completes mid-robbery is reflected on the very next accrual tick.
+-- Nothing further is needed client-side once a purchase completes:
+-- PassOwnership (MonetizationService) confirms it and publishes GamepassOwned_<key>,
+-- GamepassManager reads that attribute, and BankInstance:GetDuffelCap is
+-- `config.DuffelCap * self.duffelCapMultiplier(player)` -- recomputed on EVERY
+-- call, never cached per session. So a purchase that completes mid-robbery is
+-- reflected on the very next accrual tick.
 local upgradeGui = player:WaitForChild("PlayerGui"):WaitForChild("DuffelUpgradeGui", 10)
 local upgradeFrame = upgradeGui and upgradeGui:WaitForChild("DialogFrame", 10)
 -- Must match DialogFrame's authored Position: UITransitions derives both the
@@ -365,29 +364,14 @@ local function closeUpgradeDialog()
 		-- notification stack, so this must not read as the same kind of element.
 		UITransitions.SlideOut(upgradeFrame, UPGRADE_POSITION, "Right")
 	end
+	Panels.closed("DuffelUpgrade")
 end
 
-local function promptCapacityPurchase(tierName: string)
-	local config = GamepassManager.GamepassConfig[tierName]
-	local id = config and config.Id
-	if not id or id == 0 then
-		-- TODO(project owner): every Id in GamepassManager.GamepassConfig is still
-		-- the placeholder 0. Real Gamepasses must be created in the Creator
-		-- Dashboard and their Ids filled in before a purchase can complete -- a
-		-- monetization decision, not a technical one. Fails soft until then.
-		warn(string.format(
-			"[HeistClient] %s still has placeholder Id 0 -- create the real Gamepass before it can be purchased",
-			tierName))
-		return
-	end
-	-- pcall'd regardless: PromptGamePassPurchase can throw on a bad/unpublished Id
-	-- and must never take the rest of the HUD down with it.
-	local ok, err = pcall(function()
-		MarketplaceService:PromptGamePassPurchase(player, id)
-	end)
-	if not ok then
-		warn("[HeistClient] PromptGamePassPurchase failed: " .. tostring(err))
-	end
+-- TODO(project owner): the duffel pass ids in Monetization.Constants.Gamepasses are
+-- still the placeholder 0; until a real id is pasted there the server prints that
+-- the pass is not configured and prompts nothing.
+local function promptCapacityPurchase(passKey: string)
+	promptGamepassRemote:FireServer(passKey)
 end
 
 if upgradeFrame then
@@ -417,6 +401,7 @@ for _, location in ipairs(LOCATIONS) do
 	duffelWidgets[location].plus.Activated:Connect(function()
 		if upgradeFrame then
 			UITransitions.SlideIn(upgradeFrame, UPGRADE_POSITION, "Right")
+			Panels.opened("DuffelUpgrade", closeUpgradeDialog)
 		end
 	end)
 end
@@ -694,8 +679,12 @@ local function closeSafeGui()
 	safeFrame.Visible = false
 	for _, box in ipairs(digitBoxes) do
 		box.Text = ""
+		-- A hidden box kept the keyboard focus after a seal / death / panel close (measured
+		-- 2026-11-18: GetFocusedTextBox() was still Digit1 after the keypad closed).
+		box:ReleaseFocus()
 	end
 	currentSafeId = nil
+	Panels.closed("SafeCode")
 end
 
 -- Fires immediately on submit rather than waiting for a server response
@@ -742,6 +731,7 @@ remotes:WaitForChild("OpenSafeGui").OnClientEvent:Connect(function(safeId)
 		box.Text = ""
 	end
 	safeFrame.Visible = true
+	Panels.opened("SafeCode", closeSafeGui)
 	digitBoxes[1]:CaptureFocus()
 end)
 
@@ -994,11 +984,20 @@ local lockpickState = nil
 local function closeLockpickGui()
 	lockpickGui.Enabled = false
 	lockpickState = nil
+	Panels.closed("Lockpick")
+end
+
+-- Exit ("X") path: a clean, no-penalty bail-out (see the ExitButton below). Also
+-- the close UI.Panels calls when a city panel opens over the puzzle.
+local function exitLockpick()
+	closeLockpickGui()
+	remotes:WaitForChild("LockpickExitRequested"):FireServer()
 end
 
 remotes:WaitForChild("OpenLockpickGui").OnClientEvent:Connect(function(payload)
 	lockpickState = payload
 	lockpickGui.Enabled = true
+	Panels.opened("Lockpick", exitLockpick)
 	lockpickRingTrack.ImageColor3 = RING_IDLE_COLOR
 	lockpickZone.ImageColor3 = ZONE_IDLE_COLOR
 	applyProgress(payload.progress)
@@ -1051,10 +1050,7 @@ end)
 -- state too -- the door stays closed, the physical prompt is untouched
 -- (never disabled by opening a puzzle in the first place), and the player
 -- can re-trigger it fresh later.
-lockpickExitButton.Activated:Connect(function()
-	closeLockpickGui()
-	remotes:WaitForChild("LockpickExitRequested"):FireServer()
-end)
+lockpickExitButton.Activated:Connect(exitLockpick)
 
 -- The render loop: the needle animates locally every frame using the
 -- identical deterministic formula the server itself validates stops

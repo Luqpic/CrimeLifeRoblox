@@ -6,8 +6,8 @@ local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Config = require(ReplicatedStorage.HeistShared.Config)
+-- Reads the city's published pass ownership (2026-11-18); nothing to initialise.
 local GamepassManager = require(ReplicatedStorage.SharedSystems.GamepassManager)
-GamepassManager:Init()
 local Heist = ServerScriptService.Heist
 local BankInstance = require(Heist.BankInstance)
 local ComponentRegistry = require(Heist.ComponentRegistry)
