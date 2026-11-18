@@ -1,7 +1,8 @@
 -- Tests for Blaster.validateFireInterval, the server's rate-of-fire rule. rateOfFire is rounds per minute
 -- (BlasterController waits 60 / rateOfFire between Shoot events in every fire mode). A shot is refused when
 -- its CLAIMED timestamp comes less than 0.9 of an interval after the last accepted one, or when it REACHES
--- the server more than the arrival slack (0.1 s) ahead of the pace the accepted shots set on the server clock.
+-- the server more than the arrival slack (0.25 s, Blaster.Constants) ahead of the pace the accepted shots set
+-- on the server clock.
 return function(t)
 	local validateFireInterval = require(game:GetService("ServerScriptService").Blaster.Scripts.Blaster.validateFireInterval)
 	local expect = t.expect
@@ -46,6 +47,25 @@ return function(t)
 		end
 		return refused
 	end
+	-- The same honest client through a stall (a phone hitch or a connection pause) of `stall` seconds that
+	-- starts 0.01 s before shot 20: every Shoot sent during it reaches the server together when it ends, 50 ms
+	-- later. Returns how many of 100 shots were refused.
+	local function stallRefusals(rate, stall)
+		local stallFrom = 100 + 20 * 60 / rate - 0.01
+		local record, refused, arrivedAt = nil, 0, 0
+		for i = 0, 99 do
+			local claimed = 100 + i * 60 / rate
+			local sent = if claimed >= stallFrom and claimed < stallFrom + stall then stallFrom + stall else claimed
+			arrivedAt = math.max(arrivedAt, sent + 0.05)
+			local result = validateFireInterval(record, claimed, rate, arrivedAt)
+			if result then
+				record = result
+			else
+				refused += 1
+			end
+		end
+		return refused
+	end
 
 	t.test("the first shot passes", function()
 		expect.truthy(first())
@@ -70,18 +90,25 @@ return function(t)
 		local record = validateFireInterval(nil, 100, nil, 100)
 		expect.truthy(validateFireInterval(record, 100, nil, 100))
 	end)
-	t.test("after 2 s idle, 12 shots claiming the last second: 2 pass at 600 rpm, and again after the next idle second", function()
+	t.test("after 2 s idle, 12 shots claiming the last second: 3 pass at 600 rpm, and again after the next idle second", function()
+		-- 1 + floor(0.25 / 0.09). Without the arrival clock all 12 would pass.
 		local accepted, record = burst(first(), 102, 12, RATE)
-		expect.equal(accepted, 2)
-		expect.equal((burst(record, 103, 12, RATE)), 2)
+		expect.equal(accepted, 3)
+		expect.equal((burst(record, 103, 12, RATE)), 3)
 	end)
-	t.test("after 2 s idle, the fastest gun (MP9, 1200 rpm) gets 3 of 12 through", function()
-		expect.equal((burst(validateFireInterval(nil, 100, 1200, 100), 102, 12, 1200)), 3)
+	t.test("after 2 s idle, the fastest gun (MP9, 1200 rpm) gets 6 of 12 through", function()
+		expect.equal((burst(validateFireInterval(nil, 100, 1200, 100), 102, 12, 1200)), 6)
 	end)
 	t.test("an honest client at full rate with +-30 ms of jitter is never refused", function()
 		expect.equal(honestRefusals(RATE, 0.03), 0)
 		expect.equal(honestRefusals(1200, 0.03), 0)
 		expect.equal(honestRefusals(90, 0.03), 0)
+	end)
+	t.test("an honest 600 rpm stream through a 250 ms stall and its bunched arrival loses no shot", function()
+		expect.equal(stallRefusals(RATE, 0.25), 0)
+	end)
+	t.test("a 600 ms stall at 600 rpm costs 4 shots (the accepted loss)", function()
+		expect.equal(stallRefusals(RATE, 0.6), 4)
 	end)
 	t.test("a melee swing stamped at the press survives a 100 ms hitch on the swing before", function()
 		-- Knife: 90 rpm, swingDelay 0.2. The first swing's hit resolves 0.1 s late; the next press comes one

@@ -6,11 +6,8 @@
 --     still judged by when they were fired;
 --   * its server RECEIVE time keeps the same pace, give or take ARRIVAL_SLACK. Without this a client that
 --     idled could back-date a whole second of shots and send them at once (12 AK47 rounds passed).
-local INTERVAL_TOLERANCE = 0.9
--- Seconds a shot may reach the server ahead of its due time: covers network jitter (+-30 ms needs 0.06).
--- Idle time banks no more than this, so after idling at most 1 + floor(ARRIVAL_SLACK / (0.9 x interval))
--- shots arrive at once: 1 at 90 rpm, 2 at 600 rpm, 3 at 1200 rpm (MP9).
-local ARRIVAL_SLACK = 0.1
+-- Both numbers live in Blaster.Constants (INTERVAL_TOLERANCE 0.9, ARRIVAL_SLACK 0.25 s).
+local Constants = require(game:GetService("ReplicatedStorage").Blaster.Constants)
 
 -- The last accepted shot of one weapon: its claimed timestamp, and the server time the next one is due.
 export type Record = { claimed: number, due: number }
@@ -25,9 +22,9 @@ local function validateFireInterval(last: Record?, timestamp: number, rateOfFire
 		-- client cannot fire a weapon without it (BlasterController divides by it).
 		return { claimed = timestamp, due = receivedAt }
 	end
-	local spacing = INTERVAL_TOLERANCE * 60 / rateOfFire
+	local spacing = Constants.INTERVAL_TOLERANCE * 60 / rateOfFire
 	if last then
-		if timestamp - last.claimed < spacing or receivedAt < last.due - ARRIVAL_SLACK then
+		if timestamp - last.claimed < spacing or receivedAt < last.due - Constants.ARRIVAL_SLACK then
 			return nil
 		end
 		return { claimed = timestamp, due = math.max(last.due, receivedAt) + spacing }

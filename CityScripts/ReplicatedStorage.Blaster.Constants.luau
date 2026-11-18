@@ -92,6 +92,17 @@ local Constants = {
 	-- Radius of the third-person crosshair ray (BlasterController, thirdPersonAim): thin enough to land on what
 	-- the crosshair covers, through the same filters as a shot (castRays).
 	CROSSHAIR_RAY_RADIUS = 0.05,
+	-- With nothing under the crosshair within range, thirdPersonAim aims at a point this far along the camera's
+	-- look: only the direction counts.
+	CROSSHAIR_FAR_DISTANCE = 1000,
+
+	-- Server rate of fire (Blaster.validateFireInterval). A shot is refused when its claimed timestamp comes less
+	-- than INTERVAL_TOLERANCE x 60 / rateOfFire after the last accepted one, or when it reaches the server more
+	-- than ARRIVAL_SLACK seconds ahead of the pace accepted shots set on the server clock. The slack is sized for
+	-- phones: a stall of about 0.25 s costs no honest shot. Idle banks no more than it, so after idling at most
+	-- 1 + floor(ARRIVAL_SLACK / (INTERVAL_TOLERANCE x interval)) shots arrive at once (3 at 600 rpm, 6 at 1200).
+	INTERVAL_TOLERANCE = 0.9,
+	ARRIVAL_SLACK = 0.25,
 
 	-- View model
 	VIEW_MODEL_BIND_NAME = "BlasterViewModel",

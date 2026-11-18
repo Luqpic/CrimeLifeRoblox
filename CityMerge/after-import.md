@@ -760,3 +760,17 @@ Studio objects (not scripts): `ReplicatedStorage.GuiTemplates.DeathScreen.TextCo
 The 11 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (11 / 11). City suites 282 / 282 / 0 (277 + 5); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 3.39 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 3 fix round 2 (rate slack and third-person aim, controller ruling, `Batch: open items rate slack and aim`). Same columns; old = the place after Task 3 fix round 1 (eab14de).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ReplicatedStorage.Blaster.Constants` (ModuleScript) | 5,533 / 2818109534 | 6,318 / 3954372288 | `INTERVAL_TOLERANCE = 0.9` and `ARRIVAL_SLACK = 0.25` (moved from `validateFireInterval`; slack 0.1 -> 0.25, ruling: phones first, a ~250 ms stall costs no honest shot), `CROSSHAIR_FAR_DISTANCE = 1000`. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Blaster.Scripts.Blaster.validateFireInterval` (ModuleScript) | 2,227 / 605611656 | 2,077 / 2923609653 | Reads both numbers from `Blaster.Constants`; the rule is unchanged. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.ShotRate_Test` (ModuleScript) | 4,316 / 3822350991 | 5,496 / 1038411814 | Idle burst re-pinned (3 of 12 at 600 rpm, 6 at the MP9; 12 without the arrival clock); a 250 ms stall loses 0 shots; a 600 ms stall costs 4. 11 -> 13 cases. Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.Blaster.Utility.thirdPersonAim` (ModuleScript) | 1,194 / 1089443442 | 1,703 / 2954774249 | No hit within range (or no range): aim at `CROSSHAIR_FAR_DISTANCE` along the camera look (a melee miss was 25.9 degrees off); no range casts nothing; the camera's up is the roll hint. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.ThirdPersonAim_Test` (ModuleScript) | 1,928 / 4149179032 | 3,577 / 1137805472 | 4 cases: camera ahead of the head, range 0 / nil, straight-up look, melee miss within 1 degree of the camera look. 4 -> 8 cases. Attribute appended. |
+
+The 5 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (5 / 5). City suites 288 / 288 / 0 (282 + 6); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 3.45 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published
