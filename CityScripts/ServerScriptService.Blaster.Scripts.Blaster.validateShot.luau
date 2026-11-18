@@ -4,9 +4,10 @@ local Workspace = game:GetService("Workspace")
 local Constants = require(ReplicatedStorage.Blaster.Constants)
 local validateFireInterval = require(script.Parent.validateFireInterval)
 
--- player -> weapon NAME -> claimed timestamp of the last accepted shot. Keyed by name, not by Tool
--- instance: SetLoadoutSlotRequest hands out a fresh Tool on every call, which would start a fresh clock.
-local lastShotAt: { [Player]: { [string]: number } } = {}
+-- player -> weapon NAME -> the last accepted shot's record (claimed timestamp, server time the next is due).
+-- Keyed by name, not by Tool instance: SetLoadoutSlotRequest hands out a fresh Tool on every call, which
+-- would start a fresh clock.
+local lastShotAt: { [Player]: { [string]: validateFireInterval.Record } } = {}
 game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
 	lastShotAt[player] = nil
 end)
@@ -73,14 +74,15 @@ local function validateShot(player: Player, timestamp: number, blaster: Tool, or
 	-- Rate of fire, checked last so only a shot that passed everything else is recorded.
 	local shotsByTool = lastShotAt[player]
 	local rateOfFire = blaster:GetAttribute(Constants.RATE_OF_FIRE_ATTRIBUTE)
-	if not validateFireInterval(shotsByTool and shotsByTool[blaster.Name], timestamp, rateOfFire) then
+	local record = validateFireInterval(shotsByTool and shotsByTool[blaster.Name], timestamp, rateOfFire, now)
+	if not record then
 		return false
 	end
 	if not shotsByTool then
 		shotsByTool = {}
 		lastShotAt[player] = shotsByTool
 	end
-	shotsByTool[blaster.Name] = timestamp
+	shotsByTool[blaster.Name] = record
 
 	return true
 end

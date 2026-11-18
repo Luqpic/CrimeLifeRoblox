@@ -428,13 +428,13 @@ local function explode(shooter: Player | Model, weapon: Tool, position: Vector3,
 		blast.Parent = Workspace
 		local flash = blast:FindFirstChildOfClass("ParticleEmitter")
 		if flash then
-			flash.Rate = 60
+			flash.Rate = Constants.RPG_BLAST_RATE
 			flash.Enabled = true
-			task.delay(0.25, function()
+			task.delay(Constants.RPG_BLAST_EMIT_SECONDS, function()
 				flash.Enabled = false
 			end)
 		end
-		Debris:AddItem(blast, 2)
+		Debris:AddItem(blast, Constants.RPG_BLAST_LIFETIME)
 	end
 
 	-- The weapon's own impact sound (Sounds.Impact), played where the round landed. Hosted on an

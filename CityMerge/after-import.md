@@ -701,3 +701,25 @@ Studio objects (not scripts): `Workspace.BankVault.CarrierLedge` and `CarrierLed
 The 32 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (32 / 32). City suites 267 / 267 / 0 (265 + 2); heist 733 passed / 0 failed (707 + 26). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 3 (weapons, blaster and combat, `Batch: open items weapons and combat`). Same columns; old = the place before this task (each equal to its `CityScripts/` copy at 7c0309c).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ServerScriptService.Blaster.Scripts.Blaster.validateFireInterval` (ModuleScript) | 1,147 / 2461960568 | 2,227 / 605611656 | Item 1: a shot must also keep pace on the server receive clock (`ARRIVAL_SLACK = 0.1` s ahead of its due time); takes and returns the weapon's record `{ claimed, due }` (nil = refused). The 0.9 margin is kept on both clocks. Attribute appended. |
+| 2026-11-18 | `ServerScriptService.Blaster.Scripts.Blaster.validateShot` (ModuleScript) | 2,902 / 3565084835 | 2,988 / 456326661 | Passes its own `GetServerTimeNow()` as the receive time and stores the returned record per player and weapon name. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.ShotRate_Test` (ModuleScript) | 1,272 / 1910810662 | 4,316 / 3822350991 | Item 2: 0.85-of-an-interval case (fails if the factor becomes 0.5). Item 1: idle burst at 600 and 1200 rpm, honest stream at 600 / 1200 / 90 rpm with +-30 ms, melee press-stamp case; the five old cases on the new signature. 5 -> 11 cases. Attribute set. |
+| 2026-11-18 | `ReplicatedStorage.Blaster.Scripts.BlasterController` (ModuleScript) | 18,826 / 1436954061 | 19,146 / 3049823395 | Item 3: the shot timestamp (and spread seed) is taken at the press, before a melee `swingDelay`. Item 8: the dry-fire cue plays for Semi only (no cue on a Burst re-press). Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.Blaster.Constants` (ModuleScript) | 5,020 / 3796454014 | 5,320 / 2026350663 | Item 6: `RPG_BLAST_RATE = 60`, `RPG_BLAST_EMIT_SECONDS = 0.25`, `RPG_BLAST_LIFETIME = 2` (same values). Attribute set. First export. |
+| 2026-11-18 | `ServerScriptService.Blaster.Scripts.ShotResolver` (ModuleScript) | 37,622 / 1129572665 | 37,699 / 3051881499 | Item 6: `explode` reads the three blast numbers from `Blaster.Constants`. Attribute appended. |
+
+Exported unchanged (item 9, first export): `ReplicatedStorage.Blaster.Scripts.WeaponViewmodelMotion` 22,998 / 3125689737. The `FPSSystem/` mirrors stay the frozen snapshot.
+
+Studio objects (not scripts):
+- `ServerStorage.Weapons.APS` (developer decision 9, Stechkin machine pistol): `Category` AutoRifle -> Pistol, `magazineSize` and `_ammo` 26 -> 20, `damage` 14 -> 18, `range` 750 -> 700, `spread` 3.5 -> 2.2, `recoilMin` (1, 10) -> (-1, 6), `recoilMax` (4, 18) -> (3, 11), `unanchoredImpulseForce` 3 -> 4, `Price` 600 -> 650, `Description` "Full-auto machine pistol, 20 rounds, steadier fire". Kept: `fireMode` Auto, `rateOfFire` 750, `reloadTime` 1.8, the rifle-sized mesh and its rifle hold clips.
+- `MuzzleAttachment` (Body-local, Orientation (0, 0, 0) -> (0, -90, 0)) and a `FlashEmitter` cloned from a same-class Tool, on 7 guns: Glock 18 (-1.210, 0.40, 0) -> (-0.90, 0.45, 0); M45A1 (-1.560, 0.40, 0) -> (-1.25, 0.41, 0); SIG M17 (-1.380, 0.40, 0) -> (-1.07, 0.44, 0); USP Compact (-1.080, 0.40, 0) -> (-0.77, 0.48, 0); MP443 (0.726, 0, 0) -> (-0.73, 0.45, 0); PB (1.297, 0, 0) -> (-1.30, 0.41, 0); S&W 29 (1.148, 0, 0) -> (-1.15, 0.25, 0) (donor Mateba 2006M; the six pistols from the Glock 17).
+- Not changed (held for a decision, see the Task 3 report): APS, AR-18, HK G3, M14 EBR, Itacha Mag-10 muzzles stay at the stock end with no `FlashEmitter`: at the barrel end their third-person shot origin would sit 5.4 to 7.2 studs from the root part, past `validateShot`'s 5-stud standing limit.
+
+The 7 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (7 / 7). City suites 273 / 273 / 0 (267 + 6); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 5.48 ms and 4.64 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

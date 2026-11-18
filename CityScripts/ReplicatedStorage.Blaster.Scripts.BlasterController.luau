@@ -133,9 +133,11 @@ function BlasterController:shoot()
 	-- The aim is read live inside here rather than captured before the delay, so a swing connects
 	-- wherever the camera is actually pointing at the moment of impact rather than being frozen to
 	-- where it pointed when the button was pressed.
+	--
+	-- The timestamp (also the spread seed) is taken at the press, not at contact: the server paces shots
+	-- by it, and a frame hitch during a melee swingDelay would otherwise shorten the gap to the next swing.
+	local now = Workspace:GetServerTimeNow()
 	local function resolveHit()
-		local now = Workspace:GetServerTimeNow()
-
 		-- In first person the camera sits essentially at the character's head, so it's a valid shot origin.
 		-- In third person the camera is shifted off to the shoulder, which the server's validateShot
 		-- proximity check would always reject -- so the origin is the gun's actual muzzle position instead,
@@ -210,10 +212,11 @@ function BlasterController:startShooting()
 
 	if self.shooting then
 		-- This press was held back by the client's own fire-rate cooldown: a dry-fire click. activate()
-		-- reaches here once per press, so it plays at most once per held press. Not for auto fire (a
-		-- re-press mid-loop keeps the loop firing, nothing is held back) and not for melee. A shot the
-		-- server refuses never comes back to the client, so it cannot play this.
-		if fireMode ~= Constants.FIRE_MODE.AUTO and not self.infiniteAmmo then
+		-- reaches here once per press, so it plays at most once per held press. Semi only: not for auto
+		-- fire (a re-press mid-loop keeps the loop firing, nothing is held back), not for a burst still
+		-- firing rounds from its magazine (an empty one reloads above instead), and not for melee. A shot
+		-- the server refuses never comes back to the client, so it cannot play this.
+		if fireMode == Constants.FIRE_MODE.SEMI and not self.infiniteAmmo then
 			self.guiController:playDryFire()
 		end
 		return
