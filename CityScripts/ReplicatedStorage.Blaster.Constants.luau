@@ -89,6 +89,9 @@ local Constants = {
 	UI_SMALL_SCREEN_SCALE = 0.6,
 
 	HITMARKER_SOUND_DELAY = 0.1,
+	-- Radius of the third-person crosshair ray (BlasterController, thirdPersonAim): thin enough to land on what
+	-- the crosshair covers, through the same filters as a shot (castRays).
+	CROSSHAIR_RAY_RADIUS = 0.05,
 
 	-- View model
 	VIEW_MODEL_BIND_NAME = "BlasterViewModel",

@@ -17,6 +17,7 @@ local disconnectAndClear = require(ReplicatedStorage.Utility.disconnectAndClear)
 local getRayDirections = require(script.Parent.Parent.Utility.getRayDirections)
 local drawRayResults = require(script.Parent.Parent.Utility.drawRayResults)
 local castRays = require(script.Parent.Parent.Utility.castRays)
+local thirdPersonAim = require(script.Parent.Parent.Utility.thirdPersonAim)
 local canDamageHumanoid = require(script.Parent.Parent.Utility.canDamageHumanoid)
 
 local player = Players.LocalPlayer
@@ -139,17 +140,24 @@ function BlasterController:shoot()
 	local now = Workspace:GetServerTimeNow()
 	local function resolveHit()
 		-- In first person the camera sits essentially at the character's head, so it's a valid shot origin.
-		-- In third person the camera is shifted off to the shoulder, which the server's validateShot
-		-- proximity check would always reject -- so the origin is the gun's actual muzzle position instead,
-		-- while still aiming along the camera's look direction (crosshair-based aiming).
+		-- In third person the camera is off the shoulder and a long gun's muzzle is past the 5 studs the
+		-- server's validateShot allows from the root part, so the shot leaves the head toward the point
+		-- under the crosshair (thirdPersonAim). The tracer and flash still start at the muzzle.
 		local isFirstPerson = player.CameraMode == Enum.CameraMode.LockFirstPerson or not self.viewModelController.thirdPerson
 
 		local origin
 		if isFirstPerson then
 			origin = camera.CFrame
 		else
-			local muzzlePosition = self.viewModelController:getMuzzlePosition()
-			origin = CFrame.new(muzzlePosition, muzzlePosition + camera.CFrame.LookVector)
+			local character = player.Character
+			local head = character and (character:FindFirstChild("Head") or character.PrimaryPart)
+			if not head then
+				return -- the character went during a melee swingDelay: nothing to shoot from
+			end
+			origin = thirdPersonAim(camera.CFrame, head.Position, range, function(from, direction)
+				local result = castRays(player, from, { direction }, Constants.CROSSHAIR_RAY_RADIUS)[1]
+				return if result.instance then result.position else nil
+			end)
 		end
 
 		local rayDirections = getRayDirections(origin, raysPerShot, math.rad(spread), now)

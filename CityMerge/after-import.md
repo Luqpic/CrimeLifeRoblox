@@ -723,3 +723,18 @@ Studio objects (not scripts):
 The 7 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (7 / 7). City suites 273 / 273 / 0 (267 + 6); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 5.48 ms and 4.64 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 3 fix round 1 (third-person shot origin, controller ruling option (a), `Batch: open items third-person shot origin`). Same columns; old = the place after Task 3 (851c388).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-18 | `ReplicatedStorage.Blaster.Utility.thirdPersonAim` (ModuleScript) | new | 1,194 / 1089443442 | Pure: the third-person shot leaves the head toward the point the crosshair ray hits (the ray starts level with the head; the cast is injected). A hit level with the head keeps the camera's direction. Attribute set. |
+| 2026-11-18 | `ReplicatedStorage.Blaster.Scripts.BlasterController` (ModuleScript) | 19,146 / 3049823395 | 19,563 / 1338451710 | Third person: origin = `thirdPersonAim(camera, head, range, castRays at CROSSHAIR_RAY_RADIUS)` instead of the muzzle; the tracer and flash still start at the muzzle; no head (character gone during a melee delay) sends nothing. First person unchanged. Attribute appended. |
+| 2026-11-18 | `ReplicatedStorage.Blaster.Constants` (ModuleScript) | 5,320 / 2026350663 | 5,533 / 2818109534 | `CROSSHAIR_RAY_RADIUS = 0.05`. Attribute appended. |
+| 2026-11-18 | `ServerStorage.UnitTest.Cases.ThirdPersonAim_Test` (ModuleScript) | new | 1,928 / 4149179032 | 4 cases (origin at the head aimed at the hit; the crosshair ray starts level with the head; no hit aims at full range; a hit level with the head keeps the camera's direction). Attribute set. |
+
+Studio objects: the five held muzzles applied from the Task 3 table (Orientation (0, -90, 0), `FlashEmitter` from a same-class Tool): APS (3.512, 0, 0) -> (-3.51, 0.27, 0) (Glock 17); AR-18 (3.197, 0, 0) -> (-3.43, 0.23, 0) (AK47); HK G3 (3.519, 0, 0) -> (-3.52, 0.13, 0) (AK47); M14 EBR (3.554, 0, 0) -> (-3.55, 0.20, 0.08) (AK47); Itacha Mag-10 (4.389, 0, 0) -> (-4.42, 0.58, 0.08) (Mossberg 590). `validateShot` unchanged (`POSITION_BUFFER_CONSTANT` 5).
+
+The 4 sources exported to `CityScripts/`; on-disk Adler-32 equals the place (4 / 4). City suites 277 / 277 / 0 (273 + 4); heist 732 passed / 1 failed (only `Zone` "the real occupancy sweep", 4.06 ms, the known flake). After: 1 enabled SpawnLocation in Workspace, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published
