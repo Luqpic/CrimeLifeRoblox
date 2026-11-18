@@ -21,3 +21,5 @@ Follow-up (2026-11-18): "The builder wants a pdf file. Also a visualisaton, give
 Follow-up (2026-11-18): "I want a prompt of images, for better reference in google flow, take a snap show from top , side and isometric view of the building and google flow will design the looks in top of it"
 
 Follow-up (2026-11-18): "I just want the top view now, also I want the building to look more "Modern" and industrial, not scrappy. Update the PDF and the prompt"
+
+Follow-up (2026-11-18), with a Flow top-view render attached: "Okay I want to follow this, get me the south view following from this screenshot"

@@ -94,6 +94,7 @@ All from [[2026-11-18 Open Items Pass]].
 - **Hygiene:** 26 untracked space-named copies in `CityScripts/` (" <name> .luau"), not from this batch; the developer may delete them.
 
 ### Product calls waiting
+- **Tycoon compound look (2026-11-18):** the approved Flow top view (`docs/compound-views/flow-top-result.jpg`) has a fourth guard tower at the SE corner and pyramid tower roofs; the plan has three corner towers. Confirm whether the plan should add the SE tower. [[2026-11-17 Compound Floor Plan]]
 - **Tycoon compound plan (2026-11-17):** share the artifact with the builder (Share menu), pick a room for the F2 spare slot, confirm Claude's layout rulings and price stages 0 to 8. [[2026-11-17 Compound Floor Plan]] -> [[Compound Floor Plan]]
 - **Price curve (keep until a playtest, developer 2026-11-18).** Nebula at 8200 Spraypaint is about 4,100 Criminal kills; re-size it after the playtest (2026-09-24). Upgrade, cash-drop and Spraypaint rates are all placeholders (2026-09-16, 2026-09-23). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]] [[FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix]] -> [[Spraypaint]] [[2026-11-18 Open Items Pass]]
 - **APS mesh (developer, 2026-11-18):** the APS is now a machine pistol (pistol slot, mag 20, Price 650), but its mesh is a 7.02-stud rifle with rifle hold clips: pick a pistol mesh. [[FPS-AK47-Display-Fix-11-New-Guns-Integration]] -> [[Weapons and Blaster]] [[2026-11-18 Open Items Pass]]
