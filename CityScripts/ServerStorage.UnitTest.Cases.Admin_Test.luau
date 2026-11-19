@@ -262,6 +262,20 @@ return function(t)
 		expect.equal(s.call(s.owner, "announce", { text = "still here" }).ok, true)
 	end)
 
+	t.test("text is bounded before the trim, announcements are spaced, a target still loading is refused", function()
+		local s = setup()
+		-- trimmed it would be "hi" (accepted); the byte bound refuses it before the pattern runs
+		refused(s.call(s.helper, "announce", { text = string.rep(" ", 4 * Config.ANNOUNCE_MAX) .. "hi" }))
+		expect.equal(s.calls.filter, nil)
+		expect.equal(s.call(s.helper, "announce", { text = "hello" }).ok, true)
+		refused(s.call(s.helper, "announce", { text = "again" }), R.announceGap)
+		s.clock += Config.ANNOUNCE_GAP
+		expect.equal(s.call(s.helper, "announce", { text = "again" }).ok, true)
+		s.ctx.roleLoaded = function(p) return p ~= s.player end
+		refused(s.call(s.helper, "freeze", { target = PLAYER }), R.loading)
+		expect.equal(s.call(s.owner, "freeze", { target = PLAYER }).message == R.loading, false) -- owners are not held
+	end)
+
 	t.test("a heist cooldown resets through the normal rearm; refused while robbing or open", function()
 		local clock = 1000
 		local bank = BankInstance.new({

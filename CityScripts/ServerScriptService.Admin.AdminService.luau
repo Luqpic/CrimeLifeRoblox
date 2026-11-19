@@ -41,29 +41,52 @@ local panelFolder = ServerStorage:WaitForChild("AdminPanel", 10)
 local HELPER_ACTIONS = Actions.helperActions()
 local ENEMY_TYPES = Actions.enemyTypes()
 
+-- The role rides on the delivered GUIs (attribute AdminRole), never on the Player. A role lost or lowered first ends
+-- the owner states it allowed (review I1); on loss the GUIs see AdminRole go (the panel closes, fly, noclip and
+-- spectate stop) and are removed a moment later.
 Roles.onChanged(function(player: Player, role: string?)
+	if role ~= "owner" and player.Character then
+		Actions.clearCharacter(player.Character)
+	end
+	if not role then
+		Actions.forgetPlayer(player)
+	end
 	local playerGui = player:WaitForChild("PlayerGui", 10)
 	if not (panelFolder and playerGui) then
 		return
 	end
 	for _, name in { "AdminHudGui", "AdminPanelGui" } do
 		local existing = playerGui:FindFirstChild(name)
-		if role and not existing then
+		if existing then
+			existing:SetAttribute("AdminRole", role)
+			if not role then
+				task.delay(1, function()
+					if not Roles.get(player) then
+						existing:Destroy()
+					end
+				end)
+			end
+		elseif role then
 			local gui = panelFolder:FindFirstChild(name)
 			if gui then
 				gui = gui:Clone()
+				gui:SetAttribute("AdminRole", role)
 				gui:SetAttribute("HelperActions", HELPER_ACTIONS)
 				gui:SetAttribute("EnemyTypes", ENEMY_TYPES)
 				gui.Parent = playerGui
 			end
-		elseif not role and existing then
-			existing:Destroy()
 		end
 	end
 end)
 
 safePlayerAdded(function(player: Player)
-	player.CharacterAdded:Connect(watchCharacter)
+	-- A new body ends the old one's spectate on the server too (review I2: the client stops on its own respawn).
+	player.CharacterAdded:Connect(function(character)
+		Actions.forgetPlayer(player)
+		watchCharacter(character)
+	end)
+	-- A body removed alive (respawn, leave) drops its states and their connections like a death does.
+	player.CharacterRemoving:Connect(Actions.clearCharacter)
 	if player.Character then
 		task.spawn(watchCharacter, player.Character)
 	end

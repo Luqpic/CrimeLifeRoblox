@@ -24,6 +24,7 @@ return table.freeze({
 	WALK_SPEED_MAX = 100,
 	KICK_REASON_MAX = 120,
 	ANNOUNCE_MAX = 140,
+	ANNOUNCE_GAP = 5, -- seconds between two announcements from one helper (owners are not held)
 
 	-- Ban lengths in seconds (-1 = forever); a helper may pick up to HELPER_BAN_MAX.
 	BAN_DURATIONS = table.freeze({ ["1h"] = 3600, ["1d"] = 86400, ["7d"] = 604800, forever = -1 }),

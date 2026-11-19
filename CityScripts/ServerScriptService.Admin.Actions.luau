@@ -34,6 +34,8 @@ Actions.REFUSE = table.freeze({
 	staff = "Helpers cannot act on staff.",
 	self = "Not on yourself.",
 	tooFast = "Too fast. Try again in a moment.",
+	loading = "That player's role is still loading. Try again in a moment.",
+	announceGap = "One announcement every few seconds.",
 	failed = "That failed. The server output has the error.",
 })
 local R = Actions.REFUSE
@@ -48,9 +50,10 @@ local function int(value, lo: number, hi: number): number?
 	return value
 end
 
--- Valid UTF-8, trimmed, 1..max characters, or nil.
+-- Valid UTF-8, trimmed, 1..max characters, or nil. The byte bound comes first: the trim pattern backtracks, so a long
+-- run of spaces would cost the server quadratic time (security review I1). 4 bytes = the widest UTF-8 character.
 local function text(value, max: number): string?
-	if type(value) ~= "string" or utf8.len(value) == nil then
+	if type(value) ~= "string" or #value > max * 4 or utf8.len(value) == nil then
 		return nil
 	end
 	local trimmed = string.match(value, "^%s*(.-)%s*$") :: string
@@ -59,6 +62,16 @@ local function text(value, max: number): string?
 		return nil
 	end
 	return trimmed
+end
+
+-- A kick or ban reason as shown to the player: the fixed text with no reason, or if the filter fails (security
+-- review M5: a filter outage must not stop a kick).
+local function shownReason(ctx, why: string, fallback: string, fromUserId: number): string
+	if why == "" then
+		return fallback
+	end
+	local ok, filtered = pcall(ctx.filterBroadcast, why, fromUserId)
+	return if ok then filtered else fallback
 end
 
 local function toggle(args)
@@ -499,7 +512,7 @@ Actions.list = {
 			if a.target == admin then
 				return false, R.self
 			end
-			local message = if a.reason == "" then "Removed by an admin." else ctx.filterBroadcast(a.reason, admin.UserId)
+			local message = shownReason(ctx, a.reason, "Removed by an admin.", admin.UserId)
 			a.target:Kick(message)
 			return true, `{targetName(a.target)} kicked: {message}`
 		end,
@@ -525,7 +538,7 @@ Actions.list = {
 			if a.target == admin then
 				return false, R.self
 			end
-			local message = if a.reason == "" then "Banned by an admin." else ctx.filterBroadcast(a.reason, admin.UserId)
+			local message = shownReason(ctx, a.reason, "Banned by an admin.", admin.UserId)
 			local ok, err = pcall(ctx.ban, {
 				UserIds = { a.target.UserId },
 				Duration = a.seconds,
@@ -820,7 +833,12 @@ Actions.list = {
 			end
 			return { text = message }
 		end,
-		run = function(ctx, admin, a)
+		run = function(ctx, admin, a, d)
+			local now = ctx.now()
+			if ctx.roleOf(admin) ~= "owner" and d.announcedAt[admin] and now - d.announcedAt[admin] < Config.ANNOUNCE_GAP then
+				return false, R.announceGap
+			end
+			d.announcedAt[admin] = now
 			local filtered = ctx.filterBroadcast(a.text, admin.UserId)
 			ctx.broadcast(filtered)
 			return true, filtered
@@ -854,7 +872,7 @@ end
 
 -- ctx needs at least now(), roleOf(player), playerByUserId(id); the runs use the rest.
 function Actions.newDispatcher(ctx)
-	local d = { log = {} }
+	local d = { log = {}, announcedAt = {} }
 	local lastCall = {}
 	local lastRefusal = {}
 
@@ -866,6 +884,7 @@ function Actions.newDispatcher(ctx)
 	function d.forget(player)
 		lastCall[player] = nil
 		lastRefusal[player] = nil
+		d.announcedAt[player] = nil
 	end
 
 	function d.call(player, actionName, args)
@@ -899,8 +918,12 @@ function Actions.newDispatcher(ctx)
 			if not target then
 				return reply(false, R.notFound)
 			end
-			if role == "helper" and not action.staffSafe and ctx.roleOf(target) ~= nil then
-				return reply(false, R.staff)
+			if role == "helper" and not action.staffSafe then
+				if ctx.roleOf(target) ~= nil then
+					return reply(false, R.staff)
+				elseif ctx.roleLoaded and not ctx.roleLoaded(target) then
+					return reply(false, R.loading) -- staff who just joined would count as no role (reviews M2 / M3)
+				end
 			end
 		end
 
@@ -945,6 +968,7 @@ function Actions.liveContext(announceRemote: RemoteEvent)
 	return {
 		now = os.clock,
 		roleOf = Roles.get,
+		roleLoaded = Roles.loaded,
 		playerByUserId = function(id)
 			return Players:GetPlayerByUserId(id)
 		end,

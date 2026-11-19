@@ -2,9 +2,9 @@
 -- place's creator or a group rank.
 --
 -- roleOf is pure (the environment is passed in; AdminRoles_Test drives it). The live part reads the rank once per
--- join (pcall; a failure leaves no role and retries a few times), caches it per player, publishes the player
--- attribute AdminRole ("owner" / "helper") for the HUD, tells onChanged listeners (AdminService delivers the
--- panel) and forgets the player on leave.
+-- join (pcall; a failure leaves no role and retries a few times), caches it per player, tells onChanged listeners
+-- (AdminService delivers the panel and puts the role on it) and forgets the player on leave. No attribute on the
+-- Player: it would replicate and name the staff to every client (security review I2).
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -57,11 +57,15 @@ function Roles.get(player): string?
 	return cache[player] or nil
 end
 
--- Sets the role (false = none), publishes AdminRole and tells the listeners. Also the test seam for a role-less
--- caller in Play: Roles.set(player, false), then Roles.set(player, "owner") to restore.
+-- True once the rank lookup answered (role or none); false while it is pending or failed.
+function Roles.loaded(player): boolean
+	return cache[player] ~= nil
+end
+
+-- Sets the role (false = none) and tells the listeners. Also the test seam for a role-less caller in Play:
+-- Roles.set(player, false), then Roles.set(player, "owner") to restore.
 function Roles.set(player: Player, role: string | false)
 	cache[player] = role
-	player:SetAttribute("AdminRole", role or nil)
 	for _, fn in listeners do
 		task.spawn(fn, player, role or nil)
 	end

@@ -38,8 +38,9 @@ for name in string.gmatch(gui:GetAttribute("HelperActions") or "", "[^,]+") do
 	helperActions[name] = true
 end
 
+-- Put on this GUI by AdminService (never on the Player, which every client could read).
 local function role(): string?
-	return player:GetAttribute("AdminRole")
+	return gui:GetAttribute("AdminRole")
 end
 
 local function applyRole()
@@ -127,13 +128,17 @@ end
 
 -- A kick or ban fires on the second click within CONFIRM_SECONDS.
 local armed: GuiButton? = nil
+local armedLabel = ""
 local function confirmed(button: GuiButton, label: string, what: string): boolean
 	if armed == button then
 		armed = nil
 		button.Text = label
 		return true
 	end
-	armed = button
+	if armed then
+		armed.Text = armedLabel -- another button was waiting: it gets its own label back
+	end
+	armed, armedLabel = button, label
 	button.Text = "CLICK AGAIN"
 	status.Text = `Click again to {what}.`
 	status.TextColor3 = C.muted
@@ -421,7 +426,7 @@ end
 local function startSpectating(targetPlayer: Player)
 	local humanoid = targetPlayer.Character and targetPlayer.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then
-		return
+		return false
 	end
 	stopSpectating()
 	local own = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
@@ -439,6 +444,7 @@ local function startSpectating(targetPlayer: Player)
 			end
 		end),
 	}
+	return true
 end
 
 refreshers.ME = function()
@@ -461,8 +467,8 @@ refreshers.ME = function()
 			wire(item, function()
 				local answer = act("spectate", { target = row.userId })
 				local targetPlayer = Players:GetPlayerByUserId(row.userId)
-				if answer.ok and targetPlayer then
-					startSpectating(targetPlayer)
+				if answer.ok and not (targetPlayer and startSpectating(targetPlayer)) then
+					act("stopSpectate") -- the body went between the server's yes and here: the server lets go too
 				end
 			end)
 			item.Parent = mePage.SpectateList
@@ -656,7 +662,7 @@ playerGui.ChildAdded:Connect(function(child)
 end)
 syncScale()
 
-player:GetAttributeChangedSignal("AdminRole"):Connect(function()
+gui:GetAttributeChangedSignal("AdminRole"):Connect(function()
 	if not role() then
 		close()
 	end
@@ -741,7 +747,8 @@ local function startFly(character: Model)
 		step = RunService.Heartbeat:Connect(function()
 			local camera = Workspace.CurrentCamera
 			local move = moveVector()
-			local up = (if UserInputService:IsKeyDown(Enum.KeyCode.Space) then 1 else 0) + touchUp - keyDown - touchDown
+			local space = UserInputService:IsKeyDown(Enum.KeyCode.Space) and not UserInputService:GetFocusedTextBox()
+			local up = (if space then 1 else 0) + touchUp - keyDown - touchDown
 			local direction = camera.CFrame:VectorToWorldSpace(Vector3.new(move.X, 0, move.Z)) + Vector3.new(0, up, 0)
 			velocity.VectorVelocity = if direction.Magnitude > 0.01 then direction.Unit * Config.FLY_SPEED else Vector3.zero
 			local look = camera.CFrame.LookVector
@@ -819,7 +826,11 @@ local function watchCharacter(character: Model)
 		end
 		renderToggles()
 	end
-	character.AttributeChanged:Connect(sync)
+	character.AttributeChanged:Connect(function(name: string)
+		if string.sub(name, 1, 5) == "Admin" then
+			sync()
+		end
+	end)
 	sync()
 end
 
@@ -827,3 +838,13 @@ player.CharacterAdded:Connect(watchCharacter)
 if player.Character then
 	task.spawn(watchCharacter, player.Character)
 end
+
+-- A lost role: the client tools stop now (AdminService has cleared the server states and removes this GUI a moment
+-- later; review I1).
+gui:GetAttributeChangedSignal("AdminRole"):Connect(function()
+	if not role() then
+		stopFly()
+		stopNoclip()
+		stopSpectating()
+	end
+end)
