@@ -78,6 +78,8 @@ function HeistPolice.new(deps)
 		_nextTick = 0,
 		_nextMarker = 0,
 		_steering = false,
+		_insideAtStart = {}, -- [player] = true: inside the building when this session started
+		_session = 0, -- bumped by every clear: a wave still sending from an earlier session stops
 	}, HeistPolice)
 	self._plans = { self._timed, self._vault }
 	self._filter = function(player)
@@ -97,12 +99,14 @@ function HeistPolice:mayTarget(player): boolean
 		or ((player:GetAttribute("WantedStars") or 0) >= 1 and self.isInside(player) == true)
 end
 
+-- Held until the first wave: this robbery's participants and whoever was inside when it started (the Bank's trigger
+-- player is a participant only from the vault teleporter); not a wanted player who walks in later (review I1).
 function HeistPolice:holdsSquad(player): boolean
 	local started = self._timed.startedAt
 	return started ~= nil
 		and self.bank:GetState() == "Active"
 		and self.now() - started < self._timed.plan.first
-		and (self.bank:IsParticipant(player) or self.isInside(player) == true)
+		and (self.bank:IsParticipant(player) or self._insideAtStart[player] == true)
 end
 
 function HeistPolice:_clear()
@@ -114,11 +118,18 @@ function HeistPolice:_clear()
 		end
 		entry.officers, entry.startedAt, entry.fired = {}, nil, 0
 	end
+	self._insideAtStart = {}
+	self._session += 1
 end
 
 function HeistPolice:OnSessionStart()
 	self:_clear()
 	self._timed.startedAt = self.now()
+	for _, player in self.players() do
+		if self.isInside(player) == true then
+			self._insideAtStart[player] = true
+		end
+	end
 end
 
 function HeistPolice:Seal()
@@ -154,10 +165,12 @@ function HeistPolice:_sendWave(entry, index: number)
 	if n <= 0 then
 		return
 	end
+	local session = self._session
 	task.spawn(function()
 		for _ = 1, n do
-			-- Re-checked per officer: a squad or the other plan may have taken the room since.
-			if self.bank:GetState() ~= "Active" or self.room() <= 0 or self:_alive(entry) >= entry.plan.cap then
+			-- Re-checked per officer: a squad or the other plan may have taken the room since, or the session may have
+			-- been cleared while this wave waited a frame (review minor 4).
+			if self._session ~= session or self.bank:GetState() ~= "Active" or self.room() <= 0 or self:_alive(entry) >= entry.plan.cap then
 				break
 			end
 			self._nextMarker = self._nextMarker % #self.markers + 1
@@ -229,6 +242,9 @@ function HeistPolice:Update()
 		if entry.startedAt then
 			local due = HeistPolice.wavesDue(entry.plan, now - entry.startedAt)
 			while entry.fired < due do
+				if #robbers > 0 and self.room() <= 0 then
+					break -- no room under POLICE_CAP: the wave waits for room instead of being lost (review minor 1)
+				end
 				entry.fired += 1
 				if #robbers > 0 then
 					self:_sendWave(entry, entry.fired)

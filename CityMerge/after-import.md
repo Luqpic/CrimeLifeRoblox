@@ -1022,3 +1022,16 @@ Studio objects (not scripts): `Workspace.HeistMarkers.HeistPoliceSpawn1..3` at (
 The 12 sources are in `CityScripts/`; bytes and Adler-32 equal the place (12 / 12). City suites 355 / 355 / 0; heist 755 passed / 0 failed; boot: server the known DataStore "StudioAccessToApisNotAllowed" error and the Assistant plugin warning, client 0 errors. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute. Measured Play numbers: `.superpowers/sdd/2026-11-20-heist-police/report.md`.
 
 NOT saved / NOT published
+
+Heist police review fixes (Sonnet review of ba555fe, 2026-11-20 night), done by the controller. Same columns; old = the place after ba555fe.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `ServerScriptService.Heist.Services.HeistPolice` (ModuleScript) | 9,065 / 2622222331 | 9,961 / 2268077868 | Review I1: the squad hold (and its active-robbery stars) covers participants and the players inside when the session started, not every wanted player who walks in during the first 2 minutes. Minor 1: a wave with no POLICE_CAP room waits for room instead of being used up. Minor 4: a session counter stops a wave still sending after a clear. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Heist.Tests.HeistPoliceSpec` (ModuleScript) | 10,900 / 1265614525 | 11,515 / 2543879123 | Hold case: a wanted player who walks in after the start is not held; new case: a wave with no room waits. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Heist.BankInstance` (ModuleScript) | 13,346 / 3803117644 | 13,672 / 2972281052 | Review minor 3: `NotifyGuardSpawned` / `NotifyGuardDied` count only while Active, so a guard respawned outside a session cannot fire `GuardsCleared` (GuardRoom gate) on its next death. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Heist.Tests.BankInstanceSpec` (ModuleScript) | (unrecorded) / 2584225683 | 21,875 / 2925417210 | Asserts a guard respawning outside a session is not counted. Attribute appended. |
+
+The 4 sources are in `CityScripts/`; bytes and Adler-32 equal the place (4 / 4, checked before the write). City suites 355 / 355 / 0; heist 756 passed / 0 failed (HeistPolice 12, BankInstance 37); server: only the known DataStore error. Play: walking into the Bank lobby with the Crowbar set off the alarm (3 stars, seen) and `PoliceDispatcher.isHeld` was true for that player (inside at the start). Left as is: review I2 (the vault Armed Police use the B-arrival markers and cannot path past the obby pit: a developer question), minor 2 (one steering path check a second while robbers are inside).
+
+NOT published

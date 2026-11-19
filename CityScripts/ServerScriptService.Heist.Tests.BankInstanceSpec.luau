@@ -243,6 +243,8 @@ return function()
 		local now = makeClock()
 		local inst = makeInstance(now)
 		expect.equal(inst:GuardsRemaining(), 0, "nothing has spawned before any session")
+		inst:NotifyGuardSpawned()
+		expect.equal(inst:GuardsRemaining(), 0, "a guard respawning outside a session is not counted")
 		local cleared = 0
 		inst.GuardsCleared:Connect(function() cleared += 1 end)
 		local spawner = {}

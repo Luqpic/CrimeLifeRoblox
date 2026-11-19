@@ -197,6 +197,19 @@ return function()
 		robber.Character:Destroy()
 	end)
 
+	suite:test("a wave with no free POLICE_CAP room waits for room instead of being lost", function(expect)
+		local robber = standIn(3)
+		local f = fixture({ players = { robber }, room = 0 })
+		f.bank:TryStart(robber)
+		f.inside[robber] = true
+		f.at(1120)
+		expect.equal(#f.spawned, 0, "no room at 2:00")
+		f.room = 24
+		f.at(1121)
+		expect.equal(f.count("Police"), 3, "the 2:00 wave once room frees")
+		robber.Character:Destroy()
+	end)
+
 	suite:test("officers target this robbery's participants and wanted players inside, never bystanders", function(expect)
 		local robber = standIn(3)
 		local f = fixture({ players = { robber } })
@@ -234,18 +247,20 @@ return function()
 		robber.Character:Destroy()
 	end)
 
-	suite:test("squad hold: the squad of a participant or of anyone in the building waits until the first wave", function(expect)
-		local f = fixture({ players = {} })
-		local participant, insider, outsider = standIn(3), standIn(3), standIn(3)
+	suite:test("squad hold: the squad of a participant or of anyone inside at the start waits until the first wave", function(expect)
+		local participant, insider, outsider, late = standIn(3), standIn(3), standIn(3), standIn(3)
+		local f = fixture({ players = { participant, insider, outsider, late } })
 		expect.truthy(f.hold ~= nil, "registered with the dispatcher")
 		expect.falsy(f.hold(participant), "no session: no hold")
+		f.inside[insider] = true
 		f.bank:TryStart(participant)
 		f.bank:AddParticipant(participant)
-		f.inside[insider] = true
+		f.inside[late] = true
 		f.clock = 1119
 		expect.truthy(f.hold(participant), "a participant at 1:59")
 		expect.truthy(f.hold(insider), "the trigger player still in the lobby")
 		expect.falsy(f.hold(outsider), "nobody else")
+		expect.falsy(f.hold(late), "a wanted player who walks in after the start is not held")
 		expect.truthy(f.active ~= nil and f.active(insider), "a held robber is an active robbery: the alarm's stars hold")
 		f.clock = 1120
 		expect.falsy(f.hold(participant), "released with the first wave")
@@ -253,7 +268,7 @@ return function()
 		f.clock = 1010
 		f.bank:_seal("timer_expired")
 		expect.falsy(f.hold(participant), "released at the seal")
-		for _, p in ipairs({ participant, insider, outsider }) do p.Character:Destroy() end
+		for _, p in ipairs({ participant, insider, outsider, late }) do p.Character:Destroy() end
 	end)
 
 	return suite:run()

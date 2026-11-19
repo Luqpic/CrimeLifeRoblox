@@ -236,12 +236,16 @@ end
 
 -- Called by a GuardPost's own OnSessionStart, once, only after its spawn
 -- actually succeeds. See TryStart for why this replaces seeding from config.
+-- Counted only in a session: a guard that respawns outside one (the Bank's posts stand at all times) must not let a
+-- later death fire GuardsCleared and open the GuardRoom gate (review minor 3). TryStart is Active before it asks the
+-- components to count.
 function BankInstance:NotifyGuardSpawned()
+	if self._state ~= ACTIVE then return end
 	self._guardsRemaining += 1
 end
 
 function BankInstance:NotifyGuardDied()
-	if self._guardsRemaining <= 0 then return end
+	if self._state ~= ACTIVE or self._guardsRemaining <= 0 then return end
 	self._guardsRemaining -= 1
 	if self._guardsRemaining == 0 and not self._guardsClearedFired then
 		self._guardsClearedFired = true
