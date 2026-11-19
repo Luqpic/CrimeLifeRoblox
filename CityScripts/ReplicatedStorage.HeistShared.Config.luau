@@ -75,6 +75,21 @@ Config.GuardDamage = 6
 Config.GuardFireInterval = 0.9
 Config.GuardSightRange = 120
 Config.GuardActivationRange = 60
+-- Heist police and Bank guards (2026-11-20, developer decisions 1 to 3). The four posts stand at all times (the
+-- NewsStation way) with Security and Police rigs from ServerStorage.EnemyTemplates, alternating by post number
+-- (GuardPost1 Security), their root GuardSpawnLift (the rigs' root height over their feet) above the post. A guard
+-- killed outside a session is back GuardRespawnSeconds later; a player who hurts a guard is its target for
+-- GuardProvokeSeconds after the hit, also outside a session.
+Config.GuardsAlwaysPosted = true
+Config.GuardTemplates = table.freeze({ "Security", "Police" })
+Config.GuardSpawnLift = 3.2
+Config.GuardRespawnSeconds = 60
+Config.GuardProvokeSeconds = 30
+-- Police sent INTO the building while robbers are inside (Heist.Services.HeistPolice): `count` at `first` seconds,
+-- then `more` every `every` seconds, at most `cap` of the plan alive. HeistPolice runs from the session's start,
+-- HeistPoliceVault (armed) from the vault door's opening.
+Config.HeistPolice = table.freeze({ template = "Police", first = 120, count = 3, every = 90, more = 2, cap = 8 })
+Config.HeistPoliceVault = table.freeze({ template = "Armed Police", first = 0, count = 4, every = 60, more = 2, cap = 8 })
 
 -- C4 breach (replaces "both terminals -> teleport unlocked" with "both
 -- terminals -> plant C4 -> countdown -> explosion -> teleport unlocked")

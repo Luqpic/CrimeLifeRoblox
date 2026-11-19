@@ -64,6 +64,12 @@ return {
 	LEAVE_TIMEOUT = 60, -- review fix round 1: 30 s could remove an officer a player was looking at
 	DISPATCH_TICK = 1, -- orphans and leavers are handled every tick; top-ups every TOPUP_INTERVAL
 
+	-- Heist police (2026-11-20, Heist.Services.HeistPolice): the waves and steering act once a HEIST_POLICE_TICK; an
+	-- officer stands up within HEIST_POLICE_SCATTER studs (x and z) of its HeistPoliceSpawn marker. The wave numbers
+	-- are each location's Config (HeistPolice, the Bank's HeistPoliceVault).
+	HEIST_POLICE_TICK = 1,
+	HEIST_POLICE_SCATTER = 1.5,
+
 	-- Security guards
 	NEWSSTATION_GUARDS = 3,
 }

@@ -38,6 +38,7 @@ local SupplyObject = require(ReplicatedStorage.SharedSystems.SupplyObject)
 local DepositBoxes = require(Heist.Components.DepositBoxes)
 local DepositBoxLoot = require(ReplicatedStorage.HeistShared.DepositBoxLoot)
 local CarryGetaway = require(Heist.Services.CarryGetaway)
+local HeistPolice = require(Heist.Services.HeistPolice)
 local CARRY_SPEED_CAP = require(ReplicatedStorage.Movement.Constants).CARRY_SPEED_CAP
 local Net = require(Heist.Services.Net)
 -- Global singleton, shared with SlowFoodsServer/Gas2GoServer/SuppliesServer
@@ -957,6 +958,21 @@ require(game:GetService("ServerScriptService").Wanted.WantedService).addActiveRo
 	return bank:GetState() == "Active" and bank:IsParticipant(player) and getaway:IsNear(player)
 end)
 
+-- Heist police and Bank guards (2026-11-20): police sent into the vault from the robbery's start (Config.HeistPolice)
+-- and armed police from the vault door's opening (Config.HeistPoliceVault), at HeistMarkers.HeistPoliceSpawn1..3
+-- round the corner from TeleporterBankB's arrival. A bank component: it starts with the session, leaves at the seal.
+local heistPoliceMarkers = HeistPolice.markersIn(heistMarkers)
+assert(#heistPoliceMarkers >= 1, "[HeistServer] HeistMarkers has no HeistPoliceSpawn marker")
+local heistPolice = HeistPolice.new({
+	bank = bank,
+	plan = Config.HeistPolice,
+	vaultPlan = Config.HeistPoliceVault,
+	markers = heistPoliceMarkers,
+	isInside = isInsideBank,
+	now = now,
+})
+bank:RegisterComponent(heistPolice)
+
 -- Trigger: a weapon equipped inside the lobby zone. Both conditions are read
 -- server-side; a spoofed client equip achieves nothing. Two entry points feed
 -- one shared function, because the trigger must fire in EITHER order: equip
@@ -1133,6 +1149,12 @@ task.spawn(function()
 		-- re-arming every tick rather than only while Active.
 		getaway:Step()
 		goldGetaway:Step()
+		-- Heist police and Bank guards (2026-11-20): the guards stand at all times (a killed one comes back, a
+		-- provoked one fights outside a session), so they update in every state; the heist police act while Active.
+		for _, post in ipairs(byTag[T.HeistGuardPost] or {}) do
+			post:Update()
+		end
+		heistPolice:Update()
 
 		if bank:GetState() == "Active" then
 			for _, player in ipairs(zoneService:GetOccupants("Vault")) do
@@ -1145,9 +1167,6 @@ task.spawn(function()
 				else
 					duffelFullNotified[player] = nil
 				end
-			end
-			for _, post in ipairs(byTag[T.HeistGuardPost] or {}) do
-				post:Update()
 			end
 			for _, charge in ipairs(byTag[T.HeistC4Point] or {}) do
 				charge:Update()
@@ -1165,6 +1184,7 @@ task.spawn(function()
 				for _, register in ipairs(bankRegisterObjects) do register:Unlock() end
 				for _, safe in ipairs(safeObjects) do safe:Unlock() end
 				depositBoxes:Unlock()
+				heistPolice:OnVaultOpened() -- heist police (2026-11-20): the armed waves start
 			end
 		end
 	end

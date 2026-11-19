@@ -44,8 +44,8 @@ Config.ATMRobAmount = 3000
 Config.HeartbeatRate = 10
 
 -- Security guards (police and wanted Task 3, 2026-11-17): GuardPost components on the NewsStationGuardPost
--- markers in NewsStationMarkers, standing at their posts from boot (GuardsAlwaysPosted; the Bank's appear only
--- while Active). No cover points here: they hold their posts. The combat numbers equal the Bank's
+-- markers in NewsStationMarkers, standing at their posts from boot (GuardsAlwaysPosted; the Bank's too since
+-- 2026-11-20). No cover points here: they hold their posts. The combat numbers equal the Bank's
 -- (HeistShared.Config), kept as NewsStation's own entries like every number in this file.
 Config.GuardsAlwaysPosted = true
 -- GuardTemplate's pivot is at its feet: 0 puts them on the floor the markers are centred on (the Bank's
@@ -58,6 +58,12 @@ Config.GuardFireInterval = 0.9
 Config.GuardDamage = 6
 -- Fix round 1: a guard killed while no robbery is Active is back at its post this many seconds after it died.
 Config.GuardRespawnSeconds = 60
+-- Heist police (2026-11-20): a player who hurts a guard is its target for this long after the hit, also outside a
+-- session (the Bank's number).
+Config.GuardProvokeSeconds = 30
+-- Police sent INTO the newsroom while robbers are inside (Heist.Services.HeistPolice, developer decision 1): 2 at
+-- 2:00 from the session's start, +1 every 90 s, at most 4 alive.
+Config.HeistPolice = table.freeze({ template = "Police", first = 120, count = 2, every = 90, more = 1, cap = 4 })
 
 -- Broadcast takeover (heist layers 2026-11-17): after a MasterComputer breach, "Go Live" at the
 -- BroadcastDesk; BroadcastSeconds of air time counted while a living participant is within

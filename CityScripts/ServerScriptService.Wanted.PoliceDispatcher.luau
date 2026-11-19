@@ -15,6 +15,9 @@
 --
 -- Also installs WantedService's seen provider: a wanted player is seen while a live officer within
 -- SEEN_RANGE can see them, or a live guard within SEEN_RANGE has them in sight (Witnesses.guardSees, Task 3).
+-- Heist police (2026-11-20): spawnLoose takes a target filter and returns the officer's EnemyAI (Heist.Services.
+-- HeistPolice sends officers into a robbed building through it), room() is the free POLICE_CAP room, and
+-- addSquadHold lets a robbery hold a participant's squad until its first wave.
 -- start() is called by WantedRunner.
 local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
@@ -281,8 +284,9 @@ local function forget(record)
 	end
 end
 
--- `owner` nil (spawnLoose, the admin panel): the officer joins no squad and patrols where it stands.
-local function spawnOfficer(templateName: string, position: Vector3, owner: Player?, alarm: boolean): Model?
+-- `owner` nil (spawnLoose: the admin panel, heist police): the officer joins no squad and patrols where it stands;
+-- its character and EnemyAI are returned. `targetFilter` (heist police, 2026-11-20) replaces "wanted".
+local function spawnOfficer(templateName: string, position: Vector3, owner: Player?, alarm: boolean, targetFilter: ((Player) -> boolean)?): (Model?, any)
 	local template = ServerStorage.EnemyTemplates:FindFirstChild(templateName)
 	if not template then
 		warn(`PoliceDispatcher: no template {templateName}`)
@@ -294,7 +298,7 @@ local function spawnOfficer(templateName: string, position: Vector3, owner: Play
 	end
 	local record = { owner = owner }
 	config.faction = FACTION
-	config.targetFilter = isWanted
+	config.targetFilter = targetFilter or isWanted
 	config.preferTarget = function()
 		return record.owner
 	end
@@ -306,7 +310,7 @@ local function spawnOfficer(templateName: string, position: Vector3, owner: Play
 		forget(record)
 	end, config)
 	if not owner then
-		return character
+		return character, record.ai
 	end
 	squads[owner] = squads[owner] or {}
 	squads[owner][record] = true
@@ -343,9 +347,38 @@ PoliceDispatcher._findSpawn = findSpawn
 PoliceDispatcher._spawnOfficer = spawnOfficer
 
 -- Admin (2026-11-20): one officer at `position` outside any squad. It patrols there, engages only wanted players
--- and stays until it is killed or cleared. Returns its character, or nil.
-function PoliceDispatcher.spawnLoose(templateName: string, position: Vector3): Model?
-	return spawnOfficer(templateName, position, nil, false)
+-- (or whom `targetFilter` accepts: heist police, 2026-11-20) and stays until it is killed or cleared. Returns its
+-- character and EnemyAI, or nil.
+function PoliceDispatcher.spawnLoose(templateName: string, position: Vector3, targetFilter: ((Player) -> boolean)?): (Model?, any)
+	return spawnOfficer(templateName, position, nil, false, targetFilter)
+end
+
+-- Heist police (2026-11-20): how many more police may be alive under POLICE_CAP (squads, loose and leaving count).
+function PoliceDispatcher.room(): number
+	return Constants.POLICE_CAP - countLive()
+end
+
+-- Heist police (2026-11-20): a hold keeps a wanted player's squad from spawning (HeistPolice: until the robbery's
+-- first wave). isHeld is true while any registered hold says so; a throwing hold holds nobody.
+local holds = {}
+function PoliceDispatcher.addSquadHold(isHeld: (Player) -> boolean)
+	table.insert(holds, isHeld)
+	return {
+		Disconnect = function()
+			local i = table.find(holds, isHeld)
+			if i then table.remove(holds, i) end
+		end,
+	}
+end
+
+function PoliceDispatcher.isHeld(player): boolean
+	for _, isHeld in holds do
+		local ok, held = pcall(isHeld, player)
+		if ok and held == true then
+			return true
+		end
+	end
+	return false
 end
 
 -- One player's spawn round: up to n officers, `police` / `armed` still owed by kind. Around the robbed
@@ -380,10 +413,15 @@ function PoliceDispatcher._spawnRound(player: Player, n: number, anchor: Vector3
 	end
 end
 
+PoliceDispatcher._players = function()
+	return Players:GetPlayers()
+end
+
+-- A held player (addSquadHold) asks for no officers (stars 0 to SquadPlan) while its live ones still count.
 local function topUp()
 	local requests = {}
 	local inSquads = 0
-	for _, player in Players:GetPlayers() do
+	for _, player in PoliceDispatcher._players() do
 		if isWanted(player) and rootOf(player) then
 			local alive = 0
 			for record in squads[player] or {} do
@@ -392,13 +430,22 @@ local function topUp()
 				end
 			end
 			inSquads += alive
-			table.insert(requests, { player = player, stars = player:GetAttribute("WantedStars"), alive = alive })
+			local held = PoliceDispatcher.isHeld(player)
+			table.insert(requests, {
+				player = player,
+				stars = if held then 0 else player:GetAttribute("WantedStars"),
+				alive = alive,
+				held = held,
+			})
 		end
 	end
 	-- Officers outside these squads (leaving ones) still count against the server cap.
 	local allowed = SquadPlan.allocate(requests, Constants.POLICE_CAP - (countLive() - inSquads))
 	for _, request in requests do
 		local player = request.player
+		if request.held then
+			continue -- keeps its alarm ring for the first round after the hold
+		end
 		local n = allowed[player] or 0
 		-- An alarm sends only the round right after it; with no room now, the next round is a normal top-up.
 		local anchor = alarmAnchor[player]
@@ -418,6 +465,10 @@ local function topUp()
 		end
 	end
 end
+
+-- Seams for HeistSquadHold_Test (2026-11-20).
+PoliceDispatcher._topUp = topUp
+PoliceDispatcher._alarmAnchor = alarmAnchor
 
 -- A wanted, living player this officer can see, or nil.
 local function visibleWanted(ai)

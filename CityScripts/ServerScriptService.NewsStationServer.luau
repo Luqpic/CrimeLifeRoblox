@@ -49,6 +49,7 @@ local WantedConstants = require(ReplicatedStorage.Wanted.Constants)
 local BroadcastDesk = require(Heist.Components.BroadcastDesk)
 local BroadcastHooks = require(Heist.Services.BroadcastHooks)
 local WantedService = require(ServerScriptService.Wanted.WantedService)
+local HeistPolice = require(Heist.Services.HeistPolice)
 
 -- NewsStation carries its OWN tag table, unlike SlowFoods/Gas2Go which both
 -- read HeistConfig.Tags. The weapon tag is the exception -- there is no
@@ -149,6 +150,7 @@ end
 -- by which point every one of these is assigned.
 local oilHazards = {}
 local guardPosts = {}
+local heistPolice
 local masterComputer
 local broadcastDesk
 local lastNewsStationSafeSubmit = {}
@@ -180,11 +182,12 @@ local location = LocationServer.new({
 		for _, oil in ipairs(oilHazards) do
 			oil:Update()
 		end
-		-- Guards act only while the session is Active (GuardPost:Update), as at the Bank.
+		-- Guards fight while the session is Active, or when a player hurt them (GuardPost:Update), as at the Bank.
 		for _, post in ipairs(guardPosts) do
 			post:Update()
 		end
 		broadcastDesk:Update()
+		heistPolice:Update()
 	end,
 	-- Per-player state the shared skeleton doesn't know about.
 	onPlayerRemoving = function(player)
@@ -472,6 +475,16 @@ do
 		table.concat(parts, " "), #CollectionService:GetTagged(T.NewsStationRegister), #CollectionService:GetTagged(T.NewsStationATM),
 		#CollectionService:GetTagged(T.NewsStationCamera), #oilHazards, #newsStationSafeObjects, #location.zones))
 end
+
+-- Heist police (2026-11-20, developer decision 1): police sent into the newsroom from the robbery's start
+-- (Config.HeistPolice) at NewsStationMarkers.HeistPoliceSpawn1..3, in the lobby by the entrance.
+heistPolice = HeistPolice.new({
+	bank = bank,
+	plan = Config.HeistPolice,
+	markers = HeistPolice.markersIn(workspace.NewsStationMarkers),
+	isInside = function(player) return location.zoneService:IsInside("Newsroom", player) end,
+})
+bank:RegisterComponent(heistPolice)
 
 -- Every component is registered: connect the handlers and start the
 -- heartbeat.

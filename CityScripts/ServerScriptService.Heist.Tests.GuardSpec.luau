@@ -5,6 +5,9 @@ return function()
 	local BankInstance = TestRunner.freshRequire(game.ServerScriptService.Heist.BankInstance)
 	local Config = TestRunner.freshRequire(game.ReplicatedStorage.HeistShared.Config)
 	local suite = TestRunner.new("Guard")
+	-- The session-only lifecycle (the Bank's before 2026-11-20, still the one without GuardsAlwaysPosted).
+	local sessionOnly = table.clone(Config)
+	sessionOnly.GuardsAlwaysPosted = nil
 
 	local function activeBank(now)
 		local inst = BankInstance.new({ config = Config, now = now or function() return 1000 end })
@@ -104,7 +107,7 @@ return function()
 		local marker = tempMarker()
 		local spawned = 0
 		local post = GuardPost.new(marker, {
-			config = Config, bank = activeBank(),
+			config = sessionOnly, bank = activeBank(),
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
@@ -119,7 +122,7 @@ return function()
 		local marker = tempMarker()
 		local spawned = 0
 		local post = GuardPost.new(marker, {
-			config = Config, bank = activeBank(),
+			config = sessionOnly, bank = activeBank(),
 			now = function() return 100 end,
 			spawnGuard = function()
 				spawned += 1
@@ -178,7 +181,7 @@ return function()
 		local marker = tempMarker()
 		local spawned = 0
 		local post = GuardPost.new(marker, {
-			config = Config, bank = activeBank(),
+			config = sessionOnly, bank = activeBank(),
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
@@ -196,7 +199,7 @@ return function()
 		local marker = tempMarker()
 		local spawned = 0
 		local post = GuardPost.new(marker, {
-			config = Config, bank = activeBank(),
+			config = sessionOnly, bank = activeBank(),
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
@@ -215,7 +218,7 @@ return function()
 		local marker = tempMarker()
 		local model
 		local post = GuardPost.new(marker, {
-			config = Config, bank = activeBank(),
+			config = sessionOnly, bank = activeBank(),
 			now = function() return 100 end,
 			spawnGuard = function()
 				model = Instance.new("Model")
@@ -379,6 +382,120 @@ return function()
 			spawnGuard = function() return nil end })
 		post:Alert()
 		expect.falsy(post._activated, "no guard: latch untouched")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	-- Heist police and Bank guards (2026-11-20).
+	local function rig(anchored)
+		local model = Instance.new("Model")
+		Instance.new("Humanoid").Parent = model
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Anchored = anchored == true
+		root.Parent = model
+		model.PrimaryPart = root
+		model.Parent = workspace
+		return model
+	end
+
+	suite:test("the Bank's posts stand from boot and alternate Security and Police by post number", function(expect)
+		expect.truthy(Config.GuardsAlwaysPosted, "the Bank's guards stand at all times")
+		expect.equal(GuardPost.templateFor("GuardPost1", Config.GuardTemplates), "Security", "post 1")
+		expect.equal(GuardPost.templateFor("GuardPost2", Config.GuardTemplates), "Police", "post 2")
+		expect.equal(GuardPost.templateFor("GuardPost3", Config.GuardTemplates), "Security", "post 3")
+		expect.equal(GuardPost.templateFor("GuardPost4", Config.GuardTemplates), "Police", "post 4")
+		expect.equal(GuardPost.templateFor("GuardPost2", nil), nil, "no list: the plain GuardTemplate (NewsStation)")
+		local marker = tempMarker()
+		marker.Name = "GuardPost4"
+		local asked
+		local post = GuardPost.new(marker, { config = Config, bank = BankInstance.new({ config = Config, now = function() return 1000 end }),
+			now = function() return 100 end, spawnGuard = function(_cframe, _lift, template) asked = template return nil end })
+		expect.equal(asked, "Police", "the post's spawn is asked for its template")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	suite:test("a Bank post builds its guard from EnemyTemplates: health, held weapon, witness and guard, rooted at its post", function(expect)
+		local CollectionService = game:GetService("CollectionService")
+		for _, case in ipairs({ { "GuardPost1", "Security", 80 }, { "GuardPost2", "Police", 100 } }) do
+			local marker = tempMarker(Vector3.new(0, 4000, 0))
+			marker.Name = case[1]
+			local post = GuardPost.new(marker, { config = Config, now = function() return 100 end,
+				bank = BankInstance.new({ config = Config, now = function() return 1000 end }) })
+			local guard = post._guard
+			expect.truthy(guard ~= nil and guard.Parent ~= nil, case[1] .. " stands from construction")
+			if guard then
+				local humanoid = guard:FindFirstChildOfClass("Humanoid")
+				expect.equal(guard:GetAttribute("EnemyTemplate"), case[2], case[1] .. " template")
+				expect.equal(humanoid and humanoid.MaxHealth, case[3], case[2] .. " health from the template")
+				expect.truthy(guard:FindFirstChildOfClass("Tool") ~= nil, case[2] .. " holds the template's weapon")
+				expect.truthy(CollectionService:HasTag(guard, "Witness") and guard:GetAttribute("WitnessRole") == "Guard", "a witness and a guard")
+				expect.truthy(guard.PrimaryPart and guard.PrimaryPart.Anchored, "rooted at its post")
+				local want = marker.Position + Vector3.new(0, Config.GuardSpawnLift, 0)
+				expect.truthy(guard.PrimaryPart and (guard.PrimaryPart.Position - want).Magnitude < 0.05, "root GuardSpawnLift above the post")
+			end
+			post:Destroy()
+			marker:Destroy()
+		end
+	end)
+
+	suite:test("an always-posted guard is counted again at a session start; a dead one is replaced at once", function(expect)
+		local postedConfig = { GuardsAlwaysPosted = true, GuardSpawnLift = 0, GuardRespawnSeconds = 60, Tags = {},
+			GuardActivationRange = 60, GuardSightRange = 120, GuardFireInterval = 0.9, GuardDamage = 6 }
+		local function build()
+			local marker = tempMarker()
+			local bank = BankInstance.new({ config = Config, now = function() return 1000 end })
+			local counts = { spawned = 0, counted = 0 }
+			local post = GuardPost.new(marker, { config = postedConfig, bank = bank, now = function() return 100 end,
+				spawnGuard = function() counts.spawned += 1 return rig(true) end,
+				onGuardSpawned = function() counts.counted += 1 end })
+			bank:RegisterComponent(post)
+			return bank, post, counts, marker
+		end
+		local bank, post, counts, marker = build()
+		bank:TryStart("starter")
+		expect.equal(counts.spawned, 1, "the standing guard is kept")
+		expect.equal(counts.counted, 2, "and counted again for the session (TryStart zeroed the count)")
+		post:Destroy()
+		marker:Destroy()
+		bank, post, counts, marker = build()
+		post:_handleDeath()
+		bank:TryStart("starter")
+		expect.equal(counts.spawned, 2, "a guard dead before the start is replaced at the start")
+		expect.truthy(post:IsAlive(), "alive for the session")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	suite:test("outside a session a guard is passive; one a player hurt shoots that player for GuardProvokeSeconds", function(expect)
+		local marker = tempMarker()
+		local clock = 100
+		local shots = {}
+		local function standIn() return { GetAttribute = function() return nil end } end
+		local attacker, bystander = standIn(), standIn()
+		local post = GuardPost.new(marker, { config = Config, now = function() return clock end,
+			bank = BankInstance.new({ config = Config, now = function() return 1000 end }),
+			spawnGuard = function() return rig(true) end,
+			damage = function(target) table.insert(shots, target) end })
+		post._candidates = function()
+			return {
+				{ player = bystander, position = Vector3.new(10, 0, 0), visible = true },
+				{ player = attacker, position = Vector3.new(20, 0, 0), visible = true },
+			}
+		end
+		post:Update()
+		expect.equal(#shots, 0, "a player walking past at 10 studs is left alone")
+		post:Provoke(attacker)
+		post:Update()
+		expect.equal(#shots, 1, "provoked: fires")
+		expect.equal(shots[1], attacker, "at the attacker, past the nearer bystander")
+		clock = 100 + Config.GuardProvokeSeconds - 0.1
+		post:Update()
+		expect.equal(#shots, 2, "still provoked just before GuardProvokeSeconds")
+		clock = 100 + Config.GuardProvokeSeconds
+		post:Update()
+		expect.equal(#shots, 2, "calm again after GuardProvokeSeconds")
 		post:Destroy()
 		marker:Destroy()
 	end)

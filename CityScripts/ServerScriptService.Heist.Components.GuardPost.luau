@@ -2,7 +2,14 @@
 local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
+
+local AnimationPriorities = require(ReplicatedStorage.Modules.AnimationPriorities)
+local CharacterAnimationController = require(ReplicatedStorage.Blaster.Scripts.CharacterAnimationController)
+local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
+local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 
 local GuardPost = {}
 GuardPost.__index = GuardPost
@@ -67,11 +74,72 @@ function GuardPost.shouldFire(now: number, lastFired: number?, interval: number)
 	return (now - lastFired) >= interval
 end
 
+-- Heist police and Bank guards (2026-11-20): config.GuardTemplates names ServerStorage.EnemyTemplates rigs by post
+-- number, wrapping (the Bank's { "Security", "Police" }: GuardPost1 Security, GuardPost2 Police, ...). Nil without a
+-- list (NewsStation keeps GuardTemplate).
+function GuardPost.templateFor(markerName: string, templates: { string }?): string?
+	if not templates or #templates == 0 then
+		return nil
+	end
+	local n = tonumber(string.match(markerName, "%d+$")) or 1
+	return templates[(n - 1) % #templates + 1]
+end
+
 -- Clone-from-template rather than resetting a corpse: unragdolling a dead R15
 -- rig and rebuilding its Motor6Ds is far more bug-prone than starting fresh.
--- `lift` (config.GuardSpawnLift, default 3 as before): studs above the marker for the template's pivot, which
--- is at its feet. NewsStation uses 0 so its guards stand on the floor its markers sit on.
-local function defaultSpawn(targetCFrame: CFrame, lift: number?): Model?
+-- `lift` (config.GuardSpawnLift, default 3 as before): studs above the marker for the template's pivot.
+-- GuardTemplate's pivot is at its feet (NewsStation uses 0 so its guards stand on the floor its markers sit
+-- on); an EnemyTemplates rig's is its root, 3.2 over its feet (the Bank's lift).
+-- A guard from ServerStorage.EnemyTemplates[name] (heist police and Bank guards, 2026-11-20), built the way police
+-- are (EnemyRig: look, weapon held, health, nameplate, ragdoll on death) and kept a witness and a guard. Its root is
+-- anchored at the post (it never walks: cover is skipped for an anchored guard), with the idle and the weapon's hold
+-- clips playing; on death the root lets go and the body ragdolls.
+local function templateSpawn(name: string, targetCFrame: CFrame, lift: number?): Model?
+	local templates = ServerStorage:FindFirstChild("EnemyTemplates")
+	local template = templates and templates:FindFirstChild(name)
+	if not template then
+		warn("[GuardPost] ServerStorage.EnemyTemplates." .. name .. " is missing")
+		return nil
+	end
+	local EnemyRig = require(ServerScriptService.Enemy.Scripts.EnemyRig) :: any
+	local guard, weapon = EnemyRig.build(template, name)
+	if not guard or not weapon then
+		return nil
+	end
+	guard.Name = "Guard"
+	CollectionService:AddTag(guard, "Witness")
+	guard:SetAttribute("WitnessRole", "Guard")
+	EnemyRig.place(guard, weapon, targetCFrame + Vector3.new(0, lift or 3, 0), workspace)
+	local humanoid = guard:FindFirstChildOfClass("Humanoid") :: Humanoid
+	local root = guard.PrimaryPart :: BasePart
+	root.Anchored = true
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		animator = Instance.new("Animator")
+		animator.Parent = humanoid
+	end
+	local idle = locomotionAnimations.get("idle")
+	if idle then
+		local track = (animator :: Animator):LoadAnimation(idle)
+		track.Priority = AnimationPriorities.Locomotion
+		track.Looped = true
+		track:Play()
+	end
+	pcall(function()
+		CharacterAnimationController.new(weapon):enable()
+	end)
+	humanoid.Died:Once(function()
+		root.Anchored = false
+		RagdollController.ragdoll(guard)
+	end)
+	return guard
+end
+
+-- `templateName` (config.GuardTemplates) builds that EnemyTemplates rig; without one, ServerStorage.GuardTemplate.
+local function defaultSpawn(targetCFrame: CFrame, lift: number?, templateName: string?): Model?
+	if templateName then
+		return templateSpawn(templateName, targetCFrame, lift)
+	end
 	local template = ServerStorage:FindFirstChild("GuardTemplate")
 	if not template then
 		warn("[GuardPost] ServerStorage.GuardTemplate is missing")
@@ -84,10 +152,30 @@ local function defaultSpawn(targetCFrame: CFrame, lift: number?): Model?
 	return guard
 end
 
--- config.GuardsAlwaysPosted (NewsStation, police and wanted Task 3, 2026-11-17): the guard stands at its post
--- from boot, through Idle and Cooldown, and a fresh one replaces it at Rearm; a guard alive at Seal stays.
--- Without the flag (the Bank) guards exist only while a session is Active, as before. A config whose Tags
--- have no HeistCoverPoint gives guards no cover to run to: they hold their posts and fire from there.
+-- Heist police and Bank guards (2026-11-20): a player's hit on a guard (Blaster's Tagged: every shot, swing and
+-- bleed tick) provokes it (Provoke). One listener for every post, found by the guard's humanoid.
+local postByHumanoid = setmetatable({}, { __mode = "k" })
+local listening = false
+local function listenForHits()
+	if listening then return end
+	local blaster = ServerScriptService:FindFirstChild("Blaster")
+	local events = blaster and blaster:FindFirstChild("Events")
+	local tagged = events and events:FindFirstChild("Tagged")
+	if not tagged then return end
+	listening = true
+	local event = (tagged :: BindableEvent).Event
+	event:Connect(function(attacker, humanoid)
+		local post = postByHumanoid[humanoid]
+		if post and typeof(attacker) == "Instance" and attacker:IsA("Player") then
+			post:Provoke(attacker)
+		end
+	end)
+end
+
+-- config.GuardsAlwaysPosted (NewsStation, police and wanted Task 3, 2026-11-17; the Bank since 2026-11-20): the
+-- guard stands at its post from boot, through Idle and Cooldown, and a fresh one replaces it at Rearm; a guard alive
+-- at Seal stays. Without the flag guards exist only while a session is Active. A config whose Tags have no
+-- HeistCoverPoint gives guards no cover to run to: they hold their posts and fire from there.
 function GuardPost.new(marker: BasePart, deps)
 	assert(marker and marker:IsA("BasePart"), "GuardPost requires a marker BasePart")
 	local self = setmetatable({
@@ -111,6 +199,8 @@ function GuardPost.new(marker: BasePart, deps)
 		_activated = false,
 		_lastPathAt = nil,
 		_diedConn = nil,
+		-- [Player] = until when a player who hurt this guard is its target (Provoke).
+		_provoked = setmetatable({}, { __mode = "k" }),
 	}, GuardPost)
 	if self:_alwaysPosted() then
 		self:OnSessionStart()
@@ -129,12 +219,26 @@ function GuardPost:IsAlive(): boolean
 end
 
 function GuardPost:OnSessionStart()
-	if self._spawnedThisSession then return end
+	if self._spawnedThisSession then
+		-- Heist police and Bank guards (2026-11-20): an always-posted guard meets each robbery whole.
+		-- BankInstance:TryStart zeroed the guard count, so a standing guard is counted again and a dead one is
+		-- replaced now: the Bank's guard-room gate opens when this session's guards fall.
+		if self:_alwaysPosted() and self.bank:GetState() == "Active" then
+			if self:IsAlive() then
+				local ok, err = pcall(self.onGuardSpawned)
+				if not ok then warn("[GuardPost] onGuardSpawned failed: " .. tostring(err)) end
+			else
+				self:_respawn()
+			end
+		end
+		return
+	end
 	self._spawnedThisSession = true
 	self._deathReported = false
 	self._lastFired = nil
 
-	local guard = self.spawnGuard(self.marker.CFrame, self.config and self.config.GuardSpawnLift)
+	local templateName = self.config and GuardPost.templateFor(self.marker.Name, self.config.GuardTemplates)
+	local guard = self.spawnGuard(self.marker.CFrame, self.config and self.config.GuardSpawnLift, templateName)
 	self._guard = guard
 	if not guard then return end
 
@@ -146,6 +250,8 @@ function GuardPost:OnSessionStart()
 		self._diedConn = self._humanoid.Died:Connect(function()
 			self:_handleDeath()
 		end)
+		postByHumanoid[self._humanoid] = self
+		listenForHits()
 	end
 end
 
@@ -162,6 +268,9 @@ function GuardPost:_moveToCover()
 	local root = self._guard.PrimaryPart
 	if not root then return end
 	if not self.config.Tags.HeistCoverPoint then return end -- no cover here: hold the post
+	-- An anchored guard (both rigs, 2026-11-20: they stand at their posts at all times) holds its post: no cover
+	-- claim and no path computed for a body that cannot move.
+	if root.Anchored then return end
 
 	if self._coverTarget == nil then
 		-- ONE GetTagged call, held in `markers`, and every index derived from it.
@@ -240,6 +349,11 @@ end
 function GuardPost:_respawnIfDue()
 	if not self:_alwaysPosted() or not self._deathReported or not self._diedAt then return end
 	if self.now() - self._diedAt < (self.config.GuardRespawnSeconds or math.huge) then return end
+	self:_respawn()
+end
+
+-- A fresh guard at the post now.
+function GuardPost:_respawn()
 	self:_despawn()
 	self._spawnedThisSession = false
 	self._diedAt = nil
@@ -247,10 +361,26 @@ function GuardPost:_respawnIfDue()
 	self:OnSessionStart()
 end
 
+-- Turn the guard (anchored: it never turns by itself) toward the target it fires at. A target straight above or
+-- below is not faced (CFrame.lookAt would be NaN).
+function GuardPost:_face(candidates, target)
+	for _, candidate in ipairs(candidates) do
+		if candidate.player == target then
+			local pivot = self._guard:GetPivot()
+			local flat = Vector3.new(candidate.position.X, pivot.Position.Y, candidate.position.Z)
+			if (flat - pivot.Position).Magnitude > 0.1 then
+				self._guard:PivotTo(CFrame.lookAt(pivot.Position, flat))
+			end
+			return
+		end
+	end
+end
+
 function GuardPost:Update()
 	if self.bank:GetState() ~= "Active" then
 		self:_respawnIfDue()
-		return
+		-- Heist police and Bank guards (2026-11-20): outside a session a guard is passive unless a player hurt it.
+		if not self:_anyProvoked() then return end
 	end
 	if not self:IsAlive() then return end
 
@@ -273,13 +403,14 @@ function GuardPost:Update()
 	self:_moveToCover()
 
 	local target = GuardPost.selectTarget(root.Position, candidates, self.config.GuardSightRange, function(player)
-		return GuardPost.mayTarget(self.bank, player)
+		return GuardPost.mayTarget(self.bank, player) or self:_isProvokedBy(player)
 	end)
 	if not target then return end
 
 	local now = self.now()
 	if not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
 	self._lastFired = now
+	self:_face(candidates, target)
 
 	local ok, err = pcall(self.damage, target, self.config.GuardDamage)
 	if not ok then warn("[GuardPost] damage failed: " .. tostring(err)) end
@@ -292,7 +423,32 @@ function GuardPost:Alert()
 	self._activated = true
 end
 
+-- Heist police and Bank guards (2026-11-20): a player who hurt this guard is its target for GuardProvokeSeconds
+-- after the hit (also outside a session, when it is otherwise passive), and it engages at once, as after Alert().
+-- No-op when the guard is dead.
+function GuardPost:Provoke(player)
+	if not self:IsAlive() then return end
+	self._provoked[player] = self.now() + (self.config.GuardProvokeSeconds or 0)
+	self._activated = true
+end
+
+function GuardPost:_isProvokedBy(player): boolean
+	local untilTime = self._provoked[player]
+	return untilTime ~= nil and self.now() < untilTime
+end
+
+-- Is a provocation still running? Spent ones are dropped.
+function GuardPost:_anyProvoked(): boolean
+	local now = self.now()
+	for player, untilTime in self._provoked do
+		if now < untilTime then return true end
+		self._provoked[player] = nil
+	end
+	return false
+end
+
 function GuardPost:_despawn()
+	table.clear(self._provoked)
 	if self._diedConn then
 		self._diedConn:Disconnect()
 		self._diedConn = nil
@@ -310,8 +466,8 @@ function GuardPost:Seal()
 	self:_despawn()
 end
 
--- Stage 2: allow a fresh guard for the next session. Guards do not exist while
--- the bank is Idle or in Cooldown.
+-- Stage 2: allow a fresh guard for the next session (an always-posted one stands
+-- again at once).
 function GuardPost:Rearm()
 	self:_despawn()
 	self._spawnedThisSession = false
