@@ -98,6 +98,27 @@ function SprintAuthority.getStamina(player: Player): number?
 	return state and state.stamina.stamina
 end
 
+-- Spends `amount` stamina at once (the roll, 2026-11-20: RollAuthority), only if the player has that much. It counts
+-- as a drain: the regen delay starts again, and emptying the bar locks sprint out as a sprint to empty does.
+-- Returns whether it was spent.
+function SprintAuthority.spend(player: Player, amount: number): boolean
+	local state = getState(player)
+	if state.stamina.stamina < amount then
+		return false
+	end
+	state.stamina.stamina -= amount
+	state.stamina.secondsSinceDrain = 0
+	if state.stamina.stamina <= 0 then
+		state.stamina.lockedOut = true
+	end
+	local rootPart = getRootPart(player)
+	if rootPart then
+		rootPart:SetAttribute(Constants.CAN_SPRINT_ATTRIBUTE, not state.stamina.lockedOut)
+		publish(rootPart, state)
+	end
+	return true
+end
+
 local function onCharacterAdded(player: Player, character: Model)
 	local state = getState(player)
 	state.intent = false

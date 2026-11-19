@@ -871,3 +871,25 @@ Task 6 fix round 1 (review I1, I2, M2, M5, `Batch: unify gamepasses and notifica
 The 6 sources exported to `CityScripts/`; bytes and Adler-32 equal (6 / 6). City suites 315 / 315 / 0 (311 + 4); heist 740 passed / 0 failed. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+## Admin, animation and third person 2026-11-20
+
+Task 1, character animations (`Batch: character animations from the group clips`). Place: cloud place "Crimelife Tycoon" (placeId 128488619644399). Same columns; Adler-32 of `Source`.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.Movement` (LocalScript) | new | 23,344 / 953208571 | OBT's `Movement.lua` ported: the Player_ clips (idle, walk / jog / run in four directions, sprint, jump, fall, land, hard land, climb, swim, legs layer at Action4 under a held tool), roll (Q, ButtonB, a CAS touch button) and ledge climb (Space). Walker morphs, flying, avatar packs, emotes, OBT `SFX` / `UIShell` / `Gamepad` / `Locomotion` removed; `blocked()` reads CrimeLife state (dead, seated, PlatformStand, anchored, `IsRagdolled`, `AdminFrozen`, `IsCrouching`, any carry, an open `UI.Panels` panel). Steps aside while crouched. Roblox-default fallback for a clip that does not load. Ledge raycasts respect CanCollide (the night-light slabs over the roads); limbs kept out of collisions during the climb. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.PlayerMovement.Config` (ModuleScript) | new | 3,255 / 3485602432 | OBT's config retuned: `BaseSpeed` Jog 12 / Run 20 / Sprint 38 (each CrimeLife gait at 1x), bands `JogToRun {13, 18}`, `RunToSprint {26, 34}`, `FallbackWait` 3, `Roll` Q / ButtonB / `Stamina` 12.3 (40 / 325 of 100) / touch spot, `Ledge` as OBT. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.PlayerMovement.Fallback` (ModuleScript) | new | 862 / 3968798254 | Pure name -> Roblox default R15 clip map; legs copies, Land, LandHard, Roll, LedgeClimb have none. Attribute set. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.RollAuthority` (ModuleScript) | new | 2,147 / 1854402996 | Server re-check of a roll (alive, `Config.Roll.Cooldown` on the server clock, any carry, stun / ragdoll / anchored / `AdminFrozen`, stamina) and the spend through `SprintAuthority.spend`. Attribute set. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.SprintAuthority` (ModuleScript) | 11,627 / 4057754890 | 12,387 / 1677161428 | `spend(player, amount)`: takes stamina at once if there is that much, restarts the regen delay, locks sprint out at 0, publishes. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.RunningState` (Script) | 1,026 / 1164604505 | 1,506 / 1623531334 | `ReplicatedStorage.PlayerMovement.Roll` -> `RollAuthority.request(player, os.clock())` (no arguments read); `RollAuthority.cleanup` on leave. Attribute set. |
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.Animate2` (LocalScript) | 25,120 / 2723549544 | 25,806 / 3929996936 | Plays no locomotion clip while character attribute `MovementAnimations` is set (sitting stays); stops the destroyed `Animate`'s leftover tracks (its avatar idle kept playing at Core). WalkSpeed ramp, sprint input, landing recovery, sprint FOV and the child Animation ids (read by `locomotionAnimations`) unchanged. Attribute appended. |
+| 2026-11-20 | `ServerStorage.UnitTest.Cases.Fallback_Test` (ModuleScript) | new | 1,746 / 4038074237 | 3 cases. Attribute set. |
+| 2026-11-20 | `ServerStorage.UnitTest.Cases.RollAuthority_Test` (ModuleScript) | new | 3,494 / 3836190760 | 4 cases. Attribute set. |
+
+Studio objects (not scripts): `ReplicatedStorage.PlayerMovement` (Folder) with `Animations` (42 Animation objects: the 41 group clips of OBT's handover table without Fly / FlyIdle, plus `Empty`) and the RemoteEvent `Roll`. `StarterPlayer.StarterCharacterScripts.LandAnim` (2,412 / 10044350, unchanged source) disabled and moved to `ServerStorage.CityQuarantine.AnimationsReplaced` (attributes `OriginalPath`, `OriginalParent`, `QuarantinedBy`); Movement's Land / LandHard replace it.
+
+The 9 sources are in `CityScripts/`; bytes and Adler-32 equal the place (9 / 9). The transfer server could not be used (the Studio MCP blocks HTTP to 127.0.0.1 now): each source was written on disk first and pushed into the place, then both sides were hashed. City suites 322 / 322 / 0 (315 + 7); heist 740 passed / 0 failed. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

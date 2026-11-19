@@ -3,10 +3,15 @@
 
 local Figure = script.Parent
 
--- Delete the default Animate script
+-- Delete the default Animate script, and stop what it already started: its tracks outlive it (2026-11-20: its idle
+-- kept playing at Core under everything, and Movement's loops drop to Core under a held tool)
 local defaultAnimate = Figure:WaitForChild("Animate", 5)
 if defaultAnimate then
 	defaultAnimate:Destroy()
+	local animator = Figure:WaitForChild("Humanoid"):FindFirstChildOfClass("Animator")
+	for _, track in animator and animator:GetPlayingAnimationTracks() or {} do
+		track:Stop(0)
+	end
 end
 
 local Humanoid = Figure:WaitForChild("Humanoid")
@@ -317,6 +322,12 @@ function getLocomotionTrack(anim, humanoid)
 end
 
 function playAnimation(animName, transitionTime, humanoid)
+	-- 2026-11-20: StarterCharacterScripts.Movement plays the locomotion clips while it runs (character attribute
+	-- MovementAnimations); this script keeps sitting, and its WalkSpeed, sprint, landing recovery and sprint FOV
+	if animName ~= "sit" and Figure:GetAttribute("MovementAnimations") then
+		stopAllAnimations()
+		return
+	end
 	local roll = math.random(1, animTable[animName].totalWeight)
 	local idx = 1
 	while (roll > animTable[animName][idx].weight) do

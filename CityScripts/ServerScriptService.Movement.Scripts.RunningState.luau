@@ -4,8 +4,12 @@ local Players = game:GetService("Players")
 local makeValidateRunningState = require(script.validateRunningState)
 local validateRunningState = makeValidateRunningState()
 local SprintAuthority = require(script.Parent.SprintAuthority)
+local RollAuthority = require(script.Parent.RollAuthority)
 
 local runEvent = ReplicatedStorage:WaitForChild("UpdateRunningState")
+-- 2026-11-20: StarterCharacterScripts.Movement rolls at once (the character is the client's) and asks here for the
+-- roll's stamina; RollAuthority re-checks and spends it. No arguments are read.
+local rollEvent = ReplicatedStorage:WaitForChild("PlayerMovement"):WaitForChild("Roll")
 
 local function onUpdateRunningState(player: Player, isRunning: boolean)
 	if not validateRunningState.validate(player, isRunning) then
@@ -20,9 +24,13 @@ end
 
 local function onPlayerRemoving(player: Player)
 	validateRunningState.cleanup(player)
+	RollAuthority.cleanup(player)
 end
 
 SprintAuthority.start()
 
 runEvent.OnServerEvent:Connect(onUpdateRunningState)
+rollEvent.OnServerEvent:Connect(function(player: Player)
+	RollAuthority.request(player, os.clock())
+end)
 Players.PlayerRemoving:Connect(onPlayerRemoving)
