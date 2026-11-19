@@ -7,12 +7,19 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ServerStorage = game:GetService("ServerStorage")
 
 local AnimationPriorities = require(ReplicatedStorage.Modules.AnimationPriorities)
+local BlasterConstants = require(ReplicatedStorage.Blaster.Constants)
 local CharacterAnimationController = require(ReplicatedStorage.Blaster.Scripts.CharacterAnimationController)
+local Combat = require(ReplicatedStorage.Enemy.Combat)
+local NpcFire = require(ServerScriptService.Enemy.Scripts.NpcFire) :: any
 local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
+local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
 
 local GuardPost = {}
 GuardPost.__index = GuardPost
+
+-- The weapon clips of each EnemyTemplates guard (its shoot animation), by guard model.
+local animationOf = setmetatable({}, { __mode = "k" })
 
 -- Close enough to cover to stop pathing. Recomputing a path for a guard that
 -- is already standing in cover is pure waste.
@@ -126,7 +133,9 @@ local function templateSpawn(name: string, targetCFrame: CFrame, lift: number?):
 		track:Play()
 	end
 	pcall(function()
-		CharacterAnimationController.new(weapon):enable()
+		local controller = CharacterAnimationController.new(weapon)
+		controller:enable()
+		animationOf[guard] = controller
 	end)
 	humanoid.Died:Once(function()
 		root.Anchored = false
@@ -172,6 +181,52 @@ local function listenForHits()
 	end)
 end
 
+local function humanoidOf(player): Humanoid?
+	local character = player.Character
+	return character and character:FindFirstChildOfClass("Humanoid")
+end
+
+-- Readable gunfights (combat balance, 2026-11-20): a guard's shot is a real shot through the Blaster's ShotResolver
+-- from its weapon's muzzle (tracer, flash, sound and impact for everyone, its shoot animation, Tagged, NPC range
+-- falloff and level armor), aimed at the target's root inside the shared NPC cone (NpcFire: the template's aim, the
+-- focus ramp, the widest cone at a rolling target). Its weapon deals config.GuardDamage (set at spawn) and never runs
+-- dry: guards do not reload.
+local function shootDefault(post, target)
+	local guard = post._guard
+	local weapon = guard and guard:FindFirstChildOfClass("Tool")
+	local humanoid = humanoidOf(target)
+	local root = humanoid and humanoid.RootPart
+	if not weapon or not root then return end
+	local ShotResolver = require(ServerScriptService.Blaster.Scripts.ShotResolver) :: any
+	local from = NpcFire.muzzlePosition(weapon, guard)
+	local seed = workspace:GetServerTimeNow()
+	local focus = post:_focusSeconds()
+	local errorDegrees = NpcFire.errorDegrees(post._aim, (root.Position - from).Magnitude, root, focus, focus)
+	local origin = NpcFire.aimOrigin(from, root.Position, errorDegrees, seed)
+	weapon:SetAttribute(BlasterConstants.AMMO_ATTRIBUTE, weapon:GetAttribute(BlasterConstants.MAGAZINE_SIZE_ATTRIBUTE) or 1)
+	local animation = animationOf[guard]
+	if animation then
+		pcall(function() animation:playShootAnimation() end)
+	end
+	local function resolve()
+		if guard.Parent then
+			ShotResolver.resolveShot({ shooter = guard, weapon = weapon, origin = origin, seed = seed })
+		end
+	end
+	local swingDelay = weapon:GetAttribute(BlasterConstants.SWING_DELAY_ATTRIBUTE)
+	if typeof(swingDelay) == "number" and swingDelay > 0 then
+		task.delay(swingDelay, resolve)
+	else
+		resolve()
+	end
+end
+
+-- The red aim line from the guard's weapon to the target for its wind-up (NpcFire); returns its remover.
+local function showTellDefault(post, target): () -> ()
+	local guard = post._guard
+	return NpcFire.showTell(guard and guard:FindFirstChildOfClass("Tool"), humanoidOf(target))
+end
+
 -- config.GuardsAlwaysPosted (NewsStation, police and wanted Task 3, 2026-11-17; the Bank since 2026-11-20): the
 -- guard stands at its post from boot, through Idle and Cooldown, and a fresh one replaces it at Rearm; a guard alive
 -- at Seal stays. Without the flag guards exist only while a session is Active. A config whose Tags have no
@@ -189,7 +244,11 @@ function GuardPost.new(marker: BasePart, deps)
 		-- wires this to bank:NotifyGuardSpawned() so the guard-clear counter tracks
 		-- guards that really exist, not Config.GuardCount.
 		onGuardSpawned = deps.onGuardSpawned or function() end,
-		damage = deps.damage or function() end,
+		-- Combat balance (2026-11-20): shoot(post, target) fires one shot or swing (the visible ShotResolver shot by
+		-- default); tokens: the players' shooter tokens (NpcFire's); showTell(post, target) puts up the aim line.
+		shoot = deps.shoot or shootDefault,
+		tokens = deps.tokens or NpcFire.tokens,
+		showTell = deps.showTell or showTellDefault,
 		_guard = nil,
 		_humanoid = nil,
 		_spawnedThisSession = false,
@@ -201,6 +260,23 @@ function GuardPost.new(marker: BasePart, deps)
 		_diedConn = nil,
 		-- [Player] = until when a player who hurt this guard is its target (Provoke).
 		_provoked = setmetatable({}, { __mode = "k" }),
+		-- Combat balance (2026-11-20): the target being fired at, when its sight began (focus) and was last had (a
+		-- fresh wind-up after Combat.REACQUIRE_AFTER), the wind-up's end and whether this engagement had one, the
+		-- shots left in the burst, the pause after it, a flinch's delay, and the guard's weapon (melee, automatic)
+		-- and aim template.
+		_target = nil,
+		_lastTarget = nil,
+		_sightSince = nil,
+		_lastSightAt = nil,
+		_windupUntil = nil,
+		_windupDone = false,
+		_hideTell = nil,
+		_burstLeft = nil,
+		_pauseUntil = -math.huge,
+		_shotAfter = -math.huge,
+		_melee = false,
+		_automatic = false,
+		_aim = nil,
 	}, GuardPost)
 	if self:_alwaysPosted() then
 		self:OnSessionStart()
@@ -245,6 +321,18 @@ function GuardPost:OnSessionStart()
 	local ok, err = pcall(self.onGuardSpawned)
 	if not ok then warn("[GuardPost] onGuardSpawned failed: " .. tostring(err)) end
 
+	-- Combat balance (2026-11-20): what the guard holds decides how it fights (a melee weapon swings within reach, a
+	-- gun fires like every NPC shooter); its hits deal config.GuardDamage; it aims with its template's cone.
+	local weapon = guard:FindFirstChildOfClass("Tool")
+	self._melee = weapon ~= nil and weapon:GetAttribute(BlasterConstants.MELEE_HIT_EFFECT_ATTRIBUTE) ~= nil
+	self._automatic = weapon ~= nil
+		and weapon:GetAttribute(BlasterConstants.FIRE_MODE_ATTRIBUTE) == BlasterConstants.FIRE_MODE.AUTO
+	self._aim = templateConfig.read(guard).aim
+	self._windupDone, self._lastTarget, self._pauseUntil = false, nil, -math.huge
+	if weapon and self.config and typeof(self.config.GuardDamage) == "number" then
+		weapon:SetAttribute(BlasterConstants.DAMAGE_ATTRIBUTE, self.config.GuardDamage)
+	end
+
 	self._humanoid = guard:FindFirstChildOfClass("Humanoid")
 	if self._humanoid then
 		self._diedConn = self._humanoid.Died:Connect(function()
@@ -258,6 +346,7 @@ end
 function GuardPost:_handleDeath()
 	if self._deathReported then return end
 	self._deathReported = true
+	self:_track(nil)
 	self._diedAt = self.now()
 	local ok, err = pcall(self.onGuardDied)
 	if not ok then warn("[GuardPost] onGuardDied failed: " .. tostring(err)) end
@@ -376,11 +465,97 @@ function GuardPost:_face(candidates, target)
 	end
 end
 
+-- Combat balance (2026-11-20): the guard's hold on its target. A new target (or the same one back after more than
+-- Combat.REACQUIRE_AFTER out of sight) needs a fresh wind-up; focus counts from when sight began; losing the target
+-- gives its shooter token back and takes the aim line down.
+function GuardPost:_track(target, now: number?)
+	if target == self._target then
+		if target then self._lastSightAt = now end
+		return
+	end
+	if self._target then self.tokens:release(self._target, self) end
+	self._burstLeft = nil
+	self._windupUntil = nil
+	self:_endTell()
+	if target then
+		if target ~= self._lastTarget or (now :: number) - (self._lastSightAt or -math.huge) > Combat.REACQUIRE_AFTER then
+			self._windupDone = false
+		end
+		self._sightSince = now
+		self._lastTarget, self._lastSightAt = target, now
+	end
+	self._target = target
+end
+
+function GuardPost:_endTell()
+	if self._hideTell then
+		self._hideTell()
+		self._hideTell = nil
+	end
+end
+
+function GuardPost:_focusSeconds(): number
+	return if self._sightSince then self.now() - self._sightSince else 0
+end
+
+-- A gun guard fires like every NPC shooter: with one of its target's shooter tokens (NpcFire), after the wind-up
+-- with the aim line (Combat.reactionTime) before its first shot at a fresh target, in bursts of Combat.burstShots
+-- shots GuardFireInterval apart (_shotFired), then the token goes back for Combat.burstPause.
+function GuardPost:_ready(target, now: number): boolean
+	if now < self._pauseUntil or not self.tokens:acquire(target, self) then return false end
+	if self._windupDone then return true end
+	if not self._windupUntil then
+		self._windupUntil = now + Combat.reactionTime(self._automatic)
+		self._hideTell = self.showTell(self, target)
+	end
+	if now < self._windupUntil then return false end
+	self._windupDone = true
+	self._windupUntil = nil
+	self:_endTell()
+	self._lastFired = nil
+	return true
+end
+
+function GuardPost:_shotFired(target, now: number)
+	self._burstLeft = (self._burstLeft or Combat.burstShots()) - 1
+	if self._burstLeft <= 0 then
+		self._burstLeft = nil
+		self.tokens:release(target, self)
+		self._pauseUntil = now + Combat.burstPause()
+	end
+end
+
+function GuardPost:_fire(target)
+	local ok, err = pcall(self.shoot, self, target)
+	if not ok then warn("[GuardPost] shot failed: " .. tostring(err)) end
+end
+
+-- A melee guard's reach: the target's root within its weapon's range of the muzzle.
+function GuardPost:_inReach(target): boolean
+	local weapon = self._guard and self._guard:FindFirstChildOfClass("Tool")
+	local humanoid = humanoidOf(target)
+	local root = humanoid and humanoid.RootPart
+	if not weapon or not root then return false end
+	local reach = weapon:GetAttribute(BlasterConstants.RANGE_ATTRIBUTE)
+	return typeof(reach) == "number" and (root.Position - NpcFire.muzzlePosition(weapon, self._guard)).Magnitude <= reach
+end
+
+-- Still staggered by a stun (ShotResolver's StunnedUntil, os.clock), or within GuardFireInterval of getting up.
+function GuardPost:_staggered(target): boolean
+	local humanoid = humanoidOf(target)
+	local root = humanoid and humanoid.RootPart
+	local stunnedUntil = root and root:GetAttribute("StunnedUntil")
+	return typeof(stunnedUntil) == "number" and os.clock() < stunnedUntil + self.config.GuardFireInterval
+end
+
 function GuardPost:Update()
 	if self.bank:GetState() ~= "Active" then
 		self:_respawnIfDue()
 		-- Heist police and Bank guards (2026-11-20): outside a session a guard is passive unless a player hurt it.
-		if not self:_anyProvoked() then return end
+		if not self:_anyProvoked() then
+			self:_track(nil)
+			return
+		end
 	end
 	if not self:IsAlive() then return end
 
@@ -405,15 +580,27 @@ function GuardPost:Update()
 	local target = GuardPost.selectTarget(root.Position, candidates, self.config.GuardSightRange, function(player)
 		return GuardPost.mayTarget(self.bank, player) or self:_isProvokedBy(player)
 	end)
+	local now = self.now()
+	self:_track(target, now)
 	if not target then return end
 
-	local now = self.now()
-	if not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
-	self._lastFired = now
+	-- Turned toward its target first: a melee guard's reach is measured from its weapon's muzzle.
 	self:_face(candidates, target)
+	if self._melee then
+		-- Combat balance (2026-11-20): a guard holding a melee weapon (Security's Baton) strikes only within its
+		-- weapon's reach, and not at a target still staggered by its last strike. No token, no aim line.
+		if not self:_inReach(target) or self:_staggered(target) then return end
+		if not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
+		self._lastFired = now
+		self:_fire(target)
+		return
+	end
 
-	local ok, err = pcall(self.damage, target, self.config.GuardDamage)
-	if not ok then warn("[GuardPost] damage failed: " .. tostring(err)) end
+	if not self:_ready(target, now) then return end
+	if now < self._shotAfter or not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
+	self._lastFired = now
+	self:_fire(target)
+	self:_shotFired(target, now)
 end
 
 -- Heist layers 2026-11-17: engage at once, as if a player had come within GuardActivationRange.
@@ -428,8 +615,14 @@ end
 -- No-op when the guard is dead.
 function GuardPost:Provoke(player)
 	if not self:IsAlive() then return end
-	self._provoked[player] = self.now() + (self.config.GuardProvokeSeconds or 0)
+	local now = self.now()
+	self._provoked[player] = now + (self.config.GuardProvokeSeconds or 0)
 	self._activated = true
+	-- Combat balance (2026-11-20): the hit makes it flinch like every NPC shooter (Combat.FLINCH_*).
+	if self._sightSince then
+		self._sightSince = math.min(now, self._sightSince + Combat.FLINCH_FOCUS_SETBACK)
+	end
+	self._shotAfter = now + Combat.FLINCH_SHOT_DELAY
 end
 
 function GuardPost:_isProvokedBy(player): boolean
@@ -449,6 +642,7 @@ end
 
 function GuardPost:_despawn()
 	table.clear(self._provoked)
+	self:_track(nil)
 	if self._diedConn then
 		self._diedConn:Disconnect()
 		self._diedConn = nil

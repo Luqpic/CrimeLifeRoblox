@@ -9,6 +9,10 @@
 -- Scheduling: every enemy "thinks" on Constants.THINK_INTERVAL, not per frame, and enemies are given
 -- random phase offsets so their ticks spread across the interval instead of landing on one frame.
 -- Between thinks the engine moves them via Humanoid:MoveTo, which costs us nothing per frame.
+--
+-- Readable gunfights (combat balance, 2026-11-20): a gun fires in bursts, only while holding one of its target's
+-- shooter tokens, after a wind-up with a red aim line, through an aim cone that tightens with continuous sight
+-- (Enemy.Scripts.NpcFire, numbers in ReplicatedStorage.Enemy.Combat). Melee weapons swing as before.
 local CollectionService = game:GetService("CollectionService")
 local PathfindingService = game:GetService("PathfindingService")
 local Players = game:GetService("Players")
@@ -20,13 +24,13 @@ local Workspace = game:GetService("Workspace")
 local AnimationPriorities = require(ReplicatedStorage.Modules.AnimationPriorities)
 local BlasterConstants = require(ReplicatedStorage.Blaster.Constants)
 local CharacterAnimationController = require(ReplicatedStorage.Blaster.Scripts.CharacterAnimationController)
-local AimConfig = require(ReplicatedStorage.Enemy.AimConfig)
+local Combat = require(ReplicatedStorage.Enemy.Combat)
 local Constants = require(ReplicatedStorage.Enemy.Constants)
+local NpcFire = require(ServerScriptService.Enemy.Scripts.NpcFire)
 local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
 local ShotResolver = require(ServerScriptService.Blaster.Scripts.ShotResolver)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
-local getRayDirections = require(ReplicatedStorage.Blaster.Utility.getRayDirections)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
 
@@ -125,6 +129,17 @@ function EnemyAI.new(
 		-- Lets the stun handling in `think` tell "just became stunned" / "still stunned" /
 		-- "just recovered" apart with one flag instead of three separate checks.
 		wasStunned = false,
+		-- Readable gunfights (2026-11-20). sightSince: when continuous sight of the target began (the focus ramp);
+		-- lastSightAt: the last think with sight (a fresh wind-up after Combat.REACQUIRE_AFTER without); windupDone:
+		-- this engagement's wind-up is behind it; pauseUntil: the pause after a burst; shotAfter: a flinch's delay of
+		-- the next shot; bursting: a burst thread runs; hideTell: takes the aim line down.
+		sightSince = nil :: number?,
+		lastSightAt = nil :: number?,
+		windupDone = false,
+		pauseUntil = 0,
+		shotAfter = 0,
+		bursting = false,
+		hideTell = nil :: (() -> ())?,
 
 		connections = {},
 	}, EnemyAI)
@@ -428,8 +443,30 @@ end
 function EnemyAI:_setTarget(player: Player?)
 	if player ~= self.target then
 		self.targetAcquiredTime = os.clock()
+		-- A new target is a new engagement: a running burst (with its token and aim line) ends; wind-up and focus
+		-- start over.
+		if self.bursting then
+			self:_stopFiring()
+		end
+		self.windupDone = false
+		self.sightSince = nil
+		self.lastSightAt = nil
 	end
 	self.target = player
+end
+
+-- Sight of the current target this think (combat balance, 2026-11-20): continuous sight drives the focus ramp, and
+-- sight back after more than Combat.REACQUIRE_AFTER without it needs a fresh wind-up.
+function EnemyAI:_noteSight(now: number, visible: boolean)
+	if not visible then
+		self.sightSince = nil
+		return
+	end
+	if self.lastSightAt == nil or now - self.lastSightAt > Combat.REACQUIRE_AFTER then
+		self.windupDone = false
+	end
+	self.sightSince = self.sightSince or now
+	self.lastSightAt = now
 end
 
 function EnemyAI:_targetHumanoid(): Humanoid?
@@ -462,8 +499,22 @@ end
 -- ============================================================================
 
 function EnemyAI:_stopFiring()
-	-- Invalidating the generation is what stops the automatic loop; a stale loop can never fire again.
+	-- Invalidating the generation is what stops a running burst; a stale burst can never fire again. Its shooter
+	-- token and aim line go with it.
 	self.fireGeneration += 1
+	self:_dropToken()
+end
+
+function EnemyAI:_dropToken()
+	NpcFire.tokens:releaseShooter(self)
+	if self.hideTell then
+		self.hideTell()
+		self.hideTell = nil
+	end
+end
+
+function EnemyAI:_isMelee(): boolean
+	return self.weapon:GetAttribute(BlasterConstants.MELEE_HIT_EFFECT_ATTRIBUTE) ~= nil
 end
 
 -- Automatic weapons hold the trigger down; semi-automatic weapons fire once per trigger pull. This
@@ -479,7 +530,7 @@ function EnemyAI:_shotCooldown(): number
 	return 60 / math.max(rateOfFire, 1)
 end
 
--- One trigger pull, for a semi-automatic weapon.
+-- One swing, for a melee weapon (guns fire bursts since 2026-11-20: _gunTick, _startBurst).
 --
 -- A player's cadence on a semi-auto is set by how fast they can click, with the weapon's rateOfFire
 -- only imposing a ceiling. The AI's equivalent of a click is one Attack think tick, and the same
@@ -562,34 +613,20 @@ function EnemyAI:_reload()
 	end)
 end
 
--- Rotates a perfect aim direction by a random amount inside an error cone.
---
--- Reuses getRayDirections -- the same seeded angular-deviation helper the weapon system already uses
--- to derive its spread pattern -- rather than introducing a second randomisation mechanism. The seed
--- is offset from the shot's own seed so the aim cone and the weapon's spread cone draw different
--- numbers; sharing a seed would make both deviate identically and simply stack.
+-- Rotates a perfect aim direction by a random amount inside an error cone: NpcFire's cone (AimConfig's error for the
+-- range, the target's speed and this template, widened by the focus ramp of combat balance 2026-11-20, the widest
+-- against a rolling target), drawn with getRayDirections on a seed offset from the shot's own.
 function EnemyAI:_applyAimError(trueOrigin: CFrame, targetHumanoid: Humanoid, seed: number): CFrame
 	local targetRoot = targetHumanoid.RootPart
 	if not targetRoot then
 		return trueOrigin
 	end
-
+	local now = os.clock()
 	local distance = (targetRoot.Position - trueOrigin.Position).Magnitude
-	local velocity = targetRoot.AssemblyLinearVelocity
-	local targetSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
-	local secondsSinceAcquired = os.clock() - (self.targetAcquiredTime or 0)
-
-	local errorDegrees = AimConfig.getErrorDegrees(distance, targetSpeed, secondsSinceAcquired, self.config.aim)
-	if errorDegrees <= 0 then
-		return trueOrigin
-	end
-
-	local deviated = getRayDirections(trueOrigin, 1, math.rad(errorDegrees), seed + AimConfig.SEED_DECORRELATION_OFFSET)[1]
-	if not deviated then
-		return trueOrigin
-	end
-
-	return CFrame.lookAt(trueOrigin.Position, trueOrigin.Position + deviated)
+	local focusSeconds = if self.sightSince then now - self.sightSince else 0
+	local errorDegrees =
+		NpcFire.errorDegrees(self.config.aim, distance, targetRoot, now - (self.targetAcquiredTime or 0), focusSeconds)
+	return NpcFire.aimOrigin(trueOrigin.Position, trueOrigin.Position + trueOrigin.LookVector, errorDegrees, seed)
 end
 
 -- Decays the accumulated recoil toward zero based on real elapsed time since it was last touched.
@@ -721,28 +758,75 @@ function EnemyAI:_fireOnce(): boolean
 	return true
 end
 
--- Holds the trigger down, for an automatic weapon only: fires continuously at the weapon's real rate
--- of fire for as long as we stay in Attack, mirroring BlasterController's Auto branch. Runs on its
--- own thread because an automatic weapon's cadence is faster than the think interval.
---
--- Semi-automatic weapons deliberately do NOT use this -- they go through _tryFire, one shot per
--- think tick. Running this loop for a semi-auto is what made the pistol behave like an automatic.
-function EnemyAI:_startAutoFire()
+-- Readable gunfights (combat balance, 2026-11-20): a gun fires only while holding one of its target's shooter tokens
+-- (NpcFire: at most two NPCs fire at one player; the others keep aiming, repositioning and waiting). Each Attack
+-- think, outside a burst and its pause, takes a token if one is free and starts a burst.
+function EnemyAI:_gunTick(now: number, targetHumanoid: Humanoid)
+	if self.bursting or now < self.pauseUntil then
+		return
+	end
+	if self.weapon:GetAttribute(BlasterConstants.RELOADING_ATTRIBUTE) then
+		return
+	end
+	if not NpcFire.tokens:acquire(self.target, self) then
+		return
+	end
+	self:_startBurst(targetHumanoid)
+end
+
+-- One burst, on its own thread (an automatic's cadence is faster than the think interval): the wind-up first when
+-- this engagement has not had one (the red aim line for Combat.reactionTime), then Combat.burstShots shots
+-- Combat.shotInterval apart (a flinch pushes the next one back), then the token goes back for Combat.burstPause. A
+-- state change, stun, death or a shot that cannot leave the barrel (no sight, an ally in the line, an empty
+-- magazine) ends it early.
+function EnemyAI:_startBurst(targetHumanoid: Humanoid)
 	self.fireGeneration += 1
 	local generation = self.fireGeneration
+	self.bursting = true
+	local function live(): boolean
+		return not self.destroyed and self.fireGeneration == generation and self.state == STATE.Attack
+	end
 
 	task.spawn(function()
-		while
-			not self.destroyed
-			and self.fireGeneration == generation
-			and self.state == STATE.Attack
-		do
-			if self:_fireOnce() then
-				self.lastShotTime = os.clock()
+		if not self.windupDone then
+			self.hideTell = NpcFire.showTell(self.weapon, targetHumanoid)
+			task.wait(Combat.reactionTime(self:_isAutomatic()))
+			if self.hideTell then
+				self.hideTell()
+				self.hideTell = nil
 			end
-			task.wait(self:_shotCooldown())
+			self.windupDone = live()
 		end
+		local shots = Combat.burstShots()
+		local interval = Combat.shotInterval(self:_isAutomatic(), self:_shotCooldown())
+		local fired = 0
+		while fired < shots and live() do
+			local hold = self.shotAfter - os.clock()
+			if hold > 0 then
+				task.wait(hold)
+			elseif self:_fireOnce() then
+				self.lastShotTime = os.clock()
+				fired += 1
+				if fired < shots then
+					task.wait(interval)
+				end
+			else
+				break
+			end
+		end
+		NpcFire.tokens:releaseShooter(self)
+		self.pauseUntil = os.clock() + Combat.burstPause()
+		self.bursting = false
 	end)
+end
+
+-- A hit on this enemy (combat balance, 2026-11-20): its focus goes back Combat.FLINCH_FOCUS_SETBACK and its next
+-- shot waits Combat.FLINCH_SHOT_DELAY.
+function EnemyAI:_flinch(now: number)
+	if self.sightSince then
+		self.sightSince = math.min(now, self.sightSince + Combat.FLINCH_FOCUS_SETBACK)
+	end
+	self.shotAfter = now + Combat.FLINCH_SHOT_DELAY
 end
 
 -- ============================================================================
@@ -764,13 +848,8 @@ function EnemyAI:_setState(newState: string)
 	self.character:SetAttribute("AIState", newState)
 	self:_clearPath()
 
-	if newState == STATE.Attack then
-		-- Only an automatic weapon gets a continuous firing loop. A semi-auto is pulled once per
-		-- think tick from _thinkAttack instead.
-		if self:_isAutomatic() then
-			self:_startAutoFire()
-		end
-	elseif newState == STATE.Search then
+	-- Entering Attack starts nothing: each Attack think swings a melee weapon or starts a gun's burst.
+	if newState == STATE.Search then
 		self.searchUntil = os.clock() + Constants.SEARCH_DURATION
 		self.hasLookedAround = false
 	elseif newState == STATE.Patrol then
@@ -903,7 +982,9 @@ function EnemyAI:_thinkChase(now: number)
 		return
 	end
 
-	if ShotResolver.hasLineOfSight(self.character, eyePosition, targetHumanoid) then
+	local visible = ShotResolver.hasLineOfSight(self.character, eyePosition, targetHumanoid)
+	self:_noteSight(now, visible)
+	if visible then
 		self.lastKnownPosition = aimPosition
 		if distance <= self:_engageRange() then
 			self:_setState(STATE.Attack)
@@ -930,10 +1011,12 @@ function EnemyAI:_thinkAttack(now: number)
 	local eyePosition = self:_eyePosition()
 	if not ShotResolver.hasLineOfSight(self.character, eyePosition, targetHumanoid) then
 		-- Cover broke the shot: go back to closing the distance, and remember where they were.
+		self:_noteSight(now, false)
 		self:_setState(STATE.Chase)
 		return
 	end
 
+	self:_noteSight(now, true)
 	self.lastKnownPosition = aimPosition
 	local distance = (aimPosition - eyePosition).Magnitude
 	local engageRange = self:_engageRange()
@@ -946,10 +1029,11 @@ function EnemyAI:_thinkAttack(now: number)
 	-- Hold a firing line instead of walking into the player.
 	self:_faceTowards(aimPosition)
 
-	-- One trigger pull per think for a semi-automatic weapon; automatic weapons are driven by their
-	-- own loop (see _startAutoFire).
-	if not self:_isAutomatic() then
+	-- One swing per think for a melee weapon; a gun starts a burst when it may (_gunTick).
+	if self:_isMelee() then
 		self:_tryFire(now)
+	else
+		self:_gunTick(now, targetHumanoid)
 	end
 	if self.allyInLineAt and now - self.allyInLineAt <= Constants.THINK_INTERVAL * 2 then
 		self:_sidestep(aimPosition)
@@ -1026,12 +1110,7 @@ function EnemyAI:think(now: number)
 		self.humanoid.WalkSpeed = 0
 		return
 	elseif self.wasStunned then
-		self.wasStunned = false
-		-- The stun killed an automatic weapon's fire loop (see _stopFiring above); if we are
-		-- still in Attack once the stun lifts, that loop does not restart on its own.
-		if self.state == STATE.Attack and self:_isAutomatic() then
-			self:_startAutoFire()
-		end
+		self.wasStunned = false -- the next Attack think starts a new burst
 	end
 
 	if self.state == STATE.Patrol then
@@ -1062,10 +1141,11 @@ end
 -- Called when something damages this enemy. Being shot from outside the detection radius is itself a
 -- detection event, otherwise an enemy would ignore a sniper indefinitely.
 function EnemyAI:onDamagedBy(attacker: Player | Model)
-	if not Constants.RETALIATION_DETECTION or self.state == STATE.Dead then
+	if self.state == STATE.Dead or typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
 		return
 	end
-	if typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
+	self:_flinch(os.clock())
+	if not Constants.RETALIATION_DETECTION then
 		return
 	end
 

@@ -18,7 +18,7 @@ local function applyMaxHealth(character: Model, level: number)
 	if not humanoid then
 		return
 	end
-	humanoid.MaxHealth = 100 + LevelingConstants.MAX_HEALTH_PER_LEVEL * (level - 1)
+	humanoid.MaxHealth = LevelingConstants.maxHealth(level)
 	humanoid.Health = humanoid.MaxHealth
 end
 
@@ -144,7 +144,7 @@ local function hydrate(player: any, profile: any?)
 	-- CharacterAutoLoads can spawn a character before this hydrator's profile load resolves (it does
 	-- not yield, ProfileGateway's does), so onPlayerAdded's CharacterAdded connection can already have
 	-- applied MaxHealth for the level-1 default by the time this runs -- a level-70 returning player
-	-- would otherwise spend their whole first life at 100 HP instead of 238, uncorrectable by a
+	-- would otherwise spend their whole first life at 100 HP instead of 376, uncorrectable by a
 	-- level-up at the cap. Guarded on Character existing: if it doesn't exist yet, onPlayerAdded's
 	-- CharacterAdded connection fires later and reads the playerLevels value this just set, so both
 	-- orderings land on the correct health.

@@ -39,6 +39,9 @@ function RollAuthority.request(player: Player, now: number): (boolean, string?)
 		return false, "stamina"
 	end
 	lastRoll[player] = now
+	-- Combat balance (2026-11-20): NPC aim gives a rolling target its widest cone (Enemy.Scripts.NpcFire). The client's
+	-- MoveAction attribute never reaches the server, so an accepted roll is stamped here, for the longest roll.
+	root:SetAttribute("RollingUntil", now + Config.Roll.Time * Config.Roll.Sprint.Time)
 	return true
 end
 

@@ -4,6 +4,7 @@ return function()
 	local GuardPost = TestRunner.freshRequire(game.ServerScriptService.Heist.Components.GuardPost)
 	local BankInstance = TestRunner.freshRequire(game.ServerScriptService.Heist.BankInstance)
 	local Config = TestRunner.freshRequire(game.ReplicatedStorage.HeistShared.Config)
+	local Combat = require(game.ReplicatedStorage.Enemy.Combat)
 	local suite = TestRunner.new("Guard")
 	-- The session-only lifecycle (the Bank's before 2026-11-20, still the one without GuardsAlwaysPosted).
 	local sessionOnly = table.clone(Config)
@@ -111,7 +112,7 @@ return function()
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		expect.equal(spawned, 0, "construction does not spawn")
 		expect.falsy(post:IsAlive(), "no guard yet")
@@ -137,7 +138,7 @@ return function()
 				return model
 			end,
 			onGuardDied = function() end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		post:OnSessionStart()
 		post:OnSessionStart()
@@ -166,7 +167,7 @@ return function()
 				return model
 			end,
 			onGuardDied = function() deaths += 1 end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		post:OnSessionStart()
 		post:_handleDeath()
@@ -185,7 +186,7 @@ return function()
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		post:OnSessionStart()
 		post:_handleDeath()
@@ -203,7 +204,7 @@ return function()
 			now = function() return 100 end,
 			spawnGuard = function() spawned += 1; return nil end,
 			onGuardDied = function() end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		post:OnSessionStart()
 		post:_handleDeath()
@@ -232,7 +233,7 @@ return function()
 				return model
 			end,
 			onGuardDied = function() end,
-			damage = function() end,
+			shoot = function() end,
 		})
 		post:OnSessionStart()
 		post:Seal()
@@ -340,6 +341,7 @@ return function()
 		local function run(alert)
 			local marker = tempMarker()
 			local shots = {}
+			local clock = 100
 			local postedConfig = { GuardsAlwaysPosted = true, GuardSpawnLift = 0, GuardRespawnSeconds = 60, Tags = {},
 				GuardActivationRange = 60, GuardSightRange = 120, GuardFireInterval = 0.9, GuardDamage = 6 }
 			local bank = activeBank()
@@ -347,7 +349,9 @@ return function()
 			bank:AddParticipant(robber)
 			local post = GuardPost.new(marker, {
 				config = postedConfig, bank = bank,
-				now = function() return 100 end,
+				now = function() return clock end,
+				tokens = Combat.newTokens(2, function() return clock end),
+				showTell = function() return function() end end,
 				spawnGuard = function()
 					local model = Instance.new("Model")
 					Instance.new("Humanoid").Parent = model
@@ -359,11 +363,13 @@ return function()
 					model.Parent = workspace
 					return model
 				end,
-				damage = function(target, amount) table.insert(shots, { target = target, amount = amount }) end,
+				shoot = function(_post, target) table.insert(shots, { target = target }) end,
 			})
 			-- 90 studs: past GuardActivationRange (60), inside GuardSightRange (120).
 			post._candidates = function() return { { player = robber, position = Vector3.new(90, 0, 0), visible = true } } end
 			if alert then post:Alert() end
+			post:Update()
+			clock += Combat.reactionTime(false) -- the wind-up before a first shot (combat balance 2026-11-20)
 			post:Update()
 			post:Destroy()
 			marker:Destroy()
@@ -477,7 +483,9 @@ return function()
 		local post = GuardPost.new(marker, { config = Config, now = function() return clock end,
 			bank = BankInstance.new({ config = Config, now = function() return 1000 end }),
 			spawnGuard = function() return rig(true) end,
-			damage = function(target) table.insert(shots, target) end })
+			tokens = Combat.newTokens(2, function() return clock end),
+			showTell = function() return function() end end,
+			shoot = function(_post, target) table.insert(shots, target) end })
 		post._candidates = function()
 			return {
 				{ player = bystander, position = Vector3.new(10, 0, 0), visible = true },
@@ -488,6 +496,9 @@ return function()
 		expect.equal(#shots, 0, "a player walking past at 10 studs is left alone")
 		post:Provoke(attacker)
 		post:Update()
+		expect.equal(#shots, 0, "provoked: winds up first")
+		clock += Combat.reactionTime(false)
+		post:Update()
 		expect.equal(#shots, 1, "provoked: fires")
 		expect.equal(shots[1], attacker, "at the attacker, past the nearer bystander")
 		clock = 100 + Config.GuardProvokeSeconds - 0.1
@@ -497,6 +508,121 @@ return function()
 		post:Update()
 		expect.equal(#shots, 2, "calm again after GuardProvokeSeconds")
 		post:Destroy()
+		marker:Destroy()
+	end)
+
+	-- Combat balance (2026-11-20): guards fire like every NPC shooter (tokens, wind-up with the aim line, bursts), and a
+	-- guard holding a melee weapon strikes only within its reach.
+	local function armedPost(clock, tokens, record, tool)
+		local marker = tempMarker()
+		local bank = activeBank()
+		local robber = { GetAttribute = function() return nil end }
+		bank:AddParticipant(robber)
+		local post = GuardPost.new(marker, { config = Config, bank = bank, now = function() return clock.t end,
+			spawnGuard = function()
+				local model = rig(true)
+				if tool then tool.Parent = model end
+				return model
+			end,
+			tokens = tokens,
+			showTell = function()
+				record.tells += 1
+				record.showing = true
+				return function() record.showing = false end
+			end,
+			shoot = function(_post, target) table.insert(record.shots, { target = target, t = clock.t }) end })
+		post._candidates = function() return { { player = robber, position = Vector3.new(20, 0, 0), visible = true } } end
+		return post, robber, marker
+	end
+
+	suite:test("a gun guard shows the aim line for the wind-up, fires a burst, lets its token go and pauses", function(expect)
+		local clock = { t = 100 }
+		local tokens = Combat.newTokens(2, function() return clock.t end)
+		local record = { tells = 0, shots = {}, showing = false }
+		local post, robber, marker = armedPost(clock, tokens, record)
+		post:Update()
+		expect.equal(record.tells, 1, "the aim line goes up at once")
+		expect.truthy(record.showing, "and stays up through the wind-up")
+		expect.equal(tokens:count(robber), 1, "the guard holds one of the robber's tokens")
+		clock.t = 100 + Combat.reactionTime(false) - 0.05
+		post:Update()
+		expect.equal(#record.shots, 0, "no shot before the wind-up ends")
+		clock.t = 100 + Combat.reactionTime(false)
+		post:Update()
+		expect.equal(#record.shots, 1, "the first shot ends the wind-up")
+		expect.falsy(record.showing, "and takes the line down")
+		while tokens:count(robber) > 0 and #record.shots < 10 do
+			clock.t += Config.GuardFireInterval
+			post:Update()
+		end
+		local burst = #record.shots
+		expect.truthy(burst >= Combat.BURST_SHOTS_MIN and burst <= Combat.BURST_SHOTS_MAX, "a burst of 3 to 5")
+		expect.equal(tokens:count(robber), 0, "the token is back after the burst")
+		clock.t += Combat.BURST_PAUSE_MIN - 0.05
+		post:Update()
+		expect.equal(#record.shots, burst, "no shot in the pause")
+		clock.t += Combat.BURST_PAUSE_MAX
+		post:Update()
+		expect.equal(#record.shots, burst + 1, "after the pause it fires again")
+		expect.equal(record.tells, 1, "without a second wind-up on the same target")
+		post:Destroy()
+		expect.equal(tokens:count(robber), 0, "a removed guard holds no token")
+		marker:Destroy()
+	end)
+
+	suite:test("a gun guard waits while two others fire at the robber", function(expect)
+		local clock = { t = 100 }
+		local tokens = Combat.newTokens(2, function() return clock.t end)
+		local record = { tells = 0, shots = {}, showing = false }
+		local post, robber, marker = armedPost(clock, tokens, record)
+		local a, b = {}, {}
+		tokens:acquire(robber, a)
+		tokens:acquire(robber, b)
+		post:Update()
+		clock.t += 2
+		post:Update()
+		expect.equal(record.tells, 0, "no aim line without a token")
+		expect.equal(#record.shots, 0, "and no shot")
+		tokens:release(robber, a)
+		post:Update()
+		expect.equal(record.tells, 1, "a free token: it winds up")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	suite:test("a guard with a melee weapon strikes only within its reach, and not at a staggered target", function(expect)
+		local clock = { t = 100 }
+		local tokens = Combat.newTokens(2, function() return clock.t end)
+		local record = { tells = 0, shots = {}, showing = false }
+		local baton = Instance.new("Tool")
+		baton:SetAttribute("meleeHitEffect", "MeleeImpact")
+		baton:SetAttribute("range", 6)
+		local post, robber, marker = armedPost(clock, tokens, record, baton)
+		local body = rig(true)
+		robber.Character = body
+		local guardRoot = post._guard.PrimaryPart
+		-- Facing away from the robber with the muzzle 5 studs ahead: in reach only once the guard has turned.
+		post._guard:PivotTo(CFrame.lookAt(guardRoot.Position, guardRoot.Position - Vector3.xAxis))
+		local handle = Instance.new("Part")
+		handle.Name = "Handle"
+		handle.Anchored = true
+		handle.CFrame = guardRoot.CFrame * CFrame.new(0, 0, -5)
+		Instance.new("Attachment", handle).Name = "MuzzleAttachment"
+		handle.Parent = baton
+		body.PrimaryPart.Position = guardRoot.Position + Vector3.new(15, 0, 0)
+		post:Update()
+		expect.equal(#record.shots, 0, "15 studs: out of the Baton's reach")
+		body.PrimaryPart.Position = guardRoot.Position + Vector3.new(4, 0, 0)
+		clock.t += 1
+		post:Update()
+		expect.equal(#record.shots, 1, "4 studs: it strikes")
+		expect.equal(record.tells, 0, "a swing has no aim line")
+		body.PrimaryPart:SetAttribute("StunnedUntil", os.clock() + 5)
+		clock.t += 2
+		post:Update()
+		expect.equal(#record.shots, 1, "not while the target is still staggered")
+		post:Destroy()
+		body:Destroy()
 		marker:Destroy()
 	end)
 

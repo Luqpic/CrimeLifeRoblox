@@ -367,13 +367,8 @@ local registry = ComponentRegistry.new({
 		onRefused = notifyRefused,
 		onContact = applyLaserDamage,
 		onGuardDied = function() bank:NotifyGuardDied() end,
-		-- Guards DEAL DAMAGE; they do not forfeit directly. Death from any
-		-- cause is caught by the Humanoid.Died handler below.
-		damage = function(player, amount)
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then humanoid:TakeDamage(amount) end
-		end,
+		-- Guards deal damage (since 2026-11-20 through ShotResolver, GuardPost's own shot); they do not forfeit
+		-- directly. Death from any cause is caught by the Humanoid.Died handler below.
 		-- Seeds bank:GuardsRemaining() from guards that actually spawned, not from
 		-- Config.GuardCount, so a spawn failure cannot leave the guard barrier
 		-- permanently unopenable.

@@ -48,9 +48,11 @@ Config.HeartbeatRate = 10
 -- 2026-11-20). No cover points here: they hold their posts. The combat numbers equal the Bank's
 -- (HeistShared.Config), kept as NewsStation's own entries like every number in this file.
 Config.GuardsAlwaysPosted = true
--- GuardTemplate's pivot is at its feet: 0 puts them on the floor the markers are centred on (the Bank's
--- default of 3 lifts its guards 3 studs above their posts, measured 2026-11-17).
-Config.GuardSpawnLift = 0
+-- Combat balance (2026-11-20): the three guards are EnemyTemplates Police (a real Mateba, so their shots are seen
+-- through ShotResolver like every NPC's; the grey GuardTemplate held no weapon). The rig's root sits GuardSpawnLift
+-- over its feet, as the Bank's (GuardTemplate's pivot was at its feet, lift 0).
+Config.GuardTemplates = table.freeze({ "Police" })
+Config.GuardSpawnLift = 3.2
 Config.GuardActivationRange = 60
 Config.GuardSightRange = 120
 Config.GuardFireInterval = 0.9

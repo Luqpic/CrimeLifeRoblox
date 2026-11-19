@@ -25,6 +25,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Workspace = game:GetService("Workspace")
 
 local Constants = require(ReplicatedStorage.Blaster.Constants)
+local Combat = require(ReplicatedStorage.Enemy.Combat)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 local canDamageHumanoid = require(ReplicatedStorage.Blaster.Utility.canDamageHumanoid)
 local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
@@ -581,6 +582,14 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 			multiplier = HEADSHOT_DAMAGE_MULTIPLIER
 		end
 		local appliedDamage = isHeadshot and (damagePerRay * multiplier) or damagePerRay
+		-- Readable gunfights (combat balance, 2026-11-20): an NPC's hit (gangs, police, guards) loses damage with range
+		-- and a player's level armor takes its share (Enemy.Combat.npcDamage). Players' shots are unchanged (PvP too).
+		if not shooterIsPlayer then
+			local victim = Players:GetPlayerFromCharacter(taggedHumanoid.Parent)
+			local level = victim and victim:GetAttribute("Level")
+			appliedDamage = Combat.npcDamage(appliedDamage, (rayResult.position - origin.Position).Magnitude,
+				if typeof(level) == "number" then level else nil)
+		end
 
 		-- Apply damage and fire any relevant events. The attacker passed to Tagged/Eliminated is a
 		-- Player or an enemy character Model -- listeners must not assume Player.

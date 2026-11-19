@@ -82,4 +82,16 @@ return function(t)
 		expect.equal(SprintAuthority.getStamina(player), nil)
 		done(player)
 	end)
+
+	-- Combat balance (2026-11-20): NPC aim reads a roll from the root's RollingUntil (the longest roll, a sprint roll).
+	t.test("an accepted roll stamps RollingUntil on the root; a refused one does not", function()
+		local player, character, root = fakePlayer()
+		character:SetAttribute(Constants.CARRY_SPEED_CAP_ATTRIBUTE, Constants.CARRY_SPEED_CAP)
+		RollAuthority.request(player, 100)
+		expect.equal(root:GetAttribute("RollingUntil"), nil)
+		character:SetAttribute(Constants.CARRY_SPEED_CAP_ATTRIBUTE, nil)
+		expect.truthy(RollAuthority.request(player, 100))
+		expect.near(root:GetAttribute("RollingUntil"), 100 + Config.Roll.Time * Config.Roll.Sprint.Time)
+		done(player)
+	end)
 end

@@ -209,12 +209,7 @@ local registry = ComponentRegistry.new({
 	config = Config,
 	componentDeps = {
 		onContact = applyLaserDamage,
-		-- Guards deal damage the Bank's way (HeistServer's damage dep).
-		damage = function(player, amount)
-			local character = player.Character
-			local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-			if humanoid and humanoid.Health > 0 then humanoid:TakeDamage(amount) end
-		end,
+		-- Guards shoot through ShotResolver (GuardPost's own shot, combat balance 2026-11-20).
 	},
 	classes = {
 		[T.NewsStationAccessBarrier] = AccessBarrier,
