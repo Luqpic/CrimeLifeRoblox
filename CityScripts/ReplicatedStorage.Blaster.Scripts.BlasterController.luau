@@ -18,6 +18,7 @@ local getRayDirections = require(script.Parent.Parent.Utility.getRayDirections)
 local drawRayResults = require(script.Parent.Parent.Utility.drawRayResults)
 local castRays = require(script.Parent.Parent.Utility.castRays)
 local thirdPersonAim = require(script.Parent.Parent.Utility.thirdPersonAim)
+local ShoulderCamera = require(script.Parent.ShoulderCamera)
 local canDamageHumanoid = require(script.Parent.Parent.Utility.canDamageHumanoid)
 
 local player = Players.LocalPlayer
@@ -548,6 +549,14 @@ function BlasterController:unequip()
 end
 
 function BlasterController:initialize()
+	-- (2026-11-20) the touch Reload button had no callback (TouchInputController.reloadCallback was never set, so a
+	-- tap did nothing); VIEW and SWAP are the third-person buttons.
+	self.touchInputController:setReloadCallback(function()
+		self:reload()
+	end)
+	self.touchInputController:setViewCallbacks(function()
+		self.viewModelController:toggleThirdPerson()
+	end, ShoulderCamera.swapShoulder)
 	table.insert(
 		self.connections,
 		self.blaster.Equipped:Connect(function()
@@ -584,8 +593,19 @@ function BlasterController:initialize()
 				or inputObject.KeyCode == Constants.GAMEPAD_RELOAD_KEY_CODE
 			then
 				self:reload()
-			elseif inputObject.KeyCode == Constants.KEYBOARD_TOGGLE_VIEW_KEY_CODE then
+			elseif
+				inputObject.KeyCode == Constants.KEYBOARD_TOGGLE_VIEW_KEY_CODE
+				or inputObject.KeyCode == Constants.GAMEPAD_TOGGLE_VIEW_KEY_CODE
+			then
 				self.viewModelController:toggleThirdPerson()
+			elseif
+				inputObject.KeyCode == Constants.KEYBOARD_SWAP_SHOULDER_KEY_CODE
+				or inputObject.KeyCode == Constants.GAMEPAD_SWAP_SHOULDER_KEY_CODE
+			then
+				-- every Tool's controller hears the key; only the equipped one swaps (two swaps cancelled out)
+				if self.equipped then
+					ShoulderCamera.swapShoulder()
+				end
 			end
 		end)
 	)

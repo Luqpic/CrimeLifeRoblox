@@ -82,6 +82,21 @@ local Constants = {
 	KEYBOARD_RELOAD_KEY_CODE = Enum.KeyCode.R,
 	GAMEPAD_RELOAD_KEY_CODE = Enum.KeyCode.ButtonX,
 	KEYBOARD_TOGGLE_VIEW_KEY_CODE = Enum.KeyCode.V,
+	GAMEPAD_TOGGLE_VIEW_KEY_CODE = Enum.KeyCode.DPadUp,
+	-- Third person over the shoulder (2026-11-20, Blaster.Scripts.ShoulderCamera, ported from OBT's GunEngine.Camera):
+	-- Z / R3 swap the shoulder; the camera sits SHOULDER_ZOOM studs back at SHOULDER_OFFSET (side, up) from the
+	-- character, SHOULDER_AIM_OFFSET while aiming, SHOULDER_WALL_GAP off a wall; the upper body leans up to
+	-- SHOULDER_MAX_PITCH_DEGREES with the aim, reported at most every AIM_PITCH_SEND_INTERVAL s and taken by the
+	-- server at most every AIM_PITCH_MIN_INTERVAL s (ServerScriptService.Blaster.Scripts.AimPitch).
+	KEYBOARD_SWAP_SHOULDER_KEY_CODE = Enum.KeyCode.Z,
+	GAMEPAD_SWAP_SHOULDER_KEY_CODE = Enum.KeyCode.ButtonR3,
+	SHOULDER_ZOOM = 9,
+	SHOULDER_OFFSET = Vector3.new(1.75, 1.4, 0),
+	SHOULDER_AIM_OFFSET = Vector3.new(1.1, 1.3, 0),
+	SHOULDER_WALL_GAP = 0.5,
+	SHOULDER_MAX_PITCH_DEGREES = 70,
+	AIM_PITCH_SEND_INTERVAL = 0.1,
+	AIM_PITCH_MIN_INTERVAL = 0.08,
 
 	-- Pixel size under which a screen is considered 'small'. This is the same threshold used by the default touch UI.
 	UI_SMALL_SCREEN_THRESHOLD = 500,

@@ -892,4 +892,33 @@ Studio objects (not scripts): `ReplicatedStorage.PlayerMovement` (Folder) with `
 
 The 9 sources are in `CityScripts/`; bytes and Adler-32 equal the place (9 / 9). The transfer server could not be used (the Studio MCP blocks HTTP to 127.0.0.1 now): each source was written on disk first and pushed into the place, then both sides were hashed. City suites 322 / 322 / 0 (315 + 7); heist 740 passed / 0 failed. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
 
+Task 1 review fixes (Sonnet review, 2026-11-20; committed with Task 2).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.Movement` (LocalScript) | 23,344 / 953208571 | 24,542 / 2135516419 | I1: the `CharacterAdded` connection is kept and disconnected in `stop()`. I2: no per-frame tables, closures or name building in the Heartbeat step (cleared `target` / `rate`, a reused direction table, names built once, `syncTo` helper), the tool flag kept by `ChildAdded` / `ChildRemoved`, `AdjustWeight` / `AdjustSpeed` only when the value moves. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.RollAuthority` (ModuleScript) | 2,147 / 1854402996 | 2,348 / 2494576150 | Also refused while crouched, seated or PlatformStand; a request from a Player that has left is refused (no state recreated). Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.SprintAuthority` (ModuleScript) | 12,387 / 1677161428 | 12,414 / 3488120329 | `spend` refuses while sprint is locked out. Attribute appended. |
+
+Task 2, third person over the shoulder (`Batch: shoulder camera third person`), done by the controller.
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `ReplicatedStorage.Blaster.Scripts.ShoulderCamera` (ModuleScript) | new | 13,115 / 3035454427 | OBT's `GunEngine.Camera` ported: shoulder offset and zoom through CameraAuthority "Shoulder", wall clamp, Z / R3 swap, aim offset, facing (yields to MoveAction), waist / neck pitch reported on `Remotes.AimPitch`, the session's view choice (third by default). No scope, bob or shake (no scoped gun; Bobbing Camera and CameraRecoiler own those). Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.Blaster.Utility.shoulderMath` (ModuleScript) | new | 1,637 / 1403335509 | Pure: `clampSide`, `pitchOf`, `acceptPitch`, `due`, `smooth`. Attribute set. |
+| 2026-11-20 | `ServerScriptService.Blaster.Scripts.AimPitch` (Script) | new | 1,483 / 2971664214 | Server: a finite pitch, clamped to 70 degrees, at most one per 0.08 s (0 always), into character attribute `AimPitch`. Attribute set. |
+| 2026-11-20 | `StarterPlayer.StarterPlayerScripts.AimPitchView` (LocalScript) | new | 2,177 / 2707282781 | Other players' waist / neck eased to their `AimPitch`; idle with nobody tilted. Attribute set. |
+| 2026-11-20 | `ServerStorage.UnitTest.Cases.ShoulderMath_Test` (ModuleScript) | new | 2,099 / 2390795616 | 5 cases. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.Blaster.Scripts.ViewModelController` (ModuleScript) | 18,904 / 85491774 | 18,800 / 132407314 | Third person = the shoulder camera (the fixed `THIRD_PERSON_OFFSET` camera rewrite and its root turn removed); a fresh equip uses the session's view (third by default), player attribute `ViewMode`; V remembers; aim passed on. First mirror of this script in `CityScripts/`. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.Blaster.Scripts.BlasterController` (ModuleScript) | 19,563 / 1338451710 | 20,422 / 318981244 | DPadUp toggles the view, Z / R3 swap the shoulder (equipped controller only: every Tool's controller hears the key, two swaps cancelled out); the touch Reload button gets its callback (it never had one: a tap did nothing) and VIEW / SWAP theirs. Attribute appended. |
+| 2026-11-20 | `ReplicatedStorage.Blaster.Constants` (ModuleScript) | 6,318 / 3954372288 | 7,260 / 1144458660 | `GAMEPAD_TOGGLE_VIEW_KEY_CODE`, the swap keys, `SHOULDER_*`, `AIM_PITCH_*`. Attribute appended. |
+| 2026-11-20 | `ReplicatedStorage.Blaster.Scripts.TouchInputController` (ModuleScript) | 4,646 / 2740281819 | 5,739 / 2092945993 | `setViewCallbacks`, VIEW / SWAP wiring, SWAP shown only in third person. First mirror. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.Modules.CameraAuthority` (ModuleScript) | 6,883 / 2682741682 | 7,407 / 551032463 | "Shoulder" source on top of CameraOffset (applied at once, not tweened) and Min / MaxZoomDistance; character-scoped. First mirror. Attribute set. |
+| 2026-11-20 | `ReplicatedStorage.Modules.PropertyAuthority` (ModuleScript) | 2,513 / 4223693298 | 2,734 / 4256153360 | `Get(source)`; the applier also receives the winning source. First mirror. Attribute set. |
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.CustomShiftLock.SmoothShiftLock` (ModuleScript) | 6,249 / 1662119896 | 6,623 / 808938512 | Its camera offset and its root turn stand aside while `ShoulderCam` is set; the turn also while `MoveAction` (a roll, a ledge climb) runs. First mirror. Attribute set. |
+
+Studio objects (not scripts): `ReplicatedStorage.Blaster.Remotes.AimPitch` (UnreliableRemoteEvent); `TouchInputController.BlasterTouchGui.Buttons.ViewButton` / `SwapButton` (ReloadButton style, 64 x 64, Montserrat Heavy labels), built by `CityMerge/builds/2026-11-20-shoulder-camera-instances.luau`.
+
+The 16 sources are in `CityScripts/`; bytes and Adler-32 equal the place (16 / 16), written on disk and pushed (or patched by the same pairs on both sides) and hashed on both sides. City suites 327 / 327 / 0 (322 + 5); heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error (API access off for the new cloud place) and the Assistant plugin warning, client 0. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
+
 NOT saved / NOT published

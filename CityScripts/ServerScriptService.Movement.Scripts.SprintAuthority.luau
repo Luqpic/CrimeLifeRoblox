@@ -103,7 +103,7 @@ end
 -- Returns whether it was spent.
 function SprintAuthority.spend(player: Player, amount: number): boolean
 	local state = getState(player)
-	if state.stamina.stamina < amount then
+	if state.stamina.lockedOut or state.stamina.stamina < amount then
 		return false
 	end
 	state.stamina.stamina -= amount

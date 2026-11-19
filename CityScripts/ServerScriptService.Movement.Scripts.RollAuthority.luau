@@ -18,7 +18,8 @@ function RollAuthority.request(player: Player, now: number): (boolean, string?)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not humanoid or humanoid.Health <= 0 or not root then
+	if not humanoid or humanoid.Health <= 0 or not root
+		or (typeof(player) == "Instance" and player:IsA("Player") and player.Parent == nil) then -- a request after leaving
 		return false, "dead"
 	end
 	if now - (lastRoll[player] or -math.huge) < Config.Roll.Cooldown then
@@ -30,7 +31,8 @@ function RollAuthority.request(player: Player, now: number): (boolean, string?)
 	end
 	local stunnedUntil = root:GetAttribute("StunnedUntil")
 	if (type(stunnedUntil) == "number" and now < stunnedUntil) or character:GetAttribute("IsRagdolled") or root.Anchored
-		or character:GetAttribute("AdminFrozen") or player:GetAttribute("AdminFrozen") then
+		or character:GetAttribute("AdminFrozen") or player:GetAttribute("AdminFrozen")
+		or root:GetAttribute("IsCrouching") == true or humanoid.Sit or humanoid.PlatformStand then
 		return false, "blocked"
 	end
 	if not SprintAuthority.spend(player, Config.Roll.Stamina) then

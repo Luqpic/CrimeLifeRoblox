@@ -134,6 +134,17 @@ local KINDS = {
 	Run = { "Run_F", "Run_B", "Run_L", "Run_R" },
 	Sprint = { "Sprint" },
 }
+-- names built once (the step runs every frame: no string building or table per frame there; review 2026-11-20)
+local LEGS = setmetatable({}, { __index = function(t, n) local v = n .. "Legs" t[n] = v return v end })
+local DIR_NAME = {}
+for _, k in { "Walk", "Jog", "Run" } do DIR_NAME[k] = { F = k .. "_F", B = k .. "_B", L = k .. "_L", R = k .. "_R" } end
+local legsTodo, lastRate = {}, {}
+local dirW = { F = 0, B = 0, L = 0, R = 0 }
+local function syncTo(master, t)
+	if not t or t == master or not t.IsPlaying then return end
+	local at = master.Length > 0 and t.Length > 0 and master.TimePosition / master.Length * t.Length or master.TimePosition
+	if math.abs(t.TimePosition - at) > 0.03 then t.TimePosition = at end
+end
 local function kindWeight(kind)
 	local w = 0
 	for _, n in KINDS[kind] do w += weight[n] or 0 end
@@ -152,10 +163,13 @@ local function applyWeights(dt, toolHeld, inMove)
 	local a = 1 - math.exp(-C.Fade * dt)
 	-- the legs layer copies the full-body weights while a tool is held (not during a move)
 	if toolHeld and not inMove then
-		for name, w in pairs(table.clone(target)) do
-			if tracks[name .. "Legs"] then
-				target[name .. "Legs"], rate[name .. "Legs"] = w, rate[name]
-			end
+		local n = 0
+		for name in target do
+			if tracks[LEGS[name]] then n += 1 legsTodo[n] = name end
+		end
+		for i = 1, n do
+			local name = legsTodo[i]
+			target[LEGS[name]], rate[LEGS[name]] = target[name], rate[name]
 		end
 	end
 	-- a kind fading in starts on the phase of the strongest moving kind
@@ -173,10 +187,12 @@ local function applyWeights(dt, toolHeld, inMove)
 		if cur > 0.001 then
 			if not t.IsPlaying then
 				t:Play(0, cur, rate[name] or 1)
+				lastRate[name] = rate[name] or 1
 				if lead and t.Length > 0 then t.TimePosition = lead * t.Length end
 			else
-				t:AdjustWeight(cur, 0)
-				t:AdjustSpeed(rate[name] or 1)
+				if cur ~= weight[name] then t:AdjustWeight(cur, 0) end
+				local r = rate[name] or 1
+				if math.abs(r - (lastRate[name] or -1)) > 0.01 then t:AdjustSpeed(r) lastRate[name] = r end
 			end
 		elseif t.IsPlaying then
 			t:Stop(0)
@@ -193,13 +209,8 @@ local function applyWeights(dt, toolHeld, inMove)
 		end
 		if master then
 			for _, n in list do
-				for _, m in { n, n .. "Legs" } do
-					local t = tracks[m]
-					local at = master.Length > 0 and t and t.Length > 0 and master.TimePosition / master.Length * t.Length or master.TimePosition
-					if t and t ~= master and t.IsPlaying and math.abs(t.TimePosition - at) > 0.03 then
-						t.TimePosition = at
-					end
-				end
+				syncTo(master, tracks[n])
+				syncTo(master, tracks[LEGS[n]])
 			end
 		end
 	end
@@ -432,9 +443,20 @@ end)
 
 -- ======================= state =======================
 local airVy, climbVy = 0, 0
+-- whether a tool is held, kept by events instead of a search every frame
+local toolHeldNow = character:FindFirstChildOfClass("Tool") ~= nil
+character.ChildAdded:Connect(function(c) if c:IsA("Tool") then toolHeldNow = true end end)
+character.ChildRemoved:Connect(function(c) if c:IsA("Tool") then toolHeldNow = character:FindFirstChildOfClass("Tool") ~= nil end end)
+local function wantKind(name, w, speed, mul)
+	if w <= 0 then return end
+	local PS = C.PlaySpeed
+	local r = math.clamp(speed / (C.BaseSpeed[name] * legs), PS.Min, PS.Max)
+	local names = DIR_NAME[name]
+	for k, x in dirW do want(names[k], w * x * mul, r) end
+end
 humanoid.StateChanged:Connect(function(_, new)
 	if move and move.physics then return end
-	local toolHeld = character:FindFirstChildOfClass("Tool") ~= nil
+	local toolHeld = toolHeldNow
 	if new == S.Jumping then
 		jumpTrack = play(toolHeld and "JumpLegs" or "Jump", 0.05)
 	elseif new == S.Landed then
@@ -450,12 +472,13 @@ end)
 
 local stepConn = RunService.Heartbeat:Connect(function(dt)
 	if humanoid.Health <= 0 then return end
-	target, rate = {}, {}
+	table.clear(target)
+	table.clear(rate)
 	local state = humanoid:GetState()
 	local v = root.AssemblyLinearVelocity
 	local flat = Vector3.new(v.X, 0, v.Z)
 	local speed = flat.Magnitude
-	local toolHeld = character:FindFirstChildOfClass("Tool") ~= nil
+	local toolHeld = toolHeldNow
 	if state == S.Freefall or state == S.Jumping then airVy = math.min(airVy, v.Y) end
 	if move then stepMove() end
 
@@ -482,34 +505,31 @@ local stepConn = RunService.Heartbeat:Connect(function(dt)
 		else
 			local look, right = root.CFrame.LookVector, root.CFrame.RightVector
 			local fx, rx = flat:Dot(look), flat:Dot(right)
-			local d = { F = math.max(fx, 0), B = math.max(-fx, 0), R = math.max(rx, 0), L = math.max(-rx, 0) }
-			local sum = d.F + d.B + d.R + d.L
-			for k, x in d do d[k] = x / sum end
+			dirW.F, dirW.B, dirW.R, dirW.L = math.max(fx, 0), math.max(-fx, 0), math.max(rx, 0), math.max(-rx, 0)
+			local sum = dirW.F + dirW.B + dirW.R + dirW.L
+			for k, x in dirW do dirW[k] = x / sum end
 			local jog = ramp(speed, C.WalkToJog)
 			local run = jog * ramp(speed, C.JogToRun)
-			local sprint = run * ramp(speed, C.RunToSprint) * d.F -- only forward; a sprint-speed strafe stays a run
+			local sprint = run * ramp(speed, C.RunToSprint) * dirW.F -- only forward; a sprint-speed strafe stays a run
 			local walk = 1 - jog
 			jog -= run
 			run -= sprint
 			local PS = C.PlaySpeed
-			local function kind(name, w)
-				if w <= 0 then return end
-				local r = math.clamp(speed / (C.BaseSpeed[name] * legs), PS.Min, PS.Max)
-				for k, x in d do want(name .. "_" .. k, w * x * mul, r) end
-			end
-			kind("Walk", walk)
-			kind("Jog", jog)
-			kind("Run", run)
+			wantKind("Walk", walk, speed, mul)
+			wantKind("Jog", jog, speed, mul)
+			wantKind("Run", run, speed, mul)
 			want("Sprint", sprint * mul, math.clamp(speed / (C.BaseSpeed.Sprint * legs), PS.Min, PS.Max))
 		end
 	end
 	applyWeights(dt, toolHeld, move ~= nil)
 end)
 
+local addedConn
 local stopped = false
 local function stop()
 	if stopped then return end
 	stopped = true
+	if addedConn then addedConn:Disconnect() end
 	endMove()
 	stepConn:Disconnect()
 	jumpConn:Disconnect()
@@ -519,4 +539,4 @@ local function stop()
 end
 humanoid.Died:Connect(stop)
 -- a character replaced without a death (LoadCharacter): this one's roll binding must go
-owner.CharacterAdded:Connect(function(c) if c ~= character then stop() end end)
+addedConn = owner.CharacterAdded:Connect(function(c) if c ~= character then stop() end end)
