@@ -967,3 +967,18 @@ Studio objects (not scripts): `ServerStorage.AdminPanel` with `AdminPanelGui` (S
 The 5 sources are in `CityScripts/`; bytes and Adler-32 equal the place (5 / 5). City suites 352 / 352 / 0; heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error and the Assistant plugin warning, client 0. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute, no script holding the old account id.
 
 NOT saved / NOT published
+
+Task 2 review fixes (Sonnet review I1 to I4, 2026-11-20 night), done by the controller. Same columns; old = the place after Task 4 (each "old" equals its `CityScripts/` mirror at 2e128f0).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `ReplicatedStorage.Blaster.Scripts.ShoulderCamera` (ModuleScript) | 13,115 / 3035454427 | 13,887 / 2176473364 | I1: module `wantAiming` kept across exit / enter (V, a panel, a seat) so a held aim comes back with its offset. I4: `exit()` turns `AutoRotate` back on only with no `MoveAction`; mid-roll it waits for the move to end (and skips it if the shoulder view is back). Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Blaster.Scripts.AimPitch` (Script) | 1,483 / 2971664214 | 1,529 / 1123421684 | I2: header names the reliable RemoteEvent. Attribute appended. |
+| 2026-11-20 | `StarterPlayer.StarterPlayerScripts.AimPitchView` (LocalScript) | 2,177 / 2707282781 | 2,468 / 2866494009 | I3 (StreamingEnabled): no per-character connection; each other player's current character read at 10 Hz, joints found when first needed and again if they went away. Attribute appended. |
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.CustomShiftLock.SmoothShiftLock` (ModuleScript) | 6,623 / 808938512 | 6,703 / 4002907870 | I4: the `ShoulderCam` / `MoveAction` early return moved above its `AutoRotate` write, so the shoulder camera (or a move) is the only writer. Attribute appended. |
+
+Studio object: `ReplicatedStorage.Blaster.Remotes.AimPitch` is now a `RemoteEvent` (I2: the closing 0 must arrive); the build script makes it so.
+
+The 4 sources are in `CityScripts/`; bytes and Adler-32 equal the place (4 / 4, checked before the write). Play: Crowbar equips into the shoulder view and two swings took a dummy 100 -> 10; RMB held through V, V: offset back at (1.10, 1.30), FOV 50, released (1.75, 1.40) / 70; strafe 2.5 s: facing within 0.1 deg of the camera, `AutoRotate` never on; V 0.2 s into a roll: `AutoRotate` stays off until the roll ends, then on; Sit and PlatformStand release the view and it returns; `LoadCharacter` mid-shoulder: clean (no tool, offset 0, zoom 0.5..128) and the shoulder view on re-equip; server `AimPitch` -0.26 then 0 after V; touch VIEW / SWAP read back at 1100 x 679 with no overlaps (VIEW 16.8 px clear of Shoot, 30 px of Reload, labels fit). Not exercised: a real NPC dialogue mid-shoulder. City suites 352 / 352 / 0; heist 740 passed / 0 failed.
+
+NOT published

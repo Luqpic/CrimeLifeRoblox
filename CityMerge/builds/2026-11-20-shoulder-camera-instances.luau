@@ -1,13 +1,18 @@
 -- Re-runnable Edit build (2026-11-20): the instances the shoulder camera needs besides its scripts.
---   ReplicatedStorage.Blaster.Remotes.AimPitch (UnreliableRemoteEvent): ShoulderCamera -> ServerScriptService.Blaster.Scripts.AimPitch
+--   ReplicatedStorage.Blaster.Remotes.AimPitch (RemoteEvent, reliable since the Task 2 review: the closing 0 must arrive):
+--   ShoulderCamera -> ServerScriptService.Blaster.Scripts.AimPitch
 --   TouchInputController.BlasterTouchGui.Buttons.ViewButton / SwapButton: the phone's VIEW and SWAP buttons, styled
 --   like ReloadButton (black at 0.5, round), 64 x 64, labelled in Montserrat Heavy. VIEW sits up-left of Reload, SWAP above
 --   VIEW; centres (56, 0) and (56, -80) in the 280 x 290 Buttons frame keep 16 px clear of Shoot and 30 px of Reload.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local remotes = ReplicatedStorage.Blaster.Remotes
+local old = remotes:FindFirstChild("AimPitch")
+if old and not old:IsA("RemoteEvent") then
+	old:Destroy()
+end
 if not remotes:FindFirstChild("AimPitch") then
-	local remote = Instance.new("UnreliableRemoteEvent")
+	local remote = Instance.new("RemoteEvent")
 	remote.Name = "AimPitch"
 	remote.Parent = remotes
 end

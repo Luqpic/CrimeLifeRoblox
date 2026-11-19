@@ -1,5 +1,6 @@
 -- AimPitch (2026-11-20): a shoulder-camera player's aim pitch (Blaster.Scripts.ShoulderCamera reports it on the
--- UnreliableRemoteEvent Blaster.Remotes.AimPitch), kept on their character as attribute AimPitch so every other
+-- RemoteEvent Blaster.Remotes.AimPitch: reliable, so the closing 0 is never lost; review I2), kept on their
+-- character as attribute AimPitch so every other
 -- client leans that upper body the same way (StarterPlayerScripts.AimPitchView). Only a finite number is taken,
 -- clamped to +-SHOULDER_MAX_PITCH_DEGREES, at most one per AIM_PITCH_MIN_INTERVAL s; a 0 (the shoulder view ended) is
 -- always taken so nobody is left tilted. Cosmetic only: nothing reads it for hits.

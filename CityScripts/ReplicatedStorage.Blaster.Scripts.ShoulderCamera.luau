@@ -42,6 +42,7 @@ local BLEND_TIME = 0.35
 local SEND_STEP = math.rad(2)
 
 local preferThird = true -- the session's choice (V)
+local wantAiming = false -- the last aim BlasterController asked for: kept across an exit / enter (a panel, V, a seat)
 local side, sideValue = 1, 1 -- +1 right shoulder, -1 left; kept for the session
 local state = nil -- nil while inactive
 
@@ -258,7 +259,7 @@ function ShoulderCamera.enter(): boolean
 		character = character,
 		humanoid = humanoid,
 		root = root,
-		aiming = false,
+		aiming = wantAiming,
 		waist = ShoulderCamera.joint(character, "UpperTorso", "Waist"),
 		neck = ShoulderCamera.joint(character, "Head", "Neck"),
 		lower = character:FindFirstChild("LowerTorso"),
@@ -296,9 +297,26 @@ function ShoulderCamera.exit()
 		CameraAuthority.MaxZoomDistance:Clear("Shoulder")
 	end)
 	try(function()
-		if s.humanoid.Parent then
-			s.humanoid.AutoRotate = true -- CustomShiftLock takes it back every frame while shift lock is on
+		-- AutoRotate back on (CustomShiftLock takes it back every frame while shift lock is on). Not in the middle of a
+		-- move (roll, ledge climb): the move found it off and will not switch it on, so it is switched on once the
+		-- move ends, unless the shoulder view has come back by then (review I4).
+		local humanoid, character = s.humanoid, s.character
+		if not humanoid.Parent then
+			return
 		end
+		if character:GetAttribute("MoveAction") == nil then
+			humanoid.AutoRotate = true
+			return
+		end
+		local conn
+		conn = character:GetAttributeChangedSignal("MoveAction"):Connect(function()
+			if character:GetAttribute("MoveAction") == nil then
+				conn:Disconnect()
+				if not state and humanoid.Parent then
+					humanoid.AutoRotate = true
+				end
+			end
+		end)
 	end)
 	try(function()
 		ShoulderCamera.tilt(s.waist, s.neck, 0, 0)
@@ -327,6 +345,7 @@ function ShoulderCamera.active(): boolean
 end
 
 function ShoulderCamera.setAiming(on: boolean)
+	wantAiming = on
 	if state then
 		state.aiming = on
 	end

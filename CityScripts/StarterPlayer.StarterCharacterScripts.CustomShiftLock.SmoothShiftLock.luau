@@ -153,6 +153,9 @@ function SmoothShiftLock:ToggleShiftLock(Enable: boolean?)
 	self:_transitionLockOffset();
 	if self.Enabled then
 		self._shiftlockMaid:GiveTask(RunService.RenderStepped:Connect(function(Delta: number)
+			--// (2026-11-20, review I4) the shoulder camera or a move (roll, ledge climb: MoveAction) owns the facing
+			--// and AutoRotate while it runs: nothing below may write either
+			if self.Character:GetAttribute("ShoulderCam") or self.Character:GetAttribute("MoveAction") then return; end;
 			if (self.Humanoid and self.RootPart) then 
 				self.Humanoid.AutoRotate = not self.Enabled;
 			end;
@@ -163,8 +166,6 @@ function SmoothShiftLock:ToggleShiftLock(Enable: boolean?)
 			--// A dead or ragdolled character is driven by physics. Writing its root CFrame every frame
 			--// fights the ragdoll for control of the same part and shows up as jitter, so hand it over.
 			if self.Humanoid.Health <= 0 or self.Humanoid.PlatformStand then return; end;
-			--// (2026-11-20) the shoulder camera or a move (roll, ledge climb: MoveAction) owns the facing
-			if self.Character:GetAttribute("ShoulderCam") or self.Character:GetAttribute("MoveAction") then return; end;
 			if Config.SMOOTH_CHARACTER_ROTATION then
 				local x, y, z = Camera.CFrame:ToOrientation();
 				self.RootPart.CFrame = self.RootPart.CFrame:Lerp(CFrame.new(self.RootPart.Position) * CFrame.Angles(0, y, 0), Delta * 5 * Config.CHARACTER_ROTATION_SPEED);
