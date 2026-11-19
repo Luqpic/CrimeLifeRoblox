@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, streaming, replication, network]
-updated: 2026-11-15
-sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "OBT Vault/50 Engine Traps/Streaming and Replication Traps.md (generic traps)"]
+updated: 2026-11-20
+sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "OBT Vault/50 Engine Traps/Streaming and Replication Traps.md (generic traps)", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Streaming and Replication Traps
@@ -31,6 +31,12 @@ What replicates, who owns what, and instance streaming. Whether FPS System has `
 - **Cause:** `QuestFeedbackController` seeds its last-seen completions count from the attribute at join (0); the quest hydrator then yields on the profile load and sets `Quest_<id>_Completions` to 1, which the client reads as a new completion. Same family as the HUD race above and the double reward in [[Luau and Scripting Traps]], on the client side.
 - **Fix:** the server sets a player attribute (`QuestsRestored`) last in the hydrator, and the client treats changes before it as seeds. The client's own flag is set from the attribute's changed signal so same-frame changes keep their order. A client whose profile never restores never sees it (cannot happen while a failed load kicks).
 - **Bit us:** [[2026-11-15 FPS Hardening In City]].
+
+### A Player attribute replicates to every client: do not mark staff with one
+- **Symptom (security review, 2026-11-20, not run):** the admin role was published as `Player:SetAttribute("AdminRole", ...)`, so any client could read `Players:GetPlayers()[i]:GetAttribute("AdminRole")` and learn who is an owner or helper, including an invisible admin silently spectating. An exploiter could switch its cheats off while staff was present.
+- **Cause:** attributes on a Player (and on a Character) replicate to everyone.
+- **Fix:** keep the role on the server (`Roles` cache) and put the value on the GUI the server clones only into that admin's `PlayerGui`. The per-life states (`AdminInvisible`, `AdminGod`, `AdminFly` and so on) still ride on the character because the nameplate script reads one; hide things on the server instead of marking them if that matters. [[Admin Panel]]
+- **Bit us:** [[2026-11-20 Admin Animations Third Person]]
 
 ### The client owns its character
 - A server push or `PivotTo` on a player can be overwritten by their client. RPG knockback on another player is unverified for this reason ([[FPS-RPG-Gamepass-Launcher]]).

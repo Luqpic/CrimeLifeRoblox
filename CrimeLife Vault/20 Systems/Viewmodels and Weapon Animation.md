@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, weapons, animation, viewmodel]
-updated: 2026-11-14
-sources: ["CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/*.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Viewmodel-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Viewmodel-Swing.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Baton-Viewmodel-Real-Mesh-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-AK47-Display-Fix-11-New-Guns-Integration.md"]
+updated: 2026-11-20
+sources: ["CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/*.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Viewmodel-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Viewmodel-Swing.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Baton-Viewmodel-Real-Mesh-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-AK47-Display-Fix-11-New-Guns-Integration.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Viewmodels and Weapon Animation
@@ -29,6 +29,9 @@ The first-person arms-and-gun model for every weapon: equip, idle breathing, mov
 - Melee reload is dead: `Motion:reload` returns early for `kind == "melee"`.
 - 28 viewmodels shared only 11 `AnimationId`s across three generic kits (as of 2026-09-20), which is why motion is procedural.
 
+## Third-person hold and the group clips (2026-11-20)
+Third person is now the shoulder camera ([[Weapons and Blaster]]), and the character's own clips come from [[Character Movement and Animation]]. In the cloud place the Tool hold clips load: the AK47's `Idle` (6170771161) played at weight 1.00 under the new legs layer (the 2026-11-18 "hold clips fail to load in Studio" trap was about the unpublished file). Under a tool the legs clips play at Action4 and full-body loops at Core, so the hold clip keeps the arms. Before the change CrimeLife's AK hold never keyed the legs (hip swing sprinting 140.2 degrees with `Animate2`'s run, 111.6 after with Sprint plus SprintLegs; legs move in both). The published hold pose was not looked at ([[Sound and Asset Traps]]).
+
 ## Extend it
 - New weapon: add a `profiles` entry (missing one asserts and stops first person). Keep the donor skeleton whole and hidden; hang the new mesh off `Body`.
 - Asset path: publish the `KeyframeSequence`s (needs a person: MCP cannot upload animations), paste ids into each viewmodel's `Animations`, restore the `baseline/` controllers. Author against the mechanical classes, not the 28 weapons.
@@ -43,6 +46,7 @@ The first-person arms-and-gun model for every weapon: equip, idle breathing, mov
 - Sounds with inaccessible assets throw authorization errors in Studio.
 
 ## History
+- 2026-11-20: third person = shoulder camera; hold clips load in the cloud place; legs layer under a held tool. [[2026-11-20 Admin Animations Third Person]]
 - 2026-09-25: RPG `launcher` reload, rocket on `RoundJoint`. [[FPS-RPG-Reload-Hand-Carries-Rocket]]
 - 2026-09-24: `PumpJoint` racks fore-ends; pistol magazines move. [[FPS-New-Guns-Magazines-And-Pump-Forends]]
 - 2026-09-24: profiles for eight new guns. [[FPS-Eight-New-Pistols-And-Shotguns]]

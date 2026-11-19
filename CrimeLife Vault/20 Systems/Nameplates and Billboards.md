@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, ui, billboard, nameplate]
-updated: 2026-11-17
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Overhead-GUI-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Player-Nameplates-And-LevelUp-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Nameplate-Scaling-And-Death-Hud-Hide.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Stat-Billboard-And-Cash-Upgrade-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Player-Overhead-GUI-Integration.md"]
+updated: 2026-11-20
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Known traps)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Overhead-GUI-Integration.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Player-Nameplates-And-LevelUp-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Nameplate-Scaling-And-Death-Hud-Hide.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Shop-Polish-And-Denied-Feedback.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weapon-Stat-Billboard-And-Cash-Upgrade-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Player-Overhead-GUI-Integration.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Nameplates and Billboards
@@ -42,6 +42,7 @@ World-space overheads: one name + health plate design shared by enemies and play
 - No double name (read 2026-11-17): only `PlayerNameplates` draws a name over a player (and turns Roblox's default name off, yours included). A second player has still not looked.
 
 ## History
+- 2026-11-20: no plate and no View Card prompt while the character has `AdminInvisible` (first mirror of `PlayerNameplates` in `CityScripts/`). [[Admin Panel]] [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-17: checked for a double name over a player: none, only `PlayerNameplates` draws one; every NPC overhead kept. [[2026-11-17 Known Issues Pass]]
 - 2026-09-24: criminal ranks on player plates; Health icon in every overhead bar; plate waits for the Head. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - 2026-09-19: enemy nameplate gap (bar starts at 0.640, +0.071 gap). [[Enemies-Climbing-Each-Other-And-Nameplate-Gap]]

@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, city, plots, streaming]
-updated: 2026-11-17
+updated: 2026-11-20
 sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-15 FPS Systems Into City.md", "CrimeLifeRoblox/CityMerge/after-import.md", "CrimeLifeRoblox/CityMerge/placement.md", "CrimeLifeRoblox/CityCleanup/after-task5.md", "CrimeLifeRoblox/CityCleanup/after-task6.md", "CrimeLifeRoblox/CityCleanup/workspace-layout-plan.md", "70 Batches/2026-11-14 City Baseline and Cleanup.md"]
 ---
 
@@ -9,7 +9,7 @@ sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-15 F
 
 ## What it does
 
-The Crimelife City map in `Crimelife city.rbxl`, cleaned to be the world of CrimeLife Tycoon: art only, six plots for the tycoon bases, streaming prepared for phones. Why and how: [[2026-11-14 City Baseline and Cleanup]]. The design it serves: `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`.
+The Crimelife City map (since 2026-11-20 the cloud place "Crimelife Tycoon", placeId 128488619644399; the local `Crimelife city.rbxl` is no longer the working copy), cleaned to be the world of CrimeLife Tycoon: art only, six plots for the tycoon bases, streaming prepared for phones. Why and how: [[2026-11-14 City Baseline and Cleanup]]. The design it serves: `docs/superpowers/specs/2026-11-14-crimelife-tycoon-design.md`.
 
 ## Where it lives
 
@@ -67,6 +67,7 @@ Not recorded: no system code exists yet. The plots feed the tycoon phase of the 
 
 ## History
 - 2026-11-17: `Workspace.HQ` quarantined, the four map prompts saved `Custom`, the stuck Thug not reproduced. [[2026-11-17 Known Issues Pass]]
+- 2026-11-20: the city moved to the cloud place "Crimelife Tycoon" (published privately into SolarArc Studios by the developer; group animation clips load there). [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-16: the four heists placed on the city's Robbery buildings, vault underground, art quarantined ([[2026-11-16 Robbery Systems Into City]]).
 
 See [[Batch Log]]. Created by [[2026-11-14 City Baseline and Cleanup]]. 2026-11-15: FPS systems, `Dev`, placed enemies and givers, `TycoonPreview` ([[2026-11-15 FPS Systems Into City]]).

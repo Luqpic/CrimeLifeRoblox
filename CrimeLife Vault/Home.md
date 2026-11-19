@@ -1,13 +1,13 @@
 ---
 type: moc
 tags: [home]
-updated: 2026-11-15
+updated: 2026-11-20
 sources: ["CLAUDE.md (Roblox Development, Operating Context)", "git log of Luqpic/CrimeLifeRoblox"]
 ---
 
 # CrimeLife: Development Vault
 
-The source of truth for **CrimeLife**, a Roblox crime and shooter game. Three places: **Crimelife City** (`Roblox Games/Crimelife city.rbxl`, the primary place from 2026-11-15, with the FPS systems ported in), **FPS System** (`Roblox Games/FPS System.rbxl`, frozen from 2026-11-15 as the reference the port was taken from; it was the primary place until 2026-11-14) and the sister **Robbery System** (`Roblox Games/Robbery System.rbxl`), which shares UI modules with it. Worked live in Roblox Studio through the `Roblox_Studio` MCP server. Read [[Start Here]] on a fresh session; run every batch by [[Batch Workflow]].
+The source of truth for **CrimeLife**, a Roblox crime and shooter game. Three places: **Crimelife City** (the primary place from 2026-11-15, with the FPS systems ported in; since 2026-11-20 the cloud place "Crimelife Tycoon", placeId 128488619644399, universe 10777869898, SolarArc Studios group 4998611, where Studio save makes a place version and is never a publish; the local file `Roblox Games/Crimelife city.rbxl` is no longer the working copy), **FPS System** (`Roblox Games/FPS System.rbxl`, frozen from 2026-11-15 as the reference the port was taken from; it was the primary place until 2026-11-14) and the sister **Robbery System** (`Roblox Games/Robbery System.rbxl`), which shares UI modules with it. Worked live in Roblox Studio through the `Roblox_Studio` MCP server. Read [[Start Here]] on a fresh session; run every batch by [[Batch Workflow]].
 
 From 2026-11-14 this vault replaces the old routine of one change log per change plus an `Add change log: <what>` commit. The 143 change logs written before that date live unchanged in `70 Batches/` and are listed in [[Batch Log]].
 

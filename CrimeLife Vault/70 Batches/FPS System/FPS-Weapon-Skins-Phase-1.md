@@ -86,7 +86,7 @@ All numbers below were measured live in one Play session against `FPS System.rbx
 server-internal functions directly, except where noted.
 
 1. **Renders in third person — PASS.** Granted and equipped a `Glock 17` into the player's
-   character (`SolarAudio`), read `Color` off the **live** Tool inside `Character`, not the
+   character (`StudioPlayer`), read `Color` off the **live** Tool inside `Character`, not the
    `ServerStorage` template. Stock baseline: `Body (0.325,0.325,0.329)`, `TrimA (0.514,0.471,0.369)`,
    `TrimB (0.220,0.220,0.224)`, `TrimC (0.369,0.365,0.373)`, `TrimD (0.639,0.635,0.647)`. After
    `EquipSkinRequest("Glock 17","Carbon")`: `Body (0.114,0.122,0.145)`, `TrimA (0.188,0.200,0.235)`,

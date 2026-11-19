@@ -25,10 +25,10 @@ visible. It stands still until something moves and the cast happens to clear -- 
 Measured before the fix, six thugs ringed at 3.2 studs around a stationary player:
 
 ```
-#1 AIState=Attack  LOS=true   hit SolarAudio.HumanoidRootPart   (tagged=SolarAudio)
-#2 AIState=Attack  LOS=true   hit SolarAudio.UpperTorso         (tagged=SolarAudio)
-#3 AIState=Attack  LOS=true   hit SolarAudio.LeftUpperArm       (tagged=SolarAudio)
-#4 AIState=Attack  LOS=true   hit SolarAudio.HumanoidRootPart   (tagged=SolarAudio)
+#1 AIState=Attack  LOS=true   hit StudioPlayer.HumanoidRootPart   (tagged=StudioPlayer)
+#2 AIState=Attack  LOS=true   hit StudioPlayer.UpperTorso         (tagged=StudioPlayer)
+#3 AIState=Attack  LOS=true   hit StudioPlayer.LeftUpperArm       (tagged=StudioPlayer)
+#4 AIState=Attack  LOS=true   hit StudioPlayer.HumanoidRootPart   (tagged=StudioPlayer)
 #5 AIState=Chase   LOS=false  hit Enemy.FN P-90.Blaster.TrimB   (tagged=nil)   <- an ally's gun
 #6 AIState=Patrol  LOS=false  hit Enemy.Pi Bandit.Handle        (tagged=nil)   <- an ally's gun
 ```

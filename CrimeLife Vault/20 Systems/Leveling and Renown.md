@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, leveling, progression, ranks]
-updated: 2026-11-18
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-renown-phase-2/spraypaint-rename-report.md", "CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Kill-Leveling-System.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md"]
+updated: 2026-11-20
+sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Leveling-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-renown-phase-2/spraypaint-rename-report.md", "CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Kill-Leveling-System.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Leveling and Renown
@@ -16,9 +16,9 @@ Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a s
 
 ## Where it lives
 - `ReplicatedStorage.Leveling.Constants`: XP per kill tier, the curve (`xpToNextLevel`), `LEVEL_CAP`, rewards, `RANKS` + `rankForLevel(level)`, `XP_ICON_ID` / `HEALTH_ICON_ID` (single owner of both ids), `totalXp(level, xp)`.
-- `ReplicatedStorage.Leveling.Remotes.SetLevelRequest` (admin).
+- `ReplicatedStorage.Leveling.Remotes.SetLevelRequest` (owner-only since 2026-11-20; see "Admin set level").
 - `ServerScriptService.Weapons.Scripts.LevelingService` (mirror `CrimeLifeRoblox/FPSSystem/Weapons/LevelingService.luau`).
-- `StarterPlayer.StarterPlayerScripts.LevelingHud` (XP bar + popup), `.LevelUpVFX`, `.AdminLevelController` (`/setlevel` + F2 panel).
+- `StarterPlayer.StarterPlayerScripts.LevelingHud` (XP bar + popup), `.LevelUpVFX`. (`.AdminLevelController` was retired 2026-11-20: [[Admin Panel]].)
 - `ReplicatedStorage.VFX.LevelUpBurst` (current burst rig); `ReplicatedStorage.VFX.LevelUpShine` (unreferenced since 2026-09-19).
 - Rank shown by `GuiTemplates.PlayerCard.RankLabel` and `StarterPlayerScripts.PlayerNameplates` (`Rank` line).
 
@@ -31,11 +31,14 @@ Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a s
 - Ranks, seven equal tiers of ten (the cap falls inside the last): Rookie Thug (1-10, street grey), Street Hustler (11-20, green), Gang Enforcer (21-30, cyan), Made Man (31-40, blue), Mafia Hitman (41-50, purple), Capo (51-60, orange), Godfather (61-70, gold).
 - HUD: the XP bar is always visible above the hotbar, tweens its fill, carries a white Experience icon inside its left end; the popup reads `LEVEL {n}` under a `LEVEL UP` caption. The kill toast carries a `+N EXP` line under the Spraypaint line ([[Notifications]]).
 - Level-up burst: `LevelUpBurst` cloned on level-up, welded at foot height, emits for `EmitSeconds` 1.5, destroyed after the last particle (4.5 s total). Client-side only.
-- Admin: `SetLevelRequest` is gated server-side to one UserId (the developer's); clamps to 1..cap.
+- Admin: `SetLevelRequest` is gated server-side to the owner role (`Admin.Roles`) since 2026-11-20 (before: one hard-coded account id, removed); clamps to 1..cap.
 - Persisted since 2026-09-23: `level` and `xp` mirror into the profile; `NextLevelXP` is derived and recomputed on load ([[Persistence and Saves]]).
 
 ## The level-up popup layout (2026-11-18)
 `LevelingHud.placePopup` scales with the heist HUD's `UIScale` (`fullScale = heistScale / levelingScale`, the small-screen fit clamped to it) and places the popup again on a `ViewportSize` change while it is shown; it follows the camera as `WantedHud` does. `UIScaleController` caps every scale at 1 (read back 1.000), so the popup never grows above the heist card. At 1100 x 679 it sits at (370, 262) 360 x 90, scale 1, overlapping nothing. The phone branch (844 x 390: 256 x 64, scale 0.71, 2 px under the star meter) is computed, and the resize re-place was not exercised live ([[HUD and UI Shell]], [[Open Items]]).
+
+## Admin set level (2026-11-20)
+`SetLevelRequest` is no longer gated to one hard-coded account. The closure body became `setLevel(player, level)` (level, XP 0, `NextLevelXP`, max health, save) registered as `Admin.Hooks.setLevel`; the remote now checks `Admin.Roles.get(player) == "owner"`, and the panel's `setLevel` action is the real entry point ([[Admin Panel]]). Measured: level 12 gave Level 12, leaderstats 12, XP 0, `NextLevelXP` 195, max health 122, profile level 12 (Spraypaint 275 came from the existing 25-per-level award). `AdminLevelController` (F2 panel and `/setlevel`) is retired into `ServerStorage.CityQuarantine.AdminReplaced`. `SetLevelRequest` stays as an owner-only dead entry point (its only sender is retired).
 
 ## Extend it
 - Rename a rank or recolour it: one line in `RANKS`.
@@ -51,6 +54,7 @@ Kills (AI and PvP) and quest hand-ins grant XP; levels up to a cap of 70 pay a s
 - The XP and spray icon ids were uploaded as white glyphs so `ImageColor3` can tint them.
 
 ## History
+- 2026-11-20: set level moved behind `Admin.Hooks` and the owner role; the hard-coded account gate and the old F2 panel are gone. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `LevelingHud.placePopup` re-lays out on a viewport resize and follows the heist HUD's scale; `UIScaleController` cap 1 confirmed. [[2026-11-18 Open Items Pass]]
 - 2026-09-24: criminal ranks on the card and overhead; XP icon inside the bar, white. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]
 - 2026-09-24: `+N EXP` line on the kill toast; Experience icon on every leveling readout; `totalXp`. [[FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons]]

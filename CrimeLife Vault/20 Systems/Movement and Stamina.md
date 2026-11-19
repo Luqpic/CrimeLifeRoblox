@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, movement, stamina, camera, fps]
-updated: 2026-11-18
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
+updated: 2026-11-20
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CLAUDE.md (Instance tree)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Sprint-Landing-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-All-Landings-Dead-Stop.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Camera-Jolt.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Landing-Jolt-Root-Cause.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Movement and Stamina
@@ -32,6 +32,9 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - **Heavy carries.** `Crouching` `Stop()` sets `WalkSpeed = carryCapped(originalSpeed)`, so a carrier standing up from a crouch is capped on the same frame (2026-11-18). Carriers use the collision group `Carrier`, which is what lets them cross the Bank's carrier-only ledges ([[Robbery Heists and Getaway]]).
 - **Stamina bar** is a `CanvasGroup`; its `UIStroke` is tweened alongside `GroupTransparency` (a group's own stroke is not faded by the group) and starts at `Transparency = 1`. Opening a panel hides `StaminaGui` with the rest of the HUD ([[HUD and UI Shell]]).
 
+## Animation layer and the roll (2026-11-20)
+Clip playback, the roll (Q) and the ledge climb moved to [[Character Movement and Animation]]. What changed here: `Animate2` yields its clips while the character attribute `MovementAnimations` is set and stops `Animate`'s leftover tracks; `SprintAuthority.spend(player, amount)` (refuses while locked out) pays the roll's 12.3 stamina; `SprintAuthority` writes the admin `AdminWalkSpeed` last in its tick and `Animate2` uses it as the only target while set ([[Admin Panel]]); `LandAnim` is quarantined (`Animate2` still owns landing recovery).
+
 ## Extend it
 - Movement tuning goes in `ReplicatedStorage.Movement.Constants` only, so client and server stay in step.
 - If small drops feel sluggish, add a fall-height or fall-speed threshold for opening the landing window, not a return of the sprint test.
@@ -49,6 +52,7 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-20: OBT movement clips, roll and ledge climb added ([[Character Movement and Animation]]); `SprintAuthority.spend`; admin walk speed. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `Crouching` `Stop()` caps `WalkSpeed` at once for a carrier (`carryCapped`); not measured in Play; carriers cross the Bank ledges through the `Carrier` collision group; fall and climb defaults confirmed as fine by the developer. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: character attribute `CarrySpeedCap` (12, `Movement.Constants`) set by `CarryState` for heavy loot: `Animate2`, `SprintAuthority` and `Crouching` cap WalkSpeed at it and grant no sprint; clearing it hands back 20. Measured sprint 38 uncapped, 12 capped. [[2026-11-17 Heist Layers]]
 - 2026-11-17: `Animate2` backward clamp keys on input, not velocity: the 20 / 25.83 `WalkSpeed` swing against a wall is gone. [[2026-11-17 Known Issues Pass]]

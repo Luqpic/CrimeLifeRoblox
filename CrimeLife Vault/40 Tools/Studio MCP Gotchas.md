@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tools, mcp, testing, gotchas]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium)", "70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "70 Batches/FPS System/FPS-Hotbar-Icon-Clash-And-Drag-Drop-Feel.md", "70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "70 Batches/FPS System/FPS-Skins-Card-Sticky-Fix-Responsive-Scale-Budget.md", ".superpowers/sdd/uploaded-asset-ids.md", "OBT Vault/40 Tools/Studio MCP Gotchas.md (generic parts)"]
 ---
 
@@ -43,6 +43,7 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 ## Moving instances between two Studio windows (2026-11-15)
 
 - **`SerializationService` + `EncodingService` Base64 + `HttpService:RequestAsync` to a localhost store.** The source window serializes (`SerializationService:SerializeInstancesAsync`), encodes (`EncodingService` Base64) and posts to a localhost-only store on this Mac (`CrimeLifeRoblox/CityMerge/transfer/server.py`); the other window fetches, decodes and deserializes (`export.luau`, `import.luau` in the same folder). Nothing passes through the agent's context and no source is retyped, so the copy is exact. Proven: `ReplicatedStorage.Blaster` serialized to 873,531 bytes and posted as a 1,164,708-character Base64 body, and arrived as 1,554 descendants and 21 scripts; 88 roots (3,559,520 Base64 bytes) moved this way. Keep one root over 100,000 bytes per `execute_luau` call and yield between roots. A service itself (`StarterGui`) cannot be serialized; its children can.
+- **The Studio MCP refuses HTTP to 127.0.0.1, so mirror exports go disk-first or as patch pairs (2026-11-20).** The city is now a cloud place, and its window answers "domain 127.0.0.1:8765 is not in the Assistant HTTP allowlist", so the transfer server below is unreachable from it. The route that worked: write each source on disk, push it into the place, and compare length and Adler-32 on both sides (every push 9 / 9, 16 / 16, 20 / 20, 5 / 5, 4 / 4 and 6 / 6 equal); a large script can go as old-text and new-text patch pairs applied the same way on both sides. Remember the Write tool strips trailing whitespace ([[Luau and Scripting Traps]]). [[2026-11-20 Admin Animations Third Person]]
 - **A cloud place's window can refuse `127.0.0.1`.** Test30.4's window answered that localhost is not in the Assistant HTTP allowlist, while the local-file windows (the FPS and city places) accepted it. It was not worked around: the developer pasted the instance by hand ([[2026-11-15 FPS Systems Into City]]).
 - **`screen_capture` timed out repeatedly late in the 2026-11-15 session** (several tries, with and without markers, for the implementer and for the controller). Why is not recorded. Property read-back stood in for the look ([[Screen Captures]]).
 

@@ -1,7 +1,7 @@
 ---
 type: reference
 tags: [reference, places, studio, mcp]
-updated: 2026-11-15
+updated: 2026-11-20
 sources: ["CLAUDE.md", "Roblox Games/ (listing 2026-11-14)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Close-Button-Unified-With-Robbery.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/GUI-Audit-And-Figma-Redesign.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-09-23-persistence-phase-3.md"]
 ---
 
@@ -15,9 +15,10 @@ Which place file holds what, and which Studio window the `Roblox_Studio` MCP mus
 |---|---|---|---|
 | **FPS System** | `Roblox Games/FPS System.rbxl` (local file, last modified 2026-09-25) | The FPS place: weapons, shop, enemies, quests, leveling, cosmetics, persistence. All `70 Batches/FPS System/` work. **Frozen from 2026-11-15** as the reference the port into the city was taken from; read and Play only. | **No** (was the default until 2026-11-14) |
 | **Robbery System** | `Roblox Games/Robbery System.rbxl` (last modified 2026-09-20) | A heist game: Bank, SlowFoods, Gas2Go, NewsStation robberies, puzzle prompts, getaway. All `70 Batches/Robbery System/` work. | **Only when named explicitly** |
-| **Crimelife City** | `Roblox Games/Crimelife city.rbxl` (local file; saved copy `Crimelife city copy.rbxl` is the pre-cleanup state; `Crimelife city BACKUP pre-cleanup 2026-08-20.rbxl` is the older fallback) | The main map and the merge target. **The primary place from 2026-11-15**: the 2026-11-14 cleanup plus the FPS systems ported in ([[2026-11-15 FPS Systems Into City]]). Saved by Claude at checkpoints on 2026-11-15, never published. | **Yes**, by default (from 2026-11-15); the Robbery work is ported into it later |
+| **Crimelife City** | **Since 2026-11-20 the cloud place "Crimelife Tycoon"** (placeId 128488619644399, universe 10777869898, SolarArc Studios group 4998611; Studio id `9f6e1b42-...` that night; save makes a place version, never a publish). Before that `Roblox Games/Crimelife city.rbxl` (local file, **no longer the working copy**; saved copy `Crimelife city copy.rbxl` is the pre-cleanup state; `Crimelife city BACKUP pre-cleanup 2026-08-20.rbxl` is the older fallback) | The main map and the merge target. **The primary place from 2026-11-15**: the 2026-11-14 cleanup plus the FPS systems ported in ([[2026-11-15 FPS Systems Into City]]). Saved by Claude at checkpoints on 2026-11-15, never published. | **Yes**, by default (from 2026-11-15); the Robbery work is ported into it later |
 
 ### Crimelife City (the primary place from 2026-11-15)
+**2026-11-20: the working copy is the cloud place "Crimelife Tycoon".** The developer published the city privately into the SolarArc Studios group (475 scripts; Heist, Wanted, Blaster, UnitTest present) because group animation assets load only in a group-owned place. The Studio MCP refuses HTTP to 127.0.0.1 from this window, so mirror exports go disk-first or as patch pairs ([[Studio MCP Gotchas]]). Studio API access for DataStores is off there ([[Open Items]]). Everything below describes the 2026-11-14 file.
 Cleaned on 2026-11-14 ([[2026-11-14 City Baseline and Cleanup]]); the FPS systems were ported in on 2026-11-15, and the place was saved by Claude at checkpoints that night. The layout below is the 2026-11-14 one; the new `Workspace` children (`TycoonPreview`, `Dev`, `EnemySpawns`, `Quests`, `Targets`, `AnimVM`, `Accessory Storage`) are in [[City Map and Plots]]. Layout, `Workspace` as cleaned on 2026-11-14:
 - `Map` holds the art: `City`, `Robbery` (the six robbery buildings), `Roads`, `Props`, `Loose`.
 - `Plots` holds `Plot1` to `Plot6` (the city's blue plates) and `Plot7`, `Plot8` (`Spare = true`).
@@ -38,7 +39,7 @@ Robbery keeps its own registry `ReplicatedStorage.SharedSystems.UITheme`; FPS ha
 
 ## Saving and publishing
 - **Claude never publishes.** The developer decides when a place goes live.
-- Both places are local `.rbxl` files: changes are live Studio edits until the developer saves (File > Save to File). Many change logs end with "the place is not saved to disk by this change"; say the same. One exception: on 2026-11-15 the developer allowed Claude to save `Crimelife city.rbxl` at checkpoints for that overnight run ([[Save and Publish Rules]]).
+- FPS System and Robbery System are local `.rbxl` files: changes are live Studio edits until the developer saves (File > Save to File). The city is a cloud place since 2026-11-20: a save (`save_place` or File > Save to Roblox) makes a place version and is never a publish. Many change logs end with "the place is not saved to disk by this change"; say the same. One exception: on 2026-11-15 the developer allowed Claude to save `Crimelife city.rbxl` at checkpoints for that overnight run ([[Save and Publish Rules]]).
 - Stop Play before an Edit change that must persist (Play edits are discarded).
 - FPS System and Crimelife City are **unpublished**: persistence tests run on `ProfileStore.Mock`, and gamepass ids were placeholders until a stand-in pass was used ([[Persistence and Saves]], [[Gamepasses]]).
 - Asset uploads: images can be uploaded through the MCP (`upload_image`, http/https URLs only); animations, meshes and fonts cannot ([[Animation Pipeline]]).

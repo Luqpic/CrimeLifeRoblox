@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, shop, weapons, upgrades, fps]
-updated: 2026-11-18
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Shop-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Pistol-3D-Display-Fix-Persistent-Loadout-Slots.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/FPSSystem/Weapons/WeaponUpgradeService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponShopService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponaryShopController.luau", "CLAUDE.md (Systems: Shop and upgrades)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
+updated: 2026-11-20
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Shop-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Pistol-3D-Display-Fix-Persistent-Loadout-Slots.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Upgrade-Damage-CashBurst-SlotAnim-Baton-Sound-SpinFix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/FPSSystem/Weapons/WeaponUpgradeService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponShopService.luau", "CrimeLifeRoblox/FPSSystem/Cosmetics/WeaponaryShopController.luau", "CLAUDE.md (Systems: Shop and upgrades)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Weapon Shop and Upgrades
@@ -31,6 +31,9 @@ The Weaponary shop is the only way to get a weapon. Players browse a catalogue b
 - **Skins card.** Opening a weapon's detail slides the shop left and the detached Skins card in beside it ([[Cosmetics and Skins]]).
 - **Persistence.** Ownership, slots and upgrade levels are saved through `ProfileGateway` since 2026-09-23 ([[Persistence and Saves]]).
 
+## Admin give weapon (2026-11-20)
+`WeaponShopService.giveFree` is the buy tail without the charge (owned table, `WeaponOwned_<Name>` attribute, first free slot with the Tool granted, `publishSlots`, `mirrorLoadout`), registered as `Admin.Hooks.giveWeapon`; the buy path itself is untouched. Measured through the remote: Deagle gave `WeaponOwned_Deagle` true, `LoadoutSlot2` "Deagle", the Tool in the Backpack, profile `weaponsOwned.Deagle` true; a second give was refused "already owned". The panel's GIVE WEAPON list click was never exercised ([[Admin Panel]]).
+
 ## Extend it
 - New weapon: give the Tool a `Category` and a `Price`; the shop picks it up with no shop code (this is how the Knife reached the shop). Reclassifying a category is a data change.
 - Gamepass weapon: `Gamepass = "<key>"`, no `Price`, and a pass entry in `Monetization.Constants` ([[Gamepasses]]).
@@ -49,6 +52,7 @@ The Weaponary shop is the only way to get a weapon. Players browse a catalogue b
 - Aiming head-on at an enemy at chest height can hit the gun it holds (zero damage) — matters for tests.
 
 ## History
+- 2026-11-20: `giveFree` added as the admin give-weapon hook. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: the APS moves to the Pistol tab (Price 650, magazine 20); the shotgun-preview open item closed as not real (all 9 upright). [[2026-11-18 Open Items Pass]]
 - 2026-11-17: re-slotting a held weapon no longer grants a second copy (`WeaponShopService` grants only when `findLiveTool` finds nothing in the Backpack or the character; the held Tool keeps its ammo); the shop's detail card reads `Description`; a gamepass weapon's grid card reads OWNED once the pass is owned. [[2026-11-17 Known Issues Pass]]
 - 2026-09-25: the Gamepass panel's grid scrolls ([[Gamepasses]]). [[FPS-Gamepass-Shop-Scrolling-Grid]]

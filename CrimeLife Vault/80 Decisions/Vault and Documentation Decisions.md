@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, vault, docs, workflow]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["CLAUDE.md (How to work in this project, rule 5)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md", "CrimeLifeRoblox/.claude/skills"]
 ---
 
@@ -9,6 +9,7 @@ sources: ["CLAUDE.md (How to work in this project, rule 5)", "CrimeLifeRoblox/Cr
 
 ## Newest first
 
+- **2026-11-20: the city is the cloud place "Crimelife Tycoon"**, published privately into SolarArc Studios by the developer so group animations load; run mode "Hybrid" (Opus implementers, one merged build task, one Sonnet review per feature); "Yes, save after each task" for that night, never publish. [[Admin, Animation and Camera Decisions]] [[Save and Publish Rules]] [[2026-11-20 Admin Animations Third Person]]
 - **2026-11-18: only the vault's Roblox skills, and Opus with Sonnet.** Never an Anthropic or other skill unless the developer names one; Opus for judgement, Studio and code, Sonnet subagents for searches, per-task reviews and drafts. [[Vault Skills Only and Model Routing]] [[Model Assignment]] [[2026-11-18 Open Items Pass]]
 - **2026-11-18: by-hand checks come as one ordered checklist** at the end of a batch, run when the developer has time, rather than a live session. [[2026-11-18 Open Items Pass]]
 - **2026-11-18: `Documents/Roblox/CLAUDE.md` updated by Claude** at the developer's word: Crimelife City is the primary place, plus the skills and models rule line. [[2026-11-18 Open Items Pass]]

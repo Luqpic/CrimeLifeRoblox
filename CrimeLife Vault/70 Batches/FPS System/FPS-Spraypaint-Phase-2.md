@@ -92,8 +92,8 @@ overwritten by later steps or wiped clean by row 13's Stop/Start boundary.
 
 ## Verification
 Rows 1-12 were measured live in one continuous Play session against `FPS System.rbxl` (`Roblox_Studio`
-MCP, Server and Client datamodels); row 13 spans that session's end and a fresh one. Player: `SolarAudio`
-(UserId `58662576`, the same UserId `LevelingService` gates its admin `/setlevel` command to).
+MCP, Server and Client datamodels); row 13 spans that session's end and a fresh one. Player: `StudioPlayer`
+(the developer's account id (removed 2026-11-20), the same UserId `LevelingService` gates its admin `/setlevel` command to).
 
 1. **Kills award Spraypaint — PASS.** Baseline `Level=4 Spraypaint=75`. Called `SpraypaintService.awardForVictim`
    directly (methodology explained in Notes) against the real player `Instance` with a freshly created

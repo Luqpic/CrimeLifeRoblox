@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, physics, character, humanoid, raycast]
-updated: 2026-11-18
-sources: ["70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "OBT Vault/50 Engine Traps/Physics and Character Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md"]
+updated: 2026-11-20
+sources: ["70 Batches/FPS System/FPS-Carried-Weapons-Absorbed-Hits.md", "70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "70 Batches/FPS System/Enemies-Climbing-Each-Other-And-Nameplate-Gap.md", "70 Batches/FPS System/FPS-Shotgun-Kill-Knockback.md", "70 Batches/FPS System/FPS-RPG-Gamepass-Launcher.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "OBT Vault/50 Engine Traps/Physics and Character Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Physics and Character Traps
@@ -64,6 +64,12 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 - A server `PivotTo` of a player does not stick. Move it from the Client.
 
 ## Rigs
+
+### The character's joints are AnimationConstraints: tilt them by moving `Attachment0.CFrame`
+- **Symptom:** code written for Motor6Ds (`Motor6D.C0`, `Transform`) does nothing, or errors, on the current R15 rig; `Lean` and `Turning` returned early for this reason since 2026-09-11.
+- **Cause:** the rig's joints (`Waist`, `Neck`, hips, `Root`) are `AnimationConstraint`s, and their `C0` can be read but not assigned.
+- **Fix:** move the joint's `Attachment0.CFrame` (cache the rest value per attachment and put it back exactly). The shoulder camera tilts the waist and the neck this way (neck 18 degrees for a 45-degree look up). [[Ragdoll]], [[Weapons and Blaster]]
+- **Bit us:** [[2026-11-20 Admin Animations Third Person]]
 
 ### Anchoring a Motor6D-driven part freezes it
 - Anchor only a rig's root part. [[FPS-Viewmodel-KeyframeSequence-Export]].

@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, render, tween, viewport, mesh]
-updated: 2026-11-14
-sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Weaponary-Persistence-Sorting-Sounds-3D-Display.md", "70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "OBT Vault/50 Engine Traps/Tween and Render Traps.md (generic traps)"]
+updated: 2026-11-20
+sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Skins-Card-Detached-And-Palette-Expansion.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Weaponary-Persistence-Sorting-Sounds-3D-Display.md", "70 Batches/FPS System/FPS-Monetization-Cosmetics-Spec.md", "OBT Vault/50 Engine Traps/Tween and Render Traps.md (generic traps)", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Tween and Render Traps
@@ -16,6 +16,12 @@ Render-driven animation, viewport previews, materials and meshes.
 - **Cause:** TweenService and RenderStepped are render-driven. With the Studio viewport collapsed (`ViewportSize` 1, 1), nothing renders; Heartbeat still runs.
 - **Fix:** none in code: an environmental failure, not a code fault. Check `ViewportSize` first and report the tween as not verified ([[Studio Host and Instance Id]]).
 - **Bit us:** [[FPS-Skins-Card-Detached-And-Palette-Expansion]], [[FPS-Spraypaint-Phase-2]] (for "this whole session").
+
+### A sleeping Mac display stops Studio Play rendering (bit CrimeLife 2026-11-20)
+- **Symptom:** in a Play session, cameras do not move, virtual keyboard and mouse input never reach the game, `screen_capture` times out. Measured: `RenderStepped` fired 0 times a second while `Heartbeat` ran at 59. The admin panel's last Plays lost their virtual input this way (the GIVE WEAPON list click was never exercised).
+- **Cause:** the Mac display slept. Nothing renders, so every render-driven thing stops (the same family as the collapsed viewport above, but the viewport reads a normal size).
+- **Fix:** `caffeinate -u` wakes the display; `caffeinate -d -u -t N` keeps it awake for N seconds during a check. Read `RenderStepped` against `Heartbeat` first when input or captures fail. Mac-side notes: [[Studio Host and Instance Id]], [[Screen Captures]].
+- **Bit us:** [[2026-11-20 Admin Animations Third Person]]
 
 ### Writing a property does not stop a tween on it (OBT)
 - A running tween keeps writing every frame; a plain assignment does not cancel it. Cancel the tween, or put the value back with a 0 s tween.

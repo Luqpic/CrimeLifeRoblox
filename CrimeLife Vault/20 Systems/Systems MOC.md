@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [moc, system]
-updated: 2026-11-17
+updated: 2026-11-20
 sources: ["CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Batch Log.md"]
 ---
 
@@ -11,7 +11,7 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 
 ## FPS combat
 
-- [[Weapons and Blaster]]: data-driven guns, `ShotResolver` hit authority, knockback, the RPG.
+- [[Weapons and Blaster]]: data-driven guns, `ShotResolver` hit authority, knockback, the RPG, the third-person shoulder camera (2026-11-20).
 - [[Viewmodels and Weapon Animation]]: first-person rigs, donor-skeleton swap, linear KeyframeSequences.
 - [[Melee]]: Crowbar, Baton stagger, Knife bleed and backstab.
 - [[Damage Direction]]: the on-screen hit-direction indicator.
@@ -43,6 +43,11 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 - [[Police and Wanted]]: wanted stars, police squads, witnesses, Bank and NewsStation guards, the star meter (city, 2026-11-17).
 - [[Quests and Dialogue]]: quest givers, dialogue replies, quest log.
 - [[Movement and Stamina]]: sprint, stamina, landings, lean.
+- [[Character Movement and Animation]]: the OBT clip set, roll (Q), ledge climb, the fallback clips (2026-11-20).
+
+## Staff
+
+- [[Admin Panel]]: the F2 staff panel, roles by group rank, 31 actions, the hooks into the owning systems (2026-11-20).
 
 ## City map
 

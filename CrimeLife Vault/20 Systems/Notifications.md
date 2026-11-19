@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, ui, notifications]
-updated: 2026-11-18
-sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md", ".superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
+updated: 2026-11-20
+sources: ["CrimeLifeRoblox/FPSSystem/Cosmetics/NotificationController.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-5.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Card-Fix-And-Weapon-HUD-Move.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Queue-While-Panel-Open.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Notification-Blank-Card-ZIndexBehavior.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-XP-Line-Gun-Icons-Leveling-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Global-Notifications-And-Location-Status-Billboards.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/UI-Bug-Fixes-Notification-HUD-Lockpick-Titles.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md", ".superpowers/sdd/2026-11-18-open-items-pass/progress.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Notifications
@@ -33,6 +33,9 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - `UiButtonEffects` lost its two `HeistNotificationGui` references; the stack's own panel-open queue holds cards while a modal is up.
 - Open: on a phone (844 x 390, computed) the heist toast and the bottom-right stack overlap at x 544..632 when both show; only the 3 newest heist cards show in a burst; `GetTextBoundsAsync` yields in `displayNow`, so same-frame cards may stack out of order ([[Open Items]]).
 
+## Admin announcements (2026-11-20)
+`NotificationClient` also listens to `ReplicatedStorage.AdminAnnounce` and shows the already-filtered, RichText-escaped text as a card titled "ADMIN" through `NotificationController.show(text, "ADMIN")`, the city's one notification style. Measured: the card appeared 0.12 s after the call, message label 240 x 18 at (820, 567); a long announcement wrapped to a 280 x 72 card ([[Admin Panel]]).
+
 ## Extend it
 - New caller: just `require` and `show`; the module table is shared per client. Use `detail` / `Line` for icons.
 
@@ -46,6 +49,7 @@ Toast cards for gains and events: quest completion, Spraypaint gains, and the ki
 - Writing the same attribute from Server then Client `execute_luau` in one session threw `Unable to cast Font to Font` and ended Play.
 
 ## History
+- 2026-11-20: `AdminAnnounce` card (title ADMIN). [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: heist cards go through the city stack (titles "ALARM TRIGGERED" and "NOTICE", text unchanged, 3-card cap, 30 s waits); `HeistNotificationGui` quarantined; a wrapping message grows its card. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: `Net` remote `BroadcastHijacked` and a `NotificationClient` listener show a city-wide card "<name> hijacked the News Station broadcast!" on the existing heist template. [[2026-11-17 Heist Layers]]
 - 2026-11-16 (city): Robbery's `NotificationGui` renamed `HeistNotificationGui`, its stack moved clear of the city's. [[2026-11-16 Robbery Systems Into City]]

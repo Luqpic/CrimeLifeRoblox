@@ -1,7 +1,7 @@
 ---
 type: moc
 tags: [batch, moc]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["git log of Luqpic/CrimeLifeRoblox"]
 ---
 
@@ -13,6 +13,7 @@ Before 2026-11-14 every change was a change log (`FPSSystem/*.md`, `RobberySyste
 
 | Date | Place | Batch | What |
 |---|---|---|---|
+| 2026-11-20 | City (cloud place "Crimelife Tycoon") | [[2026-11-20 Admin Animations Third Person]] | Group animations unblocked by the developer's private publish into SolarArc Studios; OBT clip set (41 clips), roll Q (12.3 stamina) and ledge climb, Roblox-default fallback; OBT shoulder camera in the blaster (V toggles, Z swaps, shoulder zoom, `AimPitch`); admin panel on F2 (31 actions, owner and group helpers, no account ids) with reviews and fixes; city 353 / 353, heist 740 / 0; saved as place versions 10, 15, 21 and 23, not published |
 | 2026-11-18 | City | [[2026-11-18 Open Items Pass]] | Rules (vault skills only, Opus + Sonnet); heist-layers final review (C1 deposit-box lockpick from anywhere) and its fixes; police reset keeps stars, last-seen search; burst after idle 12 -> 3, third-person long-gun shots fixed, 12 muzzle flashes, APS machine pistol; DeathScreen Sibling, chip confirm, text sweep; heist test gaps, Zone flake and 1,680 warnings gone; one gamepass system and one notification style; city 315 / 315, heist 740 / 0; not saved |
 | 2026-11-17 | City | [[2026-11-17 Heist Layers]] | One optional signature layer in each robbery: SlowFoods fleeing Manager and key (safe 3000), Gas2Go ATM rip-out (9000 heavy carry), NewsStation broadcast takeover (6000 each), Bank deposit boxes (1500 cash, gold bar 8000 heavy carry); shared bonus loot over the cap and a speed-12 carry banked at 200 studs; carrier-only obby ledges; city 262 / 262, heist 707 / 0; not saved |
 | 2026-11-17 | Tycoon | [[2026-11-17 Compound Floor Plan]] | New builder drawing set for the tycoon base on a 361 × 300 plot: rooms ring an open yard (spawn + fight pit), G + F2 + roof terrace + bunker, east drive lane, skybridge to a Watchtower; every room from the HQ blueprint kept; 3D block model; OBT BUILD menu (no buttons), build in order with no temporary caps; labels clear (0 overlaps); artifact published privately; no Studio change |

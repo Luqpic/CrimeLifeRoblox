@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, police, wanted, npc-ai, heists, hud]
-updated: 2026-11-18
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "70 Batches/2026-11-17 Police Slow Fill.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-17-police-and-wanted.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CityScripts/ReplicatedStorage.Wanted.Constants.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
+updated: 2026-11-20
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "70 Batches/2026-11-17 Police Slow Fill.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-11-17-police-and-wanted-design.md", "CrimeLifeRoblox/docs/superpowers/plans/2026-11-17-police-and-wanted.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/progress.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-17-police-and-wanted/task-1-report.md to task-6-report.md", "CrimeLifeRoblox/CityMerge/police/final-run.md", "CrimeLifeRoblox/CityScripts/ReplicatedStorage.Wanted.Constants.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-2-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Police and Wanted
@@ -46,6 +46,9 @@ Each player has a wanted level of 0 to 5 stars. Heist alarms, hurting police and
 
 Measured end to end on 2026-11-17 (`CityMerge/police/final-run.md`): SlowFoods 1 star, 2 police; banked at 201 studs while seen, cash once, the star stayed; out of sight behind a rise, 0 at 8.0 s and the police gone at the same sample; died while wanted at Gas2Go, 2,000 forfeited, heat 0; Bank 3 stars, 4 + 2; NewsStation 2 stars, guards 6 hp a second; 10 police held for 125 s, never more.
 
+## Admin hooks (2026-11-20)
+`WantedService.setStars(player, n)` is `clear` then `addHeat` (fires `Changed` twice; the dispatcher reads the attribute at its tick, so no squad breaks up). `PoliceDispatcher.spawnOfficer` accepts no owner (no squad) and returns the character; `spawnLoose(template, position)` makes loose officers for the admin's SPAWN POLICE (patrol, engage only wanted players, stay until killed or cleared; Armed Police from the third). Measured: 3 spawned gave 2 Police and 1 Armed Police tagged `AdminSpawned`. Loose admin police count against `POLICE_CAP` in `countLive()` until cleared, so a real wanted player can get fewer squad officers near the cap. See [[Admin Panel]].
+
 ## Extend it
 - Tune by number in `Constants` only (heat amounts, drain, squad table, rings, cap). Guard damage and rate are per location Config (`HeistShared.Config`, `NewsStationShared.Config`).
 - A new robbery location: add its name to `ALARM_LEVELS`, make it call `WantedService.onAlarm` where it announces `NotifyRobberyTriggered`, register its active-robbery check with `addActiveRobbery` through `Getaway:IsNear`, and add its building and zones to the dispatcher's robbery boxes.
@@ -68,6 +71,7 @@ Measured end to end on 2026-11-17 (`CityMerge/police/final-run.md`): SlowFoods 1
 - The 120 ms server step while a round of 10 officers builds did not reproduce (2026-11-18): builds already run one per frame (a path check that yields precedes each), at most 1 per frame across 15 builds of 4.7 to 22.3 ms; the worst step in the 10-officer round was 43.9 ms against a 45.1 ms no-police baseline. No change was made.
 
 ## History
+- 2026-11-20: `setStars`, `spawnOfficer` without an owner and `spawnLoose` added as admin hooks. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: a character reset keeps the stars (`hurtAt` damage record, search window and drain restart at the death, squad persists through the respawn); police investigate the last-seen spot only, no live tracking (`believedPosition`, `inActiveRobbery`); the Bank death pit calls `WantedService.markHurt`; a damage death forgets `hurtAt`. Tests `WantedService_Test` 265 / 265 after Task 1, 267 / 267 after Task 2. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: a heavy-loot carrier counts as robbing (`CarryGetaway` registers `addActiveRobbery` for a carry near its location); the NewsStation broadcast raises every participant to at least 3 stars (`BroadcastHeatFloor`) and alerts its guards (`GuardPost:Alert()`). [[2026-11-17 Heist Layers]]
 - 2026-11-17: NewsWorker tagged `Invulnerable` (it keeps `Witness`): witnessed-hurt heat now comes from guards only. [[2026-11-17 Known Issues Pass]]

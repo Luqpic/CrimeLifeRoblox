@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, persistence, datastore, saves]
-updated: 2026-11-18
-sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Persistence-Sorting-Sounds-3D-Display.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-persistence-phase-3-design.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-persistence-phase-3/progress.md", "CrimeLifeRoblox/FPSSystem/Persistence/Schema.luau", "CrimeLifeRoblox/FPSSystem/Persistence/ProfileGateway.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-5-report.md"]
+updated: 2026-11-20
+sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Per-Weapon-Spraypaint.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Revert-Global-Spraypaint-Balance.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Persistence-Sorting-Sounds-3D-Display.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-23-persistence-phase-3-design.md", "CrimeLifeRoblox/.superpowers/sdd/2026-09-23-persistence-phase-3/progress.md", "CrimeLifeRoblox/FPSSystem/Persistence/Schema.luau", "CrimeLifeRoblox/FPSSystem/Persistence/ProfileGateway.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-5-report.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Persistence and Saves
@@ -57,6 +57,7 @@ Quest state is saved in the city since 2026-11-15 (`quests` and `questCompletion
 - Comments fixed 2026-11-18: the `LevelingService` header and `ReplicatedStorage.Stats.Constants` both said "Session-only"; level and XP are saved through `ProfileGateway`.
 
 ## History
+- 2026-11-20: the cloud place "Crimelife Tycoon" has Studio API access off, so the server logs `DataStoreService: StudioAccessToApisNotAllowed` at boot (ProfileStore `____PS`, SetAsync) in every Play. A developer setting, not a code fault; see [[Open Items]]. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `CashService.hydrate` merges a pre-bind credit through `PreBindBase`; two `ProfileAdoption_Test` cases. [[2026-11-18 Open Items Pass]]
 - 2026-11-18: quest restore prunes the saved tables; a Police kill is pinned as counted, saved and restored; the hydrator pin in `ProfileAdoption_Test`; the real kick text recorded in full (it already asked to rejoin); stale "Session-only" comments corrected. City suite 282 / 282 after Task 4, 288 / 288 after its fix round. [[2026-11-18 Open Items Pass]]
 - 2026-11-15 (city): quest progress saved: `quests` and `questCompletions` in the template (no version bump), `QuestConfig.restore`, `QuestService` hydrator and saves after accept, each counted kill and turn-in; 171 / 171 tests on the mock store. [[2026-11-15 FPS Hardening In City]]

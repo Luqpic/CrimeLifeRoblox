@@ -1,8 +1,8 @@
 ---
 type: trap
 tags: [trap, sound, assets, animation, images]
-updated: 2026-11-18
-sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/Robbery System/Slice-Transparency-And-Anchor-Fixes.md", "70 Batches/FPS System/FPS-Weapon-Icon-Decals.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "OBT Vault/50 Engine Traps/Sound and Asset Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
+updated: 2026-11-20
+sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/FPS-Fall-Animation-Dead-Asset.md", "70 Batches/FPS System/FPS-Figma-1to1-Image-Export-And-Font-Fix.md", "70 Batches/FPS System/FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold.md", "70 Batches/FPS System/FPS-Viewmodel-KeyframeSequence-Export.md", "70 Batches/Robbery System/Slice-Transparency-And-Anchor-Fixes.md", "70 Batches/FPS System/FPS-Weapon-Icon-Decals.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", "OBT Vault/50 Engine Traps/Sound and Asset Traps.md (generic traps)", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Sound and Asset Traps
@@ -28,7 +28,13 @@ Audio, images, decals and animation assets. Pipelines: [[Icon Pipeline]], [[Figm
 ## Animation
 
 ### The Tools' hold clips fail to load in Studio, so a Studio hold pose is the default hold
-- Measured 2026-11-18: the third-person hold clips 6170771161 (rifle idle) and 6170792878 (pistol idle) fail to load on the unpublished file ("Requester does not have permission", `serverplaceid=0`). Every hold pose or muzzle distance measured in Studio is therefore the default tool hold, which points guns down and to the right; a published place may hold them differently and was not measured. Same class as the weapon-sound warning above. [[2026-11-18 Open Items Pass]], [[Weapons and Blaster]].
+- Measured 2026-11-18: the third-person hold clips 6170771161 (rifle idle) and 6170792878 (pistol idle) fail to load on the unpublished file ("Requester does not have permission", `serverplaceid=0`). Every hold pose or muzzle distance measured in Studio is therefore the default tool hold, which points guns down and to the right; a published place may hold them differently and was not measured. Same class as the weapon-sound warning above. [[2026-11-18 Open Items Pass]], [[Weapons and Blaster]]. **Update 2026-11-20:** in the cloud place "Crimelife Tycoon" the AK47 hold clip 6170771161 loads and played at weight 1.00; the failure belonged to the unpublished file (see the group-place trap below).
+
+### Group animation assets load only in a group-owned (published) place
+- **Symptom:** every clip owned by the SolarArc Studios group (the city's idle 70581846281736, walk 122749871988730, run 136801098480203, jump, crouch, `LandAnim`, and OBT's `Player_` set) fails in the unpublished city file: "Animation failed to load ... serverplaceid=0", the `Animator` track has `Length` 0, the character stands in the default pose.
+- **Cause:** the animation service only serves a group's animation to a place that group owns. A local `.rbxl` has no owner. In OBT's group place the same ids loaded (read-only probe). Clips owned by other accounts or by Roblox (the Tool hold clips, `CrouchWalkAnim` 107107589904731, the default fall 507767968 and climb 507765644) loaded in the city file.
+- **Fix:** the developer published the city privately into the group (cloud place "Crimelife Tycoon", 2026-11-20); 41 clips then loaded. The movement script keeps a Roblox-default fallback for any clip that still fails ([[Character Movement and Animation]]). A copy of the file on disk plays the fallbacks. This also explains the 2026-11-18 "hold clips fail to load in Studio" entry above, which was about the unpublished file.
+- **Bit us:** [[2026-11-20 Admin Animations Third Person]]
 
 ### A dead animation asset plays as nothing
 - **Symptom:** no fall animation, no climb animation.

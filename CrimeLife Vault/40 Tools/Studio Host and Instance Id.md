@@ -1,8 +1,8 @@
 ---
 type: tool
 tags: [tools, studio, mac, environment]
-updated: 2026-11-15
-sources: [".superpowers/sdd/skins-card-sticky-fix-report.md", ".superpowers/sdd/per-weapon-spraypaint-report.md", ".superpowers/sdd/2026-09-23-renown-phase-2/task-1-report.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "OBT Vault/40 Tools/Studio Host and Instance Id.md (generic Mac parts)"]
+updated: 2026-11-20
+sources: [".superpowers/sdd/skins-card-sticky-fix-report.md", ".superpowers/sdd/per-weapon-spraypaint-report.md", ".superpowers/sdd/2026-09-23-renown-phase-2/task-1-report.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "OBT Vault/40 Tools/Studio Host and Instance Id.md (generic Mac parts)", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Studio Host and Instance Id
@@ -22,7 +22,7 @@ Every MCP call targets one Studio instance id, which changes. And the Mac runnin
 | Symptom | Cause | Do this |
 |---|---|---|
 | `ViewportSize` reads 1, 1; RenderStepped 0 per second; tweens freeze; clicks do not land; captures hang or are magenta | The Studio viewport is collapsed or the window is headless (seen on CrimeLife, [[FPS-Spraypaint-Phase-2]]) | Not a code fault. Verify by properties and say so, or ask the developer to open the viewport |
-| RenderStepped fires 0 times while Heartbeat runs at 60; screenshots stale | The screen is locked or the display slept (OBT) | Keep `caffeinate -di` running for long sessions; `caffeinate -u` before screenshots |
+| RenderStepped fires 0 times while Heartbeat runs at 60; screenshots stale | The screen is locked or the display slept (OBT) | Keep `caffeinate -di` running for long sessions; `caffeinate -u` wakes the display before screenshots; `caffeinate -d -u -t N` keeps it awake for N seconds during checks. Bit CrimeLife 2026-11-20 (the admin panel's last Plays lost virtual input): [[Tween and Render Traps]] |
 | Frame counts too low | An unfocused Studio renders about 9 to 16 FPS (OBT) | Frame-count thresholds must allow it |
 | Periodic freezes with no Lua time | The Mac paging a long-running Studio (OBT: 16 GB machine) | Read `game.Stats.PerformanceStats.Memory`; past about 10 GB ask the developer to save and restart |
 | MCP calls time out, Studio at 100 % CPU | A hidden modal dialog behind other windows (OBT) | The developer answers it |

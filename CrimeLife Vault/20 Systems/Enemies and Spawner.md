@@ -1,8 +1,8 @@
 ---
 type: system
 tags: [system, enemies, npc-ai, fps]
-updated: 2026-11-18
-sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-review.md"]
+updated: 2026-11-20
+sources: ["70 Batches/2026-11-17 Known Issues Pass.md", "70 Batches/2026-11-17 Police and Wanted.md", "CLAUDE.md (Instance tree, Systems)", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Miss-Tracers-And-Spawn-Cap.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Enemy-Spread-Spawn-Rate-And-Slot-Click-Equip.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Clustered-Enemies-Stop-Attacking.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Enemy-AI-6-Types.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-1-review.md", "70 Batches/2026-11-20 Admin Animations Third Person.md"]
 ---
 
 # Enemies and Spawner
@@ -65,6 +65,7 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
 ## History
+- 2026-11-20: the admin panel spawns non-police enemy types (1 to 6, no spawner accounting) and clears them (CLEAR MINE for admin-spawned, CLEAR ALL with `EnemyAI.getLive()` kills with `Health = 0` so the spawner refilled 30 live within 10 s; the spawner's accounting stayed intact). [[Admin Panel]] [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: enemies hold a shot with an ally in the line and sidestep (`_allyInLine`, `_sidestep`, `ALLY_SIDESTEP` 4; melee exempt); the outfit staging folder does not exist in the city. Tests: Play measurements only, no unit spec. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: the Thug that stood stuck at the east road end did not reproduce (185 s Play, five Thugs sampled every 10 s, none within 2 studs for 30 s); no change, because every other point breaks a placement rule. [[2026-11-17 Known Issues Pass]]
 - 2026-11-17 (city): target filter, preferred target, `canSee`, `investigate`, `getLive` on `EnemyAI`; `EnemyRig` extracted; Police and Armed Police spawn for wanted players. [[2026-11-17 Police and Wanted]]
