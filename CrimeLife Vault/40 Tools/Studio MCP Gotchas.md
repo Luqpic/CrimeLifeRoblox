@@ -33,6 +33,11 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 - A TextBox is typed from a Client call: `box:CaptureFocus()`, set `Text`, `box:ReleaseFocus(true)` (OBT).
 - A fake purchase prompt leaves an invisible dialog that eats later clicks: record prompts through a seam in tests (OBT).
 
+## Subagents (2026-11-20)
+
+- **A subagent's Write into the gitignored `.superpowers/` folder can be refused by the harness** (it happened to the heist-police and combat-balance implementers). Tell a subagent to return its report as text; the controller saves it. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]
+- **Specs that read or write `Source` fail from a temp server Script** (no `PluginOrOpenCloud` capability): run the heist suite from the Server command bar ([[Luau and Scripting Traps]]).
+
 ## Other tools
 
 - **`upload_image` takes http / https URLs only, never a local path.** Serve the PNGs from a temporary localhost HTTP server and stop it straight after ([[Icon Pipeline]]; asset ids in `CrimeLifeRoblox/.superpowers/sdd/uploaded-asset-ids.md`).

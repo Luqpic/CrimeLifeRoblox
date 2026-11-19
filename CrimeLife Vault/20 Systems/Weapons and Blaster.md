@@ -44,6 +44,12 @@ Built on the developer's brief "Add a third person POV for the FPS system (can t
 - **Fixed bug:** every Tool's `BlasterController` heard Z, so two tools swapped twice and cancelled out; only the equipped controller now acts ([[Camera and Input Traps]]). The touch Reload button had no callback (a tap did nothing); it has one now.
 - Camera layering and the "Shoulder" source: [[Camera Authority]]. Movement and rolls: [[Character Movement and Animation]]. The admin spectate unequips the tool first so the shoulder lets go ([[Admin Panel]]).
 
+## NPC shots through ShotResolver (2026-11-20)
+Details: [[2026-11-20 Readable Gunfights and Level Toughness]].
+- `ShotResolver.applyDamage`: when the shooter is an NPC, the hit goes through `Combat.npcDamage` (range falloff x1 to 25 studs, x0.5 at 90 and beyond, then the victim player's level armor). Player shots are unchanged.
+- Guards (`Heist.Components.GuardPost`) now fire through `ShotResolver.resolveShot` from their weapon's muzzle with no `claimedTags`, so the server raycast decides, and every client sees the tracer, flash and sound. Their weapon's damage is `GuardDamage` (6), set at spawn; the magazine is topped up before each shot.
+- A hit on an NPC shooter flinches it (once a second at most). The fast-semi recoil trap that this batch found is in [[Physics and Character Traps]].
+
 ## Extend it
 - New gun: run the donor-skeleton build (`BuildNewPistolsShotguns.luau`): same-class donor, keep its `Body` as a hidden anchor, hang the new mesh off it, never replace the core part. Add a `profiles` entry in `WeaponViewmodelMotion` or first person never starts. Give it `Category` (+ `Price` or `Gamepass`) and the shop picks it up. Upload a `TextureId` icon.
 - New behaviour: add an opt-in attribute to `Blaster.Constants` and read it in the shared code; never branch per weapon.
@@ -70,6 +76,7 @@ Built on the developer's brief "Add a third person POV for the FPS system (can t
 - Third person (2026-11-20), open Minors from the review: the `AimPitch` server rate limit lets a 0 through at any rate, and the server cannot know the shoulder camera is on (cosmetic only); `ShoulderCamera.enter` calls `lockBuiltIn` unprotected, so a throw would leave the state set; crouching in third person snaps the camera instead of easing; the `ViewMode` attribute is not cleared on unequip; a per-frame cost the review wants trimmed (one raycast and a filter re-assign each frame). No pure test covers the remembered-mode logic. [[Open Items]]
 
 ## History
+- 2026-11-20: NPC hits get range falloff and level armor in `applyDamage`; guards fire real shots through `resolveShot`. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: third person is OBT's shoulder camera in the blaster (V toggles, Z swaps, shoulder zoom aim, remembered across equips and respawns, VIEW and SWAP touch buttons), other players' upper body follows the aim pitch; review fixes for aim lost across exit and enter, a reliable `AimPitch` remote, streaming-safe `AimPitchView` and a single `AutoRotate` writer. Not seen: NPC dialogue mid-shoulder, a phone. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: two-clock rate of fire (`ARRIVAL_SLACK` 0.25 and `INTERVAL_TOLERANCE` 0.9 in `Blaster.Constants`; idle burst 12 to 3 at 600 rpm); melee stamps at the press; third-person shots start at the head and aim at the crosshair (`Blaster.Utility.thirdPersonAim`, `CROSSHAIR_FAR_DISTANCE` 1000); 12 barrel-end muzzles with `FlashEmitter`; RPG blast numbers in `Blaster.Constants`; the APS becomes a machine pistol; Burst never plays the dry-fire cue. City suite 288 / 288. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: descriptions on all 38 Tools, shotgun reload readout, dry-fire cue, RPG blast as a particle burst, three muzzles moved to the barrel end. [[2026-11-17 Known Issues Pass]]

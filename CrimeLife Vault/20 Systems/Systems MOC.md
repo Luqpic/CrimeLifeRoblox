@@ -11,7 +11,7 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 
 ## FPS combat
 
-- [[Weapons and Blaster]]: data-driven guns, `ShotResolver` hit authority, knockback, the RPG, the third-person shoulder camera (2026-11-20).
+- [[Weapons and Blaster]]: data-driven guns, `ShotResolver` hit authority, knockback, the RPG, the third-person shoulder camera (2026-11-20), NPC shots with falloff and armor (2026-11-20).
 - [[Viewmodels and Weapon Animation]]: first-person rigs, donor-skeleton swap, linear KeyframeSequences.
 - [[Melee]]: Crowbar, Baton stagger, Knife bleed and backstab.
 - [[Damage Direction]]: the on-screen hit-direction indicator.
@@ -21,7 +21,7 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 
 - [[Economy and Cash]]: `CashService`, `leaderstats.Cash`, cash drops, the coin bursts.
 - [[Weapon Shop and Upgrades]]: the Weaponary, permanent ownership, loadout slots, damage upgrades.
-- [[Leveling and Renown]]: kill XP, level cap 70, seven criminal ranks.
+- [[Leveling and Renown]]: kill XP, level cap 70, seven criminal ranks, max health +4 a level, level armor and regen (2026-11-20).
 - [[Spraypaint]]: the earned currency (once called Renown).
 - [[Cosmetics and Skins]]: tint palettes and the Skins card.
 - [[Gamepasses]]: passes, Cash products, the RPG pass.
@@ -39,8 +39,8 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 
 ## World and NPCs
 
-- [[Enemies and Spawner]]: enemy types, spawner, AI.
-- [[Police and Wanted]]: wanted stars, police squads, witnesses, Bank and NewsStation guards, the star meter (city, 2026-11-17).
+- [[Enemies and Spawner]]: enemy types, spawner, AI, shooter tokens, wind-up aim line, bursts (2026-11-20).
+- [[Police and Wanted]]: wanted stars, police squads, witnesses, Bank and NewsStation guards, the star meter (city, 2026-11-17), timed heist police and the squad hold (2026-11-20).
 - [[Quests and Dialogue]]: quest givers, dialogue replies, quest log.
 - [[Movement and Stamina]]: sprint, stamina, landings, lean.
 - [[Character Movement and Animation]]: the OBT clip set, roll (Q), ledge climb, the fallback clips (2026-11-20).
@@ -56,7 +56,7 @@ What exists in CrimeLife and where it lives, one note per system. Each note has 
 ## Robbery heists (running in Crimelife City since 2026-11-16; the Robbery place is the frozen reference)
 
 - [[Robbery Prompts]]: the liquid-fill proximity prompt (shared with the FPS place).
-- [[Robbery Heists and Getaway]]: locations (now at the city's buildings, Bank vault underground), duffel bag, getaway distance, supplier, location status, the bridge onto `leaderstats.Cash`.
+- [[Robbery Heists and Getaway]]: locations (now at the city's buildings, Bank vault underground), duffel bag, getaway distance, supplier, location status, the bridge onto `leaderstats.Cash`, heist police and the Bank's Security and Police guards (2026-11-20).
 - [[Robbery Puzzles]]: lockpicking, word-scramble hack, safe keypad, Bank gauntlet.
 
 Related: [[Decisions MOC]] · [[Open Items MOC]] · [[Batch Log]]

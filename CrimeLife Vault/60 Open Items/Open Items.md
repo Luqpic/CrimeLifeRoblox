@@ -116,6 +116,38 @@ All from [[2026-11-20 Admin Animations Third Person]]; systems: [[Admin Panel]],
   - The old admin account number is still in git history (security M8, and in the frozen FPS mirror `FPSSystem/Weapons/LevelingService.luau`); a user id is public, not a credential, so only a history rewrite would remove it. The vault copies were removed 2026-11-20 (three lines in two batch notes; three notes under `90 Reference/Original Prompts/` keep it as frozen specifications).
   - Studio is always an owner, so the helper and role-less paths are testable only through the `Roles.set` seam.
 
+### Heist police, gunfights and level toughness (2026-11-20)
+From [[2026-11-20 Heist Police and Bank Guards]] and [[2026-11-20 Readable Gunfights and Level Toughness]]; systems: [[Police and Wanted]], [[Robbery Heists and Getaway]], [[Enemies and Spawner]], [[Leveling and Renown]], [[Weapons and Blaster]], [[Movement and Stamina]].
+
+Questions for the developer:
+- **Vault-side spawn markers for the vault Armed Police (Batch 2 review I2).** They spawn at the markers by the `TeleporterBankB` arrival and cannot path past the obby pit, so they hold the gauntlet and the way out instead of reaching the vault. A marker set inside the vault for `HeistPoliceVault` would put them there.
+- **Guard pay outside a robbery (Batch 3 review I1).** Guards built through EnemyRig pay XP, a 30 % cash drop and quest credit when killed outside a robbery and respawn every 60 s. Ceiling across all 7 guards (Bank 2 Security and 2 Police, NewsStation 3 Police): about 95 XP and 64 cash a minute, plus 5 Police quest kills a minute. Police guards also give police heat. NewsStation guards newly pay cash and quest credit because they are Police rigs now. The smallest fix is a `NoKillReward` attribute on guard rigs that CashService, LevelingService and QuestService skip, or paying only while the Bank is Active.
+- **A free starter gun.** A new player owns only the Crowbar (`WeaponShopService` `STARTING_WEAPON`); the cheapest pistol, the Glock 17, costs 400 of the 500 starting cash. The 1v2 target was measured with the Glock.
+- **Offender `DamageOverride` 8 to 6 if 1v2 feels hard.** Standing damage rose from 7.2 to 14.0 dps (62 % health left) because recoil no longer ruins follow-up shots; strafing is unchanged. The lever is a Studio attribute on `ServerStorage.EnemyTemplates.Offender`.
+- **A level-up still fully heals mid-fight.** Rare after the first levels, except by farming guards.
+
+Not yet checked (needs a person or a longer run):
+- Two players, and a phone, for the heist police, the guards and the aim line.
+- A real Blaster hit on a guard (the provocation was emulated with `Tagged`).
+- NewsStation guards firing in Play (they are Police rigs with a Mateba; only placement was read).
+- A roll against NPC fire (the `RollingUntil` stamp and the widest cone are specs and a read-back only), and a flinch in Play (specs only).
+- NewsStation's 6:30 wave (the run ended at 5:05).
+- The 1v2 verdict assumes 4 clicks a second; at the Glock's 650 rpm cap every case ended above 75 %. Run-to-run variance is large (Police standing 8.0 to 22.7 dps) and the before cells are single runs; Bandits standing is the tightest (one run ended at 50 %).
+
+Minors left open:
+- **Batch 2 M2:** one steering path check a second from marker 1 while robbers are inside.
+- **A roll in place gets the widest NPC cone.** `RollAuthority` stamps `RollingUntil` for any accepted roll, moving or not. Bounded by stamina (12.3 a roll, regen 6.25 a second) and the 0.9 s cooldown, about 37 % uptime sustained. Fix if it matters: require horizontal speed above about 8 at request time.
+- **The 8 s token timeout against a very slow weapon.** A burst longer than 8 s would free a slot early; no current weapon does that (Mateba 220 rpm, a burst is at most about 3 s).
+- **NPC explosions and bleed ticks bypass falloff and armor** (by design; no current NPC weapon is known to use either).
+- **The `Health` script stays asleep if `MaxHealth` rises without a `Health` write.** Nothing does that today; the only writer, `applyMaxHealth`, sets Health too.
+- Gun guards turn toward their target at each 10 Hz update in sight (the 2 degree skip in `_face` softens it).
+
+Concerns carried from the reports (pre-existing or measured, not fixed):
+- Squads cannot spawn while every robber is in the vault: the dispatcher's entrance lookup covers `Workspace.Bank`, not `BankVault`.
+- After the squad hold ends, a non-participant left in the Bank lobby is unseen and their stars drain.
+- A wanted bystander who was in the building when the session started is held and counted as seen for the first 2 minutes (review I1 narrowed it to those present at the start).
+- The police damage window in Batch 2 used MaxHealth 1000; the `Tagged` total (63) is more reliable than the 53.5 HP net.
+
 ### Product calls waiting
 - **Tycoon compound look (2026-11-18):** the approved Flow top view (`docs/compound-views/flow-top-result.jpg`) has a fourth guard tower at the SE corner and pyramid tower roofs; the plan has three corner towers. Confirm whether the plan should add the SE tower. [[2026-11-17 Compound Floor Plan]]
 - **Tycoon compound plan (2026-11-17):** share the artifact with the builder (Share menu), pick a room for the F2 spare slot, confirm Claude's layout rulings and price stages 0 to 8. [[2026-11-17 Compound Floor Plan]] -> [[Compound Floor Plan]]

@@ -35,6 +35,9 @@ Walk, sprint (drains stamina, server-granted), jump, fall and climb animations, 
 ## Animation layer and the roll (2026-11-20)
 Clip playback, the roll (Q) and the ledge climb moved to [[Character Movement and Animation]]. What changed here: `Animate2` yields its clips while the character attribute `MovementAnimations` is set and stops `Animate`'s leftover tracks; `SprintAuthority.spend(player, amount)` (refuses while locked out) pays the roll's 12.3 stamina; `SprintAuthority` writes the admin `AdminWalkSpeed` last in its tick and `Animate2` uses it as the only target while set ([[Admin Panel]]); `LandAnim` is quarantined (`Animate2` still owns landing recovery).
 
+## Roll stamps RollingUntil (2026-11-20)
+`RollAuthority` now writes `RollingUntil` (server clock, `os.clock()` plus 0.744 s, the longest roll) on the character's root for every accepted roll; a refused roll stamps nothing. NPC aim reads it and gives a rolling target the widest cone ([[Enemies and Spawner]]). The remote carries no argument, so the client cannot pick the time. The stamp does not check that the character moves: a roll in place gets the same cone, bounded by stamina (12.3 a roll) and the 0.9 s cooldown, about 37 % uptime sustained (review Minor, open). Spec: `RollAuthority_Test` (5 cases). [[2026-11-20 Readable Gunfights and Level Toughness]]
+
 ## Extend it
 - Movement tuning goes in `ReplicatedStorage.Movement.Constants` only, so client and server stay in step.
 - If small drops feel sluggish, add a fall-height or fall-speed threshold for opening the landing window, not a return of the sprint test.
@@ -52,6 +55,7 @@ Clip playback, the roll (Q) and the ledge climb moved to [[Character Movement an
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-20: an accepted roll stamps `RollingUntil` for NPC aim. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: OBT movement clips, roll and ledge climb added ([[Character Movement and Animation]]); `SprintAuthority.spend`; admin walk speed. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `Crouching` `Stop()` caps `WalkSpeed` at once for a carrier (`carryCapped`); not measured in Play; carriers cross the Bank ledges through the `Carrier` collision group; fall and climb defaults confirmed as fine by the developer. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: character attribute `CarrySpeedCap` (12, `Movement.Constants`) set by `CarryState` for heavy loot: `Animate2`, `SprintAuthority` and `Crouching` cap WalkSpeed at it and grant no sprint; clearing it hands back 20. Measured sprint 38 uncapped, 12 capped. [[2026-11-17 Heist Layers]]

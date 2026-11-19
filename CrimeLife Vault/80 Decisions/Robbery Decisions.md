@@ -1,7 +1,7 @@
 ---
 type: decision
 tags: [decision, robbery]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Getaway-Distance-Replaces-Claim-Zone.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Prompt-Circle-Liquid-And-Glow.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Post-Move-Fixes-And-GUI-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Performance-Optimization-And-Unification.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/NewsStation-Hacking-Randomize-Word-Button.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Shared-UI-Effects-FOV-Blur-And-Sounds.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Close-Button-Unified-With-FPS.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Timer-Hourglass-And-Duffel-Upgrade-GUI.md"]
 ---
 
@@ -11,6 +11,10 @@ Calls about the **Robbery System** place. The code is in [[Robbery Heists and Ge
 
 ## Newest first
 
+- **2026-11-20: big robberies send police inside after a few minutes.** The developer asked "for Big robberies like bank, spawn in a few police first after a few minutes" and clarified: "I meant when you start the robbery, the police will come after a few minutes". Picker answers: Bank "3 at 2:00, +2 every 90 s" (cap 8); NewsStation 2 at 2:00, +1 every 90 s (cap 4); scope "Bank + NewsStation" (SlowFoods and Gas2Go unchanged). Claude's ruling: the stars and HUD still rise at the alarm, but the star squad is held until the first wave. [[2026-11-20 Heist Police and Bank Guards]]
+- **2026-11-20: the Bank's vault dummies become Security and Police guards.** They fight "once the robbery starts" (or when attacked); outside a robbery they stay passive and a dead guard returns after 60 s. [[2026-11-20 Heist Police and Bank Guards]]
+- **2026-11-20: opening the rolling vault brings Armed Police.** Picker answer "4 now, +2 every 60 s, cap 8". Claude's ruling: they spawn at the B-arrival markers (a vault-side set is an open question). [[2026-11-20 Heist Police and Bank Guards]]
+- **2026-11-20: guards fire real shots and Security strikes only in reach; NewsStation guards are Police rigs.** Claude's rulings in the combat batch: guards use the same tokens, aim line and bursts as every NPC shooter; a Baton guard turns first and strikes within 6 studs only. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - **2026-11-18: heavy carries get the getaway distance widget**: the ripped ATM and the gold bar show the same 200-stud widget as the duffel. [[2026-11-18 Open Items Pass]]
 - **2026-09-20: cash banks by getting 200 studs away**, not by walking into a claim zone; losing the escape to the timer is the intended failure, decided explicitly. [[Getaway-Distance-Replaces-Claim-Zone]]
 - **2026-09-19: one dialogue engine for both places.** The Illegal Supplier moved onto the FPS dialogue engine and copies its behaviour (FOV pull with no blur; the HUD stays up). [[Supplier-Dialogue-On-Shared-Billboard-Engine]]

@@ -47,6 +47,16 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - `EnemyRig.build(template, label)` and `EnemyRig.place(character, weapon, cframe, parent)` are the old `trySpawn` body, moved verbatim; the spawner keeps its points, caps and counts. Police are built with the same two calls into `Workspace.Police`.
 - `CityMergeDeviation` on `EnemyAI` and `EnemySpawner`; rows in `CityMerge/after-import.md`.
 
+## Readable gunfights (2026-11-20)
+Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is in `ReplicatedStorage.Enemy.Combat` (pure maths: `reactionTime`, `aimError`, `shotInterval`, `burstShots`, `burstPause`, `rangeFalloff`, `armor`, `npcDamage`, `regenStep`, `newTokens`); the shared server code is `ServerScriptService.Enemy.Scripts.NpcFire`. They apply to gangs, police, heist police and guards; PvP is unchanged.
+- **Tokens.** At most 2 shooters fire at one player at a time; a token is held for one burst and released at its end, on lost sight, stun, death, target change and destroy. Registry cleared on the player's death and leave; stale after 8 s.
+- **Wind-up.** The first shot of an engagement (a new target, or after 1.5 s unseen) waits 0.6 s (semi) or 0.8 s (auto) while `NpcFire.showTell` shows a plain red Beam from the muzzle to the target. It ends at the first shot.
+- **Focus ramp.** Aim cone x2.5 to x1 over 2 s of sight; lost sight resets it. A hit on the shooter flinches it (focus back 0.75 s, next shot +0.3 s), at most once a second (`FLINCH_COOLDOWN` 1). A rolling target (`RollingUntil`, see [[Movement and Stamina]]) gets the widest cone.
+- **Bursts.** Guns fire 3 to 5 shots, then pause 0.8 to 1.2 s; semi-automatic at most one shot per 0.45 s. Melee keeps `_tryFire`, no token and no line.
+- **Falloff and armor.** NPC shots on a player: x1 to 25 studs, linear to x0.5 at 90 studs; then the victim's level armor ([[Leveling and Renown]]). Lasers, the death pit, NPC explosions and bleed skip both.
+- **Template changes.** `EnemyTemplates.Police.DamageOverride` 9 (was 12), `Bandits` 1.5 a pellet (was 3); other types as read: Thug 9, Security 9, Offender 8, Smuggler 4, Disrupters 4, Saboteur 2, Armed Police 3.
+- **Measured.** 1v2 at 35 studs, level 1, Glock 17: Offender 62 % health left standing, Police 59 %, Bandits 59 %; 1v5 mixed gangs 56.1 to 14.9 dps; Crowbar rush 1v1 arrives with 92 HP. See the batch note for the full table.
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.
@@ -65,6 +75,7 @@ Measured 2026-11-15 for placing the six points in Crimelife City ([[2026-11-15 F
 - The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
 ## History
+- 2026-11-20: shooter tokens, wind-up aim line, focus ramp, bursts, range falloff, flinch (1 s cooldown), `Enemy.Combat` and `NpcFire`; Police 12 to 9, Bandits 3 to 1.5; heist police run this same AI. [[2026-11-20 Readable Gunfights and Level Toughness]] [[2026-11-20 Heist Police and Bank Guards]]
 - 2026-11-20: the admin panel spawns non-police enemy types (1 to 6, no spawner accounting) and clears them (CLEAR MINE for admin-spawned, CLEAR ALL with `EnemyAI.getLive()` kills with `Health = 0` so the spawner refilled 30 live within 10 s; the spawner's accounting stayed intact). [[Admin Panel]] [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: enemies hold a shot with an ally in the line and sidestep (`_allyInLine`, `_sidestep`, `ALLY_SIDESTEP` 4; melee exempt); the outfit staging folder does not exist in the city. Tests: Play measurements only, no unit spec. [[2026-11-18 Open Items Pass]]
 - 2026-11-17: the Thug that stood stuck at the east road end did not reproduce (185 s Play, five Thugs sampled every 10 s, none within 2 studs for 30 s); no change, because every other point breaks a placement rule. [[2026-11-17 Known Issues Pass]]

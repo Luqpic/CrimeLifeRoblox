@@ -81,6 +81,16 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 - **Fix:** bound the length first (`if #value > max * 4 then return nil end`, 4 bytes is the most a UTF-8 character takes), then trim. Applies to any trim of player-sent text. [[Admin Panel]]
 - **Bit us:** [[2026-11-20 Admin Animations Third Person]]
 
+### Roblox's default `Health` script is replaced by a Script named `Health` in StarterCharacterScripts
+- **Symptom:** characters regenerate 1 % of MaxHealth a second from the first second after a hit, with no delay, and nothing in the game's own scripts does it.
+- **Cause:** every character gets Roblox's built-in `Health` script, which does that regen. A survey that grepped the game's scripts concluded there was no regen.
+- **Fix:** put a Script named `Health` in `StarterPlayer.StarterCharacterScripts`; it replaces the default by name. Ours regens 6 % a second after 6 s without a loss, sleeps at full health and only raises Health. If MaxHealth rises without a Health write it stays asleep until the next hit (nothing does that today). Measured at level 70: Health held at 200 for 5.98 s, then about 22.9 a second. **Bit us:** [[2026-11-20 Readable Gunfights and Level Toughness]].
+
+### A temp server Script lacks the PluginOrOpenCloud capability: `Source` specs fail there
+- **Symptom:** the heist suite run from a temporary server Script reported two failures (the specs that read or write a script's `Source`); the same suite passed from the Server command bar (760 passed, 0 failed).
+- **Cause:** a Script created by the harness runs without the `PluginOrOpenCloud` capability, so reading or writing `Source` errors.
+- **Fix:** run the heist suite from the Server command bar (`execute_luau` in the Server context). The temp-Script route in the entry below is still right for sharing the game's module copies, but not for specs that touch `Source`. **Bit us:** [[2026-11-20 Readable Gunfights and Level Toughness]].
+
 ### A plugin-context `execute_luau` holds its own module copies
 - **Server and Client alike (2026-11-20):** `execute_luau` run in Server or in Client holds its own ModuleScript copies too. Act through a temporary Script (it shares the game's copy) instead of a `require` from the call. Rule restated by the admin batch ([[2026-11-20 Admin Animations Third Person]]).
 - **Symptom:** heat set with `require(ServerScriptService.Wanted.WantedService).addHeat(...)` from a server `execute_luau` showed on the star meter but never drained; `EnemyAI.getLive()` from the same call listed no enemies while 30 were alive.

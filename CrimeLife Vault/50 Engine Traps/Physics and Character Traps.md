@@ -27,6 +27,16 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 ### Raycasts obey collision groups (OBT)
 - A ray meets only parts whose group collides with its `RaycastParams.CollisionGroup`; a group that collides with nothing is invisible to every ray.
 
+### An NPC semi-auto that fires faster than its recoil decays climbs over the target's head
+- **Symptom:** two Offenders at 35 studs hit a standing player 8 times in 42 shots (7.2 damage a second); Police landed 12 of 24. The same guns at a slower cadence hit far more.
+- **Cause:** each NPC shot kicked the aim up 18 to 34 degrees and the AI's recoil decay was 69 degrees a second. At a 0.25 s cadence the kick had not decayed before the next shot, so the aim climbed over the target's head. At 0.45 s it settles: 15 of 26 hit.
+- **Fix:** cap semi-automatic NPC fire at one shot per 0.45 s (`Combat.shotInterval`). Side effect: the same guns became deadlier (Offender standing 7.2 to 14.0 dps), so retune `DamageOverride` after any cadence change, not before. **Bit us:** [[2026-11-20 Readable Gunfights and Level Toughness]].
+
+### A melee guard that measured its reach before turning never struck
+- **Symptom:** a Security guard with a Baton did nothing to a player at 3.5 studs, in Play (the specs passed).
+- **Cause:** the reach test measured from the Baton's muzzle while the guard still faced away, so the muzzle was 6.1 studs from the target, just outside the 6-stud reach. The guard only turned when it struck.
+- **Fix:** turn to the target first, then measure the reach from the muzzle. A regression case in `GuardSpec` ("4 studs: it strikes") failed first and then passed. **Bit us:** [[2026-11-20 Readable Gunfights and Level Toughness]].
+
 ## Humanoids
 
 ### Interpenetrating Humanoids climb each other
