@@ -28,11 +28,13 @@ Combat.TELL_MAX_SECONDS = 2
 -- === Focus ===
 -- The aim cone starts at FOCUS_START_MULTIPLIER x the template's error and tightens linearly to 1 x over FOCUS_TIME
 -- seconds of continuous sight; losing sight starts it over. A hit on the shooter (a flinch) sets its focus back
--- FLINCH_FOCUS_SETBACK seconds and its next shot FLINCH_SHOT_DELAY seconds. A rolling target gets the widest cone.
+-- FLINCH_FOCUS_SETBACK seconds and its next shot FLINCH_SHOT_DELAY seconds, at most once per FLINCH_COOLDOWN (a fast
+-- gun's steady hits must not silence a shooter for good: review I2). A rolling target gets the widest cone.
 Combat.FOCUS_START_MULTIPLIER = 2.5
 Combat.FOCUS_TIME = 2
 Combat.FLINCH_FOCUS_SETBACK = 0.75
 Combat.FLINCH_SHOT_DELAY = 0.3
+Combat.FLINCH_COOLDOWN = 1
 
 -- === Bursts ===
 -- Every NPC gun fires bursts of BURST_SHOTS_MIN to MAX shots, then lets its token go for BURST_PAUSE_MIN to MAX

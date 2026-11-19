@@ -274,6 +274,7 @@ function GuardPost.new(marker: BasePart, deps)
 		_burstLeft = nil,
 		_pauseUntil = -math.huge,
 		_shotAfter = -math.huge,
+		_flinchedAt = -math.huge,
 		_melee = false,
 		_automatic = false,
 		_aim = nil,
@@ -451,13 +452,16 @@ function GuardPost:_respawn()
 end
 
 -- Turn the guard (anchored: it never turns by itself) toward the target it fires at. A target straight above or
--- below is not faced (CFrame.lookAt would be NaN).
+-- below is not faced (CFrame.lookAt would be NaN), nor one it already faces within FACE_TOLERANCE (each PivotTo
+-- replicates every part of the rig; review minor).
+local FACE_TOLERANCE = math.cos(math.rad(2))
 function GuardPost:_face(candidates, target)
 	for _, candidate in ipairs(candidates) do
 		if candidate.player == target then
 			local pivot = self._guard:GetPivot()
 			local flat = Vector3.new(candidate.position.X, pivot.Position.Y, candidate.position.Z)
-			if (flat - pivot.Position).Magnitude > 0.1 then
+			local offset = flat - pivot.Position
+			if offset.Magnitude > 0.1 and pivot.LookVector:Dot(offset.Unit) < FACE_TOLERANCE then
 				self._guard:PivotTo(CFrame.lookAt(pivot.Position, flat))
 			end
 			return
@@ -618,7 +622,10 @@ function GuardPost:Provoke(player)
 	local now = self.now()
 	self._provoked[player] = now + (self.config.GuardProvokeSeconds or 0)
 	self._activated = true
-	-- Combat balance (2026-11-20): the hit makes it flinch like every NPC shooter (Combat.FLINCH_*).
+	-- Combat balance (2026-11-20): the hit makes it flinch like every NPC shooter (Combat.FLINCH_*), at most once per
+	-- Combat.FLINCH_COOLDOWN.
+	if now - self._flinchedAt < Combat.FLINCH_COOLDOWN then return end
+	self._flinchedAt = now
 	if self._sightSince then
 		self._sightSince = math.min(now, self._sightSince + Combat.FLINCH_FOCUS_SETBACK)
 	end

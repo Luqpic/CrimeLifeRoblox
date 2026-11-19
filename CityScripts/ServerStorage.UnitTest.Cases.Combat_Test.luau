@@ -86,6 +86,19 @@ return function(t)
 		expect.near(Combat.npcDamage(12, 90, nil), 6) -- no level: no armor
 	end)
 
+	t.test("an enemy flinches at most once per FLINCH_COOLDOWN (review I2: steady hits must not silence it)", function()
+		local EnemyAI = require(game:GetService("ServerScriptService").Enemy.Scripts.EnemyAI)
+		local enemy = { sightSince = 9, shotAfter = 0, flinchedAt = -math.huge }
+		EnemyAI._flinch(enemy, 10)
+		expect.near(enemy.shotAfter, 10 + Combat.FLINCH_SHOT_DELAY)
+		expect.near(enemy.sightSince, 9 + Combat.FLINCH_FOCUS_SETBACK)
+		EnemyAI._flinch(enemy, 10.2)
+		expect.near(enemy.shotAfter, 10 + Combat.FLINCH_SHOT_DELAY)
+		expect.near(enemy.sightSince, 9 + Combat.FLINCH_FOCUS_SETBACK)
+		EnemyAI._flinch(enemy, 10 + Combat.FLINCH_COOLDOWN)
+		expect.near(enemy.shotAfter, 10 + Combat.FLINCH_COOLDOWN + Combat.FLINCH_SHOT_DELAY)
+	end)
+
 	t.test("max health: 100 at level 1, +4 a level, 376 at level 70", function()
 		expect.equal(LevelingConstants.maxHealth(1), 100)
 		expect.equal(LevelingConstants.maxHealth(2), 104)

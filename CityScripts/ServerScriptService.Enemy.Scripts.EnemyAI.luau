@@ -132,12 +132,13 @@ function EnemyAI.new(
 		-- Readable gunfights (2026-11-20). sightSince: when continuous sight of the target began (the focus ramp);
 		-- lastSightAt: the last think with sight (a fresh wind-up after Combat.REACQUIRE_AFTER without); windupDone:
 		-- this engagement's wind-up is behind it; pauseUntil: the pause after a burst; shotAfter: a flinch's delay of
-		-- the next shot; bursting: a burst thread runs; hideTell: takes the aim line down.
+		-- the next shot; flinchedAt: the last flinch; bursting: a burst thread runs; hideTell: takes the aim line down.
 		sightSince = nil :: number?,
 		lastSightAt = nil :: number?,
 		windupDone = false,
 		pauseUntil = 0,
 		shotAfter = 0,
+		flinchedAt = -math.huge,
 		bursting = false,
 		hideTell = nil :: (() -> ())?,
 
@@ -821,8 +822,12 @@ function EnemyAI:_startBurst(targetHumanoid: Humanoid)
 end
 
 -- A hit on this enemy (combat balance, 2026-11-20): its focus goes back Combat.FLINCH_FOCUS_SETBACK and its next
--- shot waits Combat.FLINCH_SHOT_DELAY.
+-- shot waits Combat.FLINCH_SHOT_DELAY; at most once per Combat.FLINCH_COOLDOWN.
 function EnemyAI:_flinch(now: number)
+	if now - (self.flinchedAt or -math.huge) < Combat.FLINCH_COOLDOWN then -- or: a stand-in enemy in the specs
+		return
+	end
+	self.flinchedAt = now
 	if self.sightSince then
 		self.sightSince = math.min(now, self.sightSince + Combat.FLINCH_FOCUS_SETBACK)
 	end

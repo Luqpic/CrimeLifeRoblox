@@ -511,6 +511,29 @@ return function()
 		marker:Destroy()
 	end)
 
+	suite:test("a flinch delays the next shot at most once per FLINCH_COOLDOWN (review I2)", function(expect)
+		local marker = tempMarker()
+		local clock = 100
+		local attacker = { GetAttribute = function() return nil end }
+		local post = GuardPost.new(marker, { config = Config, now = function() return clock end,
+			bank = BankInstance.new({ config = Config, now = function() return 1000 end }),
+			spawnGuard = function() return rig(true) end,
+			tokens = Combat.newTokens(2, function() return clock end),
+			showTell = function() return function() end end,
+			shoot = function() end })
+		post:Provoke(attacker)
+		expect.equal(post._shotAfter, 100 + Combat.FLINCH_SHOT_DELAY, "the first hit flinches")
+		clock = 100.25
+		post:Provoke(attacker)
+		expect.equal(post._shotAfter, 100 + Combat.FLINCH_SHOT_DELAY, "a hit inside the cooldown does not push it back")
+		expect.equal(post._provoked[attacker], 100.25 + Config.GuardProvokeSeconds, "the provocation still renews")
+		clock = 100 + Combat.FLINCH_COOLDOWN
+		post:Provoke(attacker)
+		expect.equal(post._shotAfter, clock + Combat.FLINCH_SHOT_DELAY, "after the cooldown it flinches again")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
 	-- Combat balance (2026-11-20): guards fire like every NPC shooter (tokens, wind-up with the aim line, bursts), and a
 	-- guard holding a melee weapon strikes only within its reach.
 	local function armedPost(clock, tokens, record, tool)

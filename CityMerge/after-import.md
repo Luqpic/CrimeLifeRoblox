@@ -1063,3 +1063,19 @@ Studio objects (not scripts): `ServerStorage.EnemyTemplates.Police` attribute `D
 The 15 sources are in `CityScripts/`; bytes and Adler-32 equal the place (15 / 15). City suites 365 / 365 / 0; heist 759 passed / 0 failed; boot: server only the known DataStore "StudioAccessToApisNotAllowed" error. After: Edit mode, 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute. Measured Play numbers: `.superpowers/sdd/2026-11-20-combat-balance/report.md`.
 
 NOT saved / NOT published
+
+## Combat review fixes 2026-11-20
+
+Review of 86a0073 (`.superpowers/sdd/2026-11-20-combat-balance/review.md`): 0 Critical, 2 Important, 6 Minor. Fixed: I2 and the guard-facing Minor. Guard pay outside a robbery (I1) is left as a question for the developer. The "guards behind walls" Minor was dismissed: `GuardPost.selectTarget` only takes `visible` candidates (a raycast in `_candidates`).
+
+| Script | Before | After | Change |
+|---|---|---|---|
+| ReplicatedStorage.Enemy.Combat | 7,375 / 1606714197 | 7,513 / 880324628 | `FLINCH_COOLDOWN = 1` |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 46,010 / 878240490 | 46,253 / 4086379001 | `_flinch` at most once per `FLINCH_COOLDOWN` (`flinchedAt`, nil-safe for spec stand-ins) |
+| ServerScriptService.Heist.Components.GuardPost | 27,819 / 3524214988 | 28,220 / 1048495103 | `Provoke` flinch at most once per cooldown (the provocation still renews); `_face` skips a turn within 2 degrees (`FACE_TOLERANCE`) |
+| ServerScriptService.Heist.Tests.GuardSpec | 25,888 / 3682260325 | 27,070 / 3281672243 | case "a flinch delays the next shot at most once per FLINCH_COOLDOWN" |
+| ServerStorage.UnitTest.Cases.Combat_Test | 4,601 / 446416611 | 5,344 / 1835643840 | case "an enemy flinches at most once per FLINCH_COOLDOWN" |
+
+`CityMergeDeviation` appended on all 5. City 366 / 366 / 0; heist 760 passed / 0 failed (run from the Server command bar: from a temp Script, the two `Source` specs fail on capability).
+
+NOT published
