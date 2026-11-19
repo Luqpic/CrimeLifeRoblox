@@ -80,3 +80,15 @@ listen("BroadcastHijacked", function(playerName)
 	NotificationController.show(string.format("<b>%s</b> hijacked the News Station broadcast!",
 		escapeRichText(playerName)), ALARM_TITLE)
 end)
+
+-- Admin announcements (2026-11-20): ReplicatedStorage.AdminAnnounce (made by Admin.AdminService) carries text the
+-- server already filtered for broadcast; shown as an ADMIN card.
+task.spawn(function()
+	local remote = ReplicatedStorage:WaitForChild("AdminAnnounce", WAIT_SECONDS)
+	if remote then
+		(remote :: RemoteEvent).OnClientEvent:Connect(function(message)
+			if type(message) ~= "string" then return end
+			NotificationController.show(escapeRichText(message), "ADMIN")
+		end)
+	end
+end)

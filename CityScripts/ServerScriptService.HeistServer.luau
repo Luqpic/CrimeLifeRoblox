@@ -204,6 +204,8 @@ bank = BankInstance.new({
 	duffelCapMultiplier = function(player) return GamepassManager:GetDuffelCapMultiplier(player) end,
 	accrualRateMultiplier = function(player) return GamepassManager:GetAccrualRateMultiplier(player) end,
 })
+-- Admin (2026-11-20): the panel's heist state and cooldown reset reach this instance through Admin.Hooks.
+require(ServerScriptService.Admin.Hooks).heists.Bank = bank
 
 -- Zones are built directly rather than through the registry, because
 -- ZoneService needs the list up front.
@@ -483,6 +485,11 @@ end
 -- player per run.
 for _, volume in ipairs(byTag[T.HeistDeathVolume] or {}) do
 	volume.onContact = function(player)
+		-- Admin god (2026-11-20): this Health = 0 kill is the one damage path a ForceField does not stop.
+		local godCharacter = player.Character
+		if godCharacter and godCharacter:GetAttribute("AdminGod") then
+			return
+		end
 		-- Die, not Eject: this is a death (the spec calls this a kill-volume),
 		-- so it must never teleport to ExitSpawn -- only forfeit, then let the
 		-- Health = 0 below (and the generic Humanoid.Died handler it triggers)

@@ -169,6 +169,16 @@ function BankInstance:Step()
 	end
 end
 
+-- Admin (2026-11-20, through Admin.Hooks.heists): ends a cooldown now. The normal rearm runs (components,
+-- StateChanged, the broadcast and the LocationOpened card). Only from Cooldown: an open or robbed location is
+-- left as it is, and its state is the second value.
+function BankInstance:ResetCooldown(): (boolean, string?)
+	if self._state ~= COOLDOWN then return false, self._state end
+	self._cooldownEndsAt = self.now()
+	self:Step()
+	return true
+end
+
 function BankInstance:AddParticipant(player)
 	if table.find(self._participants, player) then return end
 	table.insert(self._participants, player)

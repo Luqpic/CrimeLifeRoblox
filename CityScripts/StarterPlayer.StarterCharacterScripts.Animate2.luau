@@ -431,6 +431,12 @@ end
 -- WalkSpeed targets. A separate concern from animation, but likewise recomputed rather than latched
 -- on an input event.
 local function resolveMovementTargets()
+	-- Admin walk speed (2026-11-20): while the server puts AdminWalkSpeed on the character it is the only target.
+	local adminSpeed = Figure:GetAttribute("AdminWalkSpeed")
+	if type(adminSpeed) == "number" then
+		targetWalkSpeed = adminSpeed
+		return
+	end
 	if isInputBackwards() then
 		targetWalkSpeed = originalWalkSpeed
 		-- Clamp rather than assign: this now runs every tick, and a plain assignment would lift the

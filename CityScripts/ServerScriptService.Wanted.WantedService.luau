@@ -173,6 +173,15 @@ function WantedService.clear(player)
 	set(player, 0)
 end
 
+-- Admin (2026-11-20): the wanted level set outright (0..5 stars) through the normal paths, clear then addHeat,
+-- so the HUD, the search timer and the police follow.
+function WantedService.setStars(player, stars: number)
+	WantedService.clear(player)
+	if stars > 0 then
+		WantedService.addHeat(player, stars, "admin")
+	end
+end
+
 local function isPolice(character): boolean
 	return Constants.POLICE_TEMPLATES[character:GetAttribute("EnemyTemplate")] == true
 end

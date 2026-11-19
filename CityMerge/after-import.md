@@ -922,3 +922,32 @@ Studio objects (not scripts): `ReplicatedStorage.Blaster.Remotes.AimPitch` (Unre
 The 16 sources are in `CityScripts/`; bytes and Adler-32 equal the place (16 / 16), written on disk and pushed (or patched by the same pairs on both sides) and hashed on both sides. City suites 327 / 327 / 0 (322 + 5); heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error (API access off for the new cloud place) and the Assistant plugin warning, client 0. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 3, admin server (`Batch: admin server`). Same columns; old = the place after Task 2 (each "old" equals its `CityScripts/` mirror at 63e51a8).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `ServerScriptService.Admin.Config` (ModuleScript) | new | 2,047 / 186285216 | Admin numbers: group 4998611, ranks 255 / 252, cooldown 0.25 s, log 150 rows, ranges, ban lengths, heists, teleport places. Attribute set. |
+| 2026-11-20 | `ServerScriptService.Admin.Roles` (ModuleScript) | new | 3,191 / 2652185648 | Pure `roleOf` (Studio, a user place's creator, rank in the creator group and in SolarArc Studios; a lookup error gives no role); live cache per player, `AdminRole` attribute, `onChanged`, `set` (the role seam), retries, cleared on leave. No UserId literal. Attribute set. |
+| 2026-11-20 | `ServerScriptService.Admin.Hooks` (ModuleScript) | new | 652 / 1610734242 | Server-only seam table the owning Scripts register into (`setLevel`, `giveWeapon`, `heists`). Attribute set. |
+| 2026-11-20 | `ServerScriptService.Admin.Actions` (ModuleScript) | new | 30,386 / 1856953293 | The 31 actions (role, validate, run) and the dispatcher (role, action role, target rules, validation, 0.25 s cooldown, pcall, log of 150); invisible / god / spectate states; `liveContext` (filtering, ban, stats). Attribute set. |
+| 2026-11-20 | `ServerScriptService.Admin.AdminService` (Script) | new | 1,845 / 3802433516 | Creates `ReplicatedStorage.AdminRemote` (RemoteFunction) and `AdminAnnounce` (RemoteEvent) at run time, loads roles on join, clears a character's admin states on death. Attribute set. |
+| 2026-11-20 | `ServerStorage.UnitTest.Cases.AdminRoles_Test` (ModuleScript) | new | 3,060 / 3037126759 | 9 cases. Attribute set. |
+| 2026-11-20 | `ServerStorage.UnitTest.Cases.Admin_Test` (ModuleScript) | new | 12,056 / 4260826386 | 16 cases (dispatcher order, validation, cooldown, log cap, BankInstance reset). Attribute set. |
+| 2026-11-20 | `ServerScriptService.Weapons.Scripts.LevelingService` (Script) | 11,188 / 3134004765 | 11,512 / 36343760 | `setLevel` extracted from the `SetLevelRequest` closure and registered in `Admin.Hooks`; `SetLevelRequest` gated by `Admin.Roles` (owner); the hard-coded account id removed. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Weapons.Scripts.WeaponShopService` (Script) | 19,054 / 1661690566 | 20,374 / 1589322929 | `giveFree`: the buy tail without the charge plus the first free slot (grant, publish, mirror), registered as `Admin.Hooks.giveWeapon`. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Heist.BankInstance` (ModuleScript) | 12,888 / 683301957 | 13,346 / 3803117644 | `ResetCooldown()`: Cooldown only, end time = now, `Step()` (the normal rearm). Attribute appended. |
+| 2026-11-20 | `ServerScriptService.HeistServer` (Script) | 53,212 / 315566770 | 53,601 / 1635167165 | Bank instance registered in `Admin.Hooks.heists`; the death pit spares an `AdminGod` character. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.SlowFoodsServer` (Script) | 14,166 / 2703310953 | 14,259 / 3174915992 | Bank instance registered in `Admin.Hooks.heists`. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Gas2GoServer` (Script) | 14,921 / 1747985791 | 15,011 / 3117630225 | Same. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.NewsStationServer` (Script) | 22,317 / 521420143 | 22,412 / 352017789 | Same. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Wanted.WantedService` (ModuleScript) | 14,984 / 583930857 | 15,312 / 2822734272 | `setStars(player, n)` = `clear` then `addHeat`. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Wanted.PoliceDispatcher` (ModuleScript) | 22,319 / 1938311026 | 22,848 / 2805465261 | `spawnOfficer` takes no owner (no squad) and returns the character; `spawnLoose(template, position)`. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Movement.Scripts.SprintAuthority` (ModuleScript) | 12,414 / 3488120329 | 12,831 / 1042876665 | A character's `AdminWalkSpeed` is written last in the tick, after every clamp. Attribute appended. |
+| 2026-11-20 | `StarterPlayer.StarterCharacterScripts.Animate2` (LocalScript) | 25,806 / 3929996936 | 26,059 / 2124763850 | `AdminWalkSpeed` on the character is the only speed target while set. Attribute appended. |
+| 2026-11-20 | `StarterPlayer.StarterPlayerScripts.PlayerNameplates` (LocalScript) | 9,826 / 2121005472 | 10,497 / 4060274529 | No plate and no View Card prompt while the character is `AdminInvisible`. First mirror. Attribute set. |
+| 2026-11-20 | `StarterPlayer.StarterPlayerScripts.NotificationClient` (LocalScript) | 3,576 / 4184920304 | 4,070 / 843413527 | `AdminAnnounce` listener: the filtered text as an "ADMIN" card through `NotificationController.show`. Attribute appended. |
+
+The 20 sources are in `CityScripts/`; bytes and Adler-32 equal the place (20 / 20). City suites 352 / 352 / 0 (327 + 25); heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error (API access off) and the Assistant plugin warning. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
+
+NOT saved / NOT published

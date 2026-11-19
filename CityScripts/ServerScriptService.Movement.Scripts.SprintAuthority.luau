@@ -257,6 +257,13 @@ local function tick(deltaTime: number)
 				state.belowBaselineClamped = false
 			end
 
+			-- Admin walk speed (2026-11-20): written last, so no clamp above outlasts it while the character
+			-- carries AdminWalkSpeed (the admin panel sets it; it goes with the character on death).
+			local adminSpeed = rootPart.Parent and rootPart.Parent:GetAttribute("AdminWalkSpeed")
+			if type(adminSpeed) == "number" and humanoid and humanoid.WalkSpeed ~= adminSpeed then
+				humanoid.WalkSpeed = adminSpeed
+			end
+
 			state.secondsSincePublish += deltaTime
 			if state.secondsSincePublish >= Constants.SERVER_PUBLISH_INTERVAL then
 				publish(rootPart, state)

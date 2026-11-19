@@ -202,6 +202,39 @@ local function mirrorLoadout(player: Player)
 	end)
 end
 
+-- Admin (2026-11-20): the buy tail without the charge (ownership, attribute, save), plus the first free loadout
+-- slot so the weapon shows at once; with all 4 slots full it is owned and waits in the shop. Called through
+-- Admin.Hooks.giveWeapon.
+local function giveFree(player: Player, weaponName: string): (boolean, string)
+	local template = WEAPONS_FOLDER:FindFirstChild(weaponName)
+	local owned, slots = ownedWeapons[player], equippedSlots[player]
+	if not (template and template:IsA("Tool")) then
+		return false, "unknown weapon"
+	elseif not (owned and slots) then
+		return false, "weapons not loaded yet"
+	elseif owned[weaponName] then
+		return false, "already owned"
+	end
+	owned[weaponName] = true
+	player:SetAttribute(UpgradeConfig.ownedAttributeFor(weaponName), true)
+	local slotted = false
+	for i = 1, MAX_LOADOUT_SLOTS do
+		if not slots[i] then
+			slots[i] = weaponName
+			local backpack = player:FindFirstChildOfClass("Backpack")
+			if backpack and not findLiveTool(player, weaponName) then
+				grantWeapon(player, weaponName, backpack)
+			end
+			slotted = true
+			break
+		end
+	end
+	publishSlots(player)
+	mirrorLoadout(player)
+	return true, if slotted then "given, in a free slot" else "given, owned (all 4 slots full)"
+end
+require(game:GetService("ServerScriptService").Admin.Hooks).giveWeapon = giveFree
+
 -- Restores ownership and the 4 slots, then hands out the Tools.
 --
 -- Registered as a plain hydrator, NOT a post-hydrator, and that is load-bearing: CosmeticsService

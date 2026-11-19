@@ -281,7 +281,8 @@ local function forget(record)
 	end
 end
 
-local function spawnOfficer(templateName: string, position: Vector3, owner: Player, alarm: boolean)
+-- `owner` nil (spawnLoose, the admin panel): the officer joins no squad and patrols where it stands.
+local function spawnOfficer(templateName: string, position: Vector3, owner: Player?, alarm: boolean): Model?
 	local template = ServerStorage.EnemyTemplates:FindFirstChild(templateName)
 	if not template then
 		warn(`PoliceDispatcher: no template {templateName}`)
@@ -300,15 +301,18 @@ local function spawnOfficer(templateName: string, position: Vector3, owner: Play
 	CollectionService:AddTag(character, "Witness")
 	EnemyRig.place(character, weapon, CFrame.new(position), policeFolder())
 
-	local root = rootOf(owner)
+	local root = owner and rootOf(owner)
 	record.ai = EnemyAI.new(character, weapon, root and root.Position or position, function()
 		forget(record)
 	end, config)
+	if not owner then
+		return character
+	end
 	squads[owner] = squads[owner] or {}
 	squads[owner][record] = true
 
 	if not PoliceDispatcher.debug then
-		return
+		return character
 	end
 	local ownerCharacter = owner.Character
 	table.insert(PoliceDispatcher._spawnLog, {
@@ -321,6 +325,7 @@ local function spawnOfficer(templateName: string, position: Vector3, owner: Play
 	if #PoliceDispatcher._spawnLog > 40 then
 		table.remove(PoliceDispatcher._spawnLog, 1)
 	end
+	return character
 end
 
 local function countLive(): number
@@ -336,6 +341,12 @@ end
 -- Seams for PoliceSpawnPoint_Test (final review 2026-11-17): count the searches, spawn nothing.
 PoliceDispatcher._findSpawn = findSpawn
 PoliceDispatcher._spawnOfficer = spawnOfficer
+
+-- Admin (2026-11-20): one officer at `position` outside any squad. It patrols there, engages only wanted players
+-- and stays until it is killed or cleared. Returns its character, or nil.
+function PoliceDispatcher.spawnLoose(templateName: string, position: Vector3): Model?
+	return spawnOfficer(templateName, position, nil, false)
+end
 
 -- One player's spawn round: up to n officers, `police` / `armed` still owed by kind. Around the robbed
 -- location (`anchor`) first; where its ring has no valid point (SlowFoods' own box covers most of it), around

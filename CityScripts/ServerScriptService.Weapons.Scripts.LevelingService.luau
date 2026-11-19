@@ -22,19 +22,10 @@ local function applyMaxHealth(character: Model, level: number)
 	humanoid.Health = humanoid.MaxHealth
 end
 
--- Debug only: sets a level outright, bypassing XP accumulation entirely. Gated to one UserId HERE,
--- on the server, because that is the only enforceable place -- a client-side check alone is bypassed
--- by firing the remote directly. Placed after applyMaxHealth because it calls it.
-local setLevelRequest = ReplicatedStorage.Leveling.Remotes.SetLevelRequest
-local ADMIN_USER_ID = 58662576
-
-setLevelRequest.OnServerEvent:Connect(function(player: Player, targetLevel: any)
-	if player.UserId ~= ADMIN_USER_ID then
-		return
-	end
-	if typeof(targetLevel) ~= "number" or targetLevel ~= targetLevel then -- NaN survives floor and clamp
-		return -- covers /setlevel abc, and anything a crafted remote call might send
-	end
+-- Sets a level outright, bypassing XP accumulation entirely: Level, XP 0, NextLevelXP, the max health bonus
+-- and the save. Two callers (2026-11-20): the admin panel's setLevel for any player, through Admin.Hooks, and
+-- SetLevelRequest below for its sender. Placed after applyMaxHealth because it calls it.
+local function setLevel(player: Player, targetLevel: number)
 	-- Clamped rather than rejected, so 0, negatives and absurd values all resolve to something
 	-- legal instead of erroring or writing a nonsense level.
 	local level = math.clamp(math.floor(targetLevel), 1, LevelingConstants.LEVEL_CAP)
@@ -61,6 +52,20 @@ setLevelRequest.OnServerEvent:Connect(function(player: Player, targetLevel: any)
 	if character then
 		applyMaxHealth(character, level)
 	end
+end
+require(ServerScriptService.Admin.Hooks).setLevel = setLevel
+
+-- The old /setlevel and F2 panel remote: gated on the server to the owner role (Admin.Roles; it held one account
+-- id until 2026-11-20). The client panel that sent it is retired; the admin panel calls setLevel instead.
+local AdminRoles = require(ServerScriptService.Admin.Roles)
+ReplicatedStorage.Leveling.Remotes.SetLevelRequest.OnServerEvent:Connect(function(player: Player, targetLevel: any)
+	if AdminRoles.get(player) ~= "owner" then
+		return
+	end
+	if typeof(targetLevel) ~= "number" or targetLevel ~= targetLevel then -- NaN survives floor and clamp
+		return
+	end
+	setLevel(player, targetLevel)
 end)
 
 -- Creates only what is missing. CashService writes Cash into this same folder and sibling scripts

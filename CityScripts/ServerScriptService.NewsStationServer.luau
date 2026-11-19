@@ -198,6 +198,7 @@ local location = LocationServer.new({
 })
 
 local bank = location.bank
+require(ServerScriptService.Admin.Hooks).heists.NewsStation = bank -- admin panel (2026-11-20)
 local net = location.net
 local notifyRefused = location.notifyRefused
 
