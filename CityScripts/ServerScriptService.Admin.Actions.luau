@@ -997,4 +997,27 @@ function Actions.liveContext(announceRemote: RemoteEvent)
 	}
 end
 
+-- For the panel (AdminService puts both on the delivered GUI): the actions a helper may use, and the enemy types.
+function Actions.helperActions(): string
+	local names = {}
+	for name, action in Actions.list do
+		if action.role == "helper" then
+			table.insert(names, name)
+		end
+	end
+	table.sort(names)
+	return table.concat(names, ",")
+end
+
+function Actions.enemyTypes(): string
+	local names = {}
+	for _, template in ServerStorage.EnemyTemplates:GetChildren() do
+		if isEnemyType(template.Name) then
+			table.insert(names, template.Name)
+		end
+	end
+	table.sort(names)
+	return table.concat(names, ",")
+end
+
 return Actions

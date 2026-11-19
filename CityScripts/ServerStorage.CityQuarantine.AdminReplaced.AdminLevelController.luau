@@ -14,7 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Effects = require(ReplicatedStorage:WaitForChild("UI"):WaitForChild("Effects"))
 local TextChatService = game:GetService("TextChatService")
 
-local ADMIN_USER_ID = 58662576
+local ADMIN_USER_ID = 0 -- account id removed 2026-11-20: retired, the admin panel (Admin.Roles) replaced this
 
 local player = Players.LocalPlayer
 if player.UserId ~= ADMIN_USER_ID then

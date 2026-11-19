@@ -4,6 +4,7 @@
 -- per join (Admin.Roles). A character's admin states (frozen, god, invisible, speed, fly, noclip) end with its death.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Actions = require(script.Parent.Actions)
 local Roles = require(script.Parent.Roles)
@@ -33,6 +34,33 @@ local function watchCharacter(character: Model)
 		end)
 	end
 end
+
+-- The panel and its code reach only a player with a role: ServerStorage.AdminPanel's two ScreenGuis are cloned into
+-- that player's PlayerGui on role gain (join included) and removed on role loss. Other clients never receive them.
+local panelFolder = ServerStorage:WaitForChild("AdminPanel", 10)
+local HELPER_ACTIONS = Actions.helperActions()
+local ENEMY_TYPES = Actions.enemyTypes()
+
+Roles.onChanged(function(player: Player, role: string?)
+	local playerGui = player:WaitForChild("PlayerGui", 10)
+	if not (panelFolder and playerGui) then
+		return
+	end
+	for _, name in { "AdminHudGui", "AdminPanelGui" } do
+		local existing = playerGui:FindFirstChild(name)
+		if role and not existing then
+			local gui = panelFolder:FindFirstChild(name)
+			if gui then
+				gui = gui:Clone()
+				gui:SetAttribute("HelperActions", HELPER_ACTIONS)
+				gui:SetAttribute("EnemyTypes", ENEMY_TYPES)
+				gui.Parent = playerGui
+			end
+		elseif not role and existing then
+			existing:Destroy()
+		end
+	end
+end)
 
 safePlayerAdded(function(player: Player)
 	player.CharacterAdded:Connect(watchCharacter)

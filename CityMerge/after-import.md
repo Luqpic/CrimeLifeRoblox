@@ -951,3 +951,19 @@ Task 3, admin server (`Batch: admin server`). Same columns; old = the place afte
 The 20 sources are in `CityScripts/`; bytes and Adler-32 equal the place (20 / 20). City suites 352 / 352 / 0 (327 + 25); heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error (API access off) and the Assistant plugin warning. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute.
 
 NOT saved / NOT published
+
+Task 4, admin panel (`Batch: admin panel`). Same columns; old = the place after Task 3 (686cb0f).
+
+| date | script | old len / Adler-32 | new len / Adler-32 | reason |
+|---|---|---|---|---|
+| 2026-11-20 | `ServerStorage.AdminPanel.AdminPanelGui.AdminPanelController` (LocalScript) | new | 25,366 / 378580945 | The panel client: F2 and the HUD button, four tabs, every control through `AdminRemote` (one call at a time, 0.3 s apart), status line and `Sounds.denied()`, helper controls hidden by their `Action` attribute, kick / ban on a second click, stats every 2 s only while the Server tab shows; `UI.Panels`, `MenuFovBlur`, `Effects.bindClose`; fit `UIScale` (max 1); fly (`LinearVelocity` + `AlignOrientation`, Space up, LeftControl down at ContextActionService High with Sink so shift lock does not toggle, touch UP / DOWN), noclip, spectate. Attribute set. |
+| 2026-11-20 | `ServerStorage.AdminPanel.AdminPanelGui.Config` (ModuleScript) | new | 1,009 / 835663730 | Client numbers (F2, 760 x 480, call spacing 0.3, confirm 3 s, stats 2 s, fly 60, steppers). Attribute set. |
+| 2026-11-20 | `ServerScriptService.Admin.AdminService` (Script) | 1,845 / 3802433516 | 2,886 / 335864505 | Clones `ServerStorage.AdminPanel`'s `AdminHudGui` and `AdminPanelGui` into a role holder's PlayerGui on role gain (join included) with `HelperActions` / `EnemyTypes` attributes, removes them on role loss. Attribute appended. |
+| 2026-11-20 | `ServerScriptService.Admin.Actions` (ModuleScript) | 30,386 / 1856953293 | 30,993 / 24881071 | `helperActions()`, `enemyTypes()` for the delivered panel. Attribute appended. |
+| 2026-11-20 | `ServerStorage.CityQuarantine.AdminReplaced.AdminLevelController` (LocalScript, was `StarterPlayer.StarterPlayerScripts.AdminLevelController`) | 7,490 / 3458649500 | 7,570 / 1308879009 | Retired: disabled, moved to `CityQuarantine.AdminReplaced` (`OriginalPath`, `OriginalParent`, `QuarantinedBy`), its account id replaced by `0` with a one-line comment. Mirror renamed. Attribute appended. |
+
+Studio objects (not scripts): `ServerStorage.AdminPanel` with `AdminPanelGui` (ScreenGui, Sibling, ResetOnSpawn false, DisplayOrder 25, CoreUISafeInsets, `FitScale`, the 760 x 480 `Panel`, `Templates`) and `AdminHudGui` (the 76 x 76 ADMIN button at the Custom Inventory column's next slot, -459, and the touch fly UP / DOWN), built by `CityMerge/builds/2026-11-20-admin-panel-gui.luau` (re-runnable; keeps the scripts inside).
+
+The 5 sources are in `CityScripts/`; bytes and Adler-32 equal the place (5 / 5). City suites 352 / 352 / 0; heist 740 passed / 0 failed; boot: server 1 DataStore "StudioAccessToApisNotAllowed" error and the Assistant plugin warning, client 0. After: 1 enabled SpawnLocation, no `Tmp*` object, no Workspace attribute, no script holding the old account id.
+
+NOT saved / NOT published
