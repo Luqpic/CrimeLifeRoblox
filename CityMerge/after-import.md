@@ -1207,3 +1207,16 @@ New instances in Edit: `ReplicatedStorage.Combat.Remotes.Finish` (RemoteEvent); 
 City 382 / 382 / 0 (temporary Script); heist 764 passed / 0 failed. Live: takedown, finish and the wound roll verified. Place version 51.
 
 NOT published
+
+## Combat D, smarter enemies 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.Tactics | new | 3,041 / 3908952226 |
+| ServerStorage.UnitTest.Cases.Tactics_Test | new | 2,914 / 4098725894 |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 47,159 / 1283614048 | 53,147 / 1126838795 |
+| ServerScriptService.Movement.Scripts.Stealth | 7,756 / 395983637 | 7,822 / 3629863366 |
+
+City 387 / 387 / 0 (temporary Script); heist 764 passed / 0 failed. Live: alert, flank, cover (temporary wall, removed) and back off verified; melee unchanged. Place version 53.
+
+NOT published

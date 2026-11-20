@@ -34,6 +34,7 @@ local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningH
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
 local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
+local Tactics = require(ServerScriptService.Enemy.Scripts.Tactics)
 
 local taggedEvent = ServerScriptService.Blaster.Events.Tagged
 
@@ -142,6 +143,14 @@ function EnemyAI.new(
 		flinchedAt = -math.huge,
 		bursting = false,
 		hideTell = nil :: (() -> ())?,
+		-- Smarter enemies (combat depth, 2026-11-20): coverPoint / coverUntil: the spot taken after a burst and until
+		-- when; attackSince: when this Attack began (an earlier attacker on the same target holds its line, later ones
+		-- flank); flankDegrees: this Attack's flank angle; tactic: the published Tactic attribute.
+		coverPoint = nil :: Vector3?,
+		coverUntil = 0,
+		attackSince = 0,
+		flankDegrees = nil :: number?,
+		tactic = nil :: string?,
 
 		connections = {},
 	}, EnemyAI)
@@ -460,10 +469,14 @@ function EnemyAI:_setTarget(player: Player?)
 		self.sightSince = nil
 		self.lastSightAt = nil
 	end
+	local spotted = self.target == nil and player ~= nil
 	self.target = player
 	-- Takedowns (combat, 2026-11-20): whether this enemy has a target, for the client's TAKEDOWN hint.
 	if self.character:GetAttribute("Aware") ~= (player ~= nil) then
 		self.character:SetAttribute("Aware", player ~= nil)
+	end
+	if spotted then
+		self:_alertAllies(player :: Player)
 	end
 end
 
@@ -597,6 +610,96 @@ function EnemyAI:_sidestep(aimPosition: Vector3)
 	self:_clearPath()
 	self.humanoid.WalkSpeed = self.config.walkSpeed
 	self.humanoid:MoveTo(from + side * Constants.ALLY_SIDESTEP)
+end
+
+-- ============================================================================
+-- TACTICS (smarter enemies, combat depth 2026-11-20; geometry in Enemy.Scripts.Tactics)
+-- ============================================================================
+
+-- This enemy's side: the Faction attribute its template carries (Criminal, Police), else config.faction.
+function EnemyAI:_faction(): string?
+	return self.character:GetAttribute("Faction") or self.config.faction
+end
+
+-- What the Attack think is doing (Cover, Flank, BackOff, or nil), published like AIState for Studio.
+function EnemyAI:_setTactic(tactic: string?)
+	if self.tactic ~= tactic then
+		self.tactic = tactic
+		self.character:SetAttribute("Tactic", tactic)
+	end
+end
+
+-- An enemy that takes a target sends the enemies of its faction within Tactics.ALERT_RADIUS that have none to look
+-- where the player is (investigate: they come over and must still see the player to fight).
+function EnemyAI:_alertAllies(player: Player)
+	local faction = self:_faction()
+	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	if not faction or not root then
+		return
+	end
+	for ally in activeEnemies do
+		if
+			ally ~= self
+			and not ally.destroyed
+			and ally.target == nil
+			and ally:_faction() == faction
+			and Tactics.inAlertRange(self.rootPart.Position, ally.rootPart.Position)
+			and ally:_accepts(player)
+		then
+			ally:investigate((root :: BasePart).Position)
+		end
+	end
+end
+
+-- After a burst, a gun enemy that is not backing off may (Tactics.COVER_CHANCE) take a spot the target cannot see
+-- for Tactics.COVER_SECONDS. Then Attack's sight check sends it to Chase, which brings it out to shoot again after
+-- a fresh wind-up.
+function EnemyAI:_maybeTakeCover(targetHumanoid: Humanoid)
+	if Tactics.shouldBackOff(self.humanoid.Health, self.humanoid.MaxHealth) or math.random() >= Tactics.COVER_CHANCE then
+		return
+	end
+	local targetRoot = targetHumanoid.RootPart
+	if not targetRoot then
+		return
+	end
+	local spot = Tactics.findCover(self.rootPart.Position, targetRoot.Position, function(a: Vector3, b: Vector3): boolean
+		return Stealth.solidCast(a, b - a)
+	end)
+	if spot then
+		self.coverPoint = spot
+		self.coverUntil = os.clock() + Tactics.COVER_SECONDS
+		self.pauseUntil = math.max(self.pauseUntil, self.coverUntil)
+	end
+end
+
+-- When another enemy entered Attack on the same target earlier, a point Tactics.FLANK_MIN to MAX_DEGREES round the
+-- target from it (the side picked once per Attack), at the current distance (at least FLANK_MIN_DISTANCE, at most
+-- the preferred range). nil for the first attacker, which holds its line.
+function EnemyAI:_flankPoint(aimPosition: Vector3, distance: number, engageRange: number): Vector3?
+	local first = nil
+	for other in activeEnemies do
+		if
+			other ~= self
+			and not other.destroyed
+			and other.state == STATE.Attack
+			and other.target == self.target
+			and other.attackSince < self.attackSince
+			and (first == nil or other.attackSince < first.attackSince)
+		then
+			first = other
+		end
+	end
+	if not first then
+		self.flankDegrees = nil
+		return nil
+	end
+	if not self.flankDegrees then
+		local degrees = Tactics.FLANK_MIN_DEGREES + math.random() * (Tactics.FLANK_MAX_DEGREES - Tactics.FLANK_MIN_DEGREES)
+		self.flankDegrees = if math.random() < 0.5 then -degrees else degrees
+	end
+	local preferred = math.max(Tactics.FLANK_MIN_DISTANCE, engageRange * self.config.preferredRangeFraction)
+	local radius = math.clamp(distance, Tactics.FLANK_MIN_DISTANCE, preferred)
+	return Tactics.flankPoint(aimPosition, first.rootPart.Position, radius, self.flankDegrees :: number)
 end
 
 function EnemyAI:_reload()
@@ -829,6 +932,9 @@ function EnemyAI:_startBurst(targetHumanoid: Humanoid)
 		NpcFire.tokens:releaseShooter(self)
 		self.pauseUntil = os.clock() + Combat.burstPause()
 		self.bursting = false
+		if fired > 0 and live() then
+			self:_maybeTakeCover(targetHumanoid)
+		end
 	end)
 end
 
@@ -856,6 +962,10 @@ function EnemyAI:_setState(newState: string)
 
 	if self.state == STATE.Attack then
 		self:_stopFiring()
+		-- Leaving Attack ends its cover, its flank side and its tactic.
+		self.coverUntil = 0
+		self.flankDegrees = nil
+		self:_setTactic(nil)
 	end
 
 	self.state = newState
@@ -868,6 +978,8 @@ function EnemyAI:_setState(newState: string)
 	if newState == STATE.Search then
 		self.searchUntil = os.clock() + Constants.SEARCH_DURATION
 		self.hasLookedAround = false
+	elseif newState == STATE.Attack then
+		self.attackSince = os.clock()
 	elseif newState == STATE.Patrol then
 		self:_setTarget(nil)
 		self.lastKnownPosition = nil
@@ -1024,6 +1136,16 @@ function EnemyAI:_thinkAttack(now: number)
 		return
 	end
 
+	-- Smarter enemies (combat depth, 2026-11-20): behind cover after a burst it neither shoots nor chases until
+	-- coverUntil; then the sight check below brings it back out.
+	if now < self.coverUntil and self.coverPoint then
+		self:_setTactic("Cover")
+		self:_clearPath()
+		self.humanoid.WalkSpeed = self.config.chaseSpeed
+		self.humanoid:MoveTo(self.coverPoint)
+		return
+	end
+
 	local eyePosition = self:_eyePosition()
 	if not ShotResolver.hasLineOfSight(self.character, eyePosition, targetHumanoid) then
 		-- Cover broke the shot: go back to closing the distance, and remember where they were.
@@ -1051,11 +1173,36 @@ function EnemyAI:_thinkAttack(now: number)
 	else
 		self:_gunTick(now, targetHumanoid)
 	end
-	if self.allyInLineAt and now - self.allyInLineAt <= Constants.THINK_INTERVAL * 2 then
+	-- Smarter enemies (combat depth, 2026-11-20): a gun enemy badly hurt backs away while it fires, then holds there
+	-- (it never flanks or closes in again); a later attacker on the same target flanks. Melee enemies keep rushing.
+	local gun = not self:_isMelee()
+	local hurt = gun and Tactics.shouldBackOff(self.humanoid.Health, self.humanoid.MaxHealth)
+	local flank = if gun and not hurt then self:_flankPoint(aimPosition, distance, engageRange) else nil
+	if hurt then
+		self:_setTactic("BackOff")
+		if distance < engageRange * Tactics.BACK_OFF_UNTIL then
+			self:_clearPath()
+			self.humanoid.WalkSpeed = self.config.walkSpeed
+			self.humanoid:MoveTo(Tactics.backOffPoint(self.rootPart.Position, aimPosition))
+		else
+			self:_stopMoving()
+		end
+	elseif self.allyInLineAt and now - self.allyInLineAt <= Constants.THINK_INTERVAL * 2 then
+		self:_setTactic(nil)
 		self:_sidestep(aimPosition)
+	elseif flank then
+		self:_setTactic("Flank")
+		local offset = flank - self.rootPart.Position
+		if Vector3.new(offset.X, 0, offset.Z).Magnitude > Tactics.FLANK_REACHED then
+			self:_followPath(flank, self.config.chaseSpeed, now)
+		else
+			self:_stopMoving()
+		end
 	elseif distance > engageRange * self.config.preferredRangeFraction then
+		self:_setTactic(nil)
 		self:_followPath(aimPosition, self.config.chaseSpeed, now)
 	else
+		self:_setTactic(nil)
 		self:_stopMoving()
 	end
 end

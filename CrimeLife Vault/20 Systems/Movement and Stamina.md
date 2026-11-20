@@ -59,6 +59,7 @@ The crouch reaches the server through `PlayerMovement.Crouch`; `Movement.Scripts
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-20: `Stealth.solidCast` made public for EnemyAI's cover search. [[2026-11-20 Smarter Enemies]]
 - 2026-11-20: `Stealth.isCrouched(player)` (the server's crouch) gates stealth takedowns. [[2026-11-20 Combat Feel]]
 - 2026-11-20: an accepted roll stamps `RollingUntil` for NPC aim. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: OBT movement clips, roll and ledge climb added ([[Character Movement and Animation]]); `SprintAuthority.spend`; admin walk speed. [[2026-11-20 Admin Animations Third Person]]

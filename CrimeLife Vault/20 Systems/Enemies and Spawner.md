@@ -71,6 +71,9 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 - `EnemyAI` publishes `Aware` (true while it has a target) and does not see a crouched player behind it (look dot below 0).
 Details: [[2026-11-20 Combat Feel]].
 
+## Smarter enemies (2026-11-20)
+`Enemy.Scripts.Tactics` (pure) and EnemyAI glue: an enemy that takes a target sends idle same-faction enemies within 60 studs to investigate; gun enemies below 30 % health back off while firing and hold at 0.9 of engage range; after a burst a gun enemy may (50 %) take 2 s of cover at a spot the target cannot see; a later attacker on the same target flanks 60 to 90 degrees round it. Melee enemies keep rushing. The model's `Tactic` attribute (`Cover`, `Flank`, `BackOff`) shows it in Studio. [[2026-11-20 Smarter Enemies]]
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.
@@ -90,6 +93,7 @@ Details: [[2026-11-20 Combat Feel]].
 - The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
 ## History
+- 2026-11-20: alert, back off, cover and flank (`Enemy.Scripts.Tactics`), `Tactic` attribute. [[2026-11-20 Smarter Enemies]]
 - 2026-11-20: hit reactions (flash, push, stagger, knockdown), wounded enemies, finishers and stealth takedowns; `Aware` attribute; no sight behind for a crouched player. [[2026-11-20 Combat Feel]]
 - 2026-11-20: shooter tokens, wind-up aim line, focus ramp, bursts, range falloff, flinch (1 s cooldown), `Enemy.Combat` and `NpcFire`; Police 12 to 9, Bandits 3 to 1.5; heist police run this same AI. [[2026-11-20 Readable Gunfights and Level Toughness]] [[2026-11-20 Heist Police and Bank Guards]]
 - 2026-11-20: the admin panel spawns non-police enemy types (1 to 6, no spawner accounting) and clears them (CLEAR MINE for admin-spawned, CLEAR ALL with `EnemyAI.getLive()` kills with `Health = 0` so the spawner refilled 30 live within 10 s; the spawner's accounting stayed intact). [[Admin Panel]] [[2026-11-20 Admin Animations Third Person]]

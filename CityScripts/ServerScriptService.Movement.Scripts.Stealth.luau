@@ -82,8 +82,9 @@ function Stealth.expose(player: Player, seconds: number?)
 	exposedUntil[player] = math.max(exposedUntil[player] or 0, untilTime)
 end
 
--- Something solid (terrain, or a visible part that is not part of a character) within the ray.
-local function solidCast(origin: Vector3, direction: Vector3): boolean
+-- Something solid (terrain, or a visible part that is not part of a character) within the ray. Also EnemyAI's cover
+-- search (Enemy.Scripts.Tactics).
+function Stealth.solidCast(origin: Vector3, direction: Vector3): boolean
 	local ignore: { Instance } = {}
 	for _, player in Players:GetPlayers() do
 		if player.Character then
@@ -162,7 +163,7 @@ local function evaluate(player: Player, now: number)
 	local exposed = now < (exposedUntil[player] or 0)
 	local sides = 0
 	if crouched[player] and not exposed then
-		sides = Stealth.coverSides(root.Position, solidCast)
+		sides = Stealth.coverSides(root.Position, Stealth.solidCast)
 	end
 	local state, range = Stealth.decide(crouched[player] == true, root:GetAttribute("IsSprinting") == true, rolling, speed, exposed, sides)
 	publish(character, state, range)
