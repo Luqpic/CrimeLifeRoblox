@@ -35,6 +35,8 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 
 - **A server ProximityPrompt that checks the player (the Bank's vault door) did not fire** from a Client `prompt:InputHoldBegin()` or from a real E hold through `user_keyboard_input`, with a player teleported to it. Likely the player was not a participant (the vault teleporter makes them one). Test such prompts with a player who came the real way. [[2026-11-20 Walking Bank Guards and Edit Rigs]]
 
+- **Hit tests through real input work** with the display awake: `user_keyboard_input` keyDown W, then `user_mouse_input` clicks (the first action needs a position: reuse the last one so the camera does not turn), then keyUp. Mouse moves pitched the shoulder camera once and then stopped doing so: place the target on the crosshair line instead (read `ViewportPointToRay` on the client). A client `Humanoid:Move` loop moves the player without input tools. [[2026-11-20 Hit Registration]]
+
 ## Subagents (2026-11-20)
 
 - **A subagent's Write into the gitignored `.superpowers/` folder can be refused by the harness** (it happened to the heist-police and combat-balance implementers). Tell a subagent to return its report as text; the controller saves it. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]

@@ -50,6 +50,10 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]].
 - Guards (`Heist.Components.GuardPost`) now fire through `ShotResolver.resolveShot` from their weapon's muzzle with no `claimedTags`, so the server raycast decides, and every client sees the tracer, flash and sound. Their weapon's damage is `GuardDamage` (6), set at spawn; the magazine is topped up before each shot.
 - A hit on an NPC shooter flinches it (once a second at most). The fast-semi recoil trap that this batch found is in [[Physics and Character Traps]].
 
+## Hit registration (2026-11-20)
+- `validateTag` accepts a claimed hit when the ray passes within 10 studs of the target's pivot measured sideways, the pivot at most 3 studs behind the ray's start (was an angle that refused close hits while moving). [[2026-11-20 Hit Registration]]
+- Player accessories and tools are `RayExclude` (`AccessoryFiltering`, template rule): incoming bullets pass through hair, hats and coats.
+
 ## Extend it
 - New gun: run the donor-skeleton build (`BuildNewPistolsShotguns.luau`): same-class donor, keep its `Body` as a hidden anchor, hang the new mesh off it, never replace the core part. Add a `profiles` entry in `WeaponViewmodelMotion` or first person never starts. Give it `Category` (+ `Price` or `Gamepass`) and the shop picks it up. Upload a `TextureId` icon.
 - New behaviour: add an opt-in attribute to `Blaster.Constants` and read it in the shared code; never branch per weapon.

@@ -37,6 +37,9 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 - **Cause:** the reach test measured from the Baton's muzzle while the guard still faced away, so the muzzle was 6.1 studs from the target, just outside the 6-stud reach. The guard only turned when it struck.
 - **Fix:** turn to the target first, then measure the reach from the muzzle. A regression case in `GuardSpec` ("4 studs: it strikes") failed first and then passed. **Bit us:** [[2026-11-20 Readable Gunfights and Level Toughness]].
 
+- **An angle tolerance to a body's centre fails up close.** atan(10 / distance) to the pivot refused real hits at 5 to 7 studs while moving (71 to 73 degrees). Measure the sideways distance from the ray instead. [[2026-11-20 Hit Registration]]
+- **Bullets pass through a player's accessories** (`RayExclude` from `AccessoryFiltering`): a shot through hair or a coat looks like a hit and deals nothing. [[2026-11-20 Hit Registration]]
+
 ## Humanoids
 
 ### Interpenetrating Humanoids climb each other

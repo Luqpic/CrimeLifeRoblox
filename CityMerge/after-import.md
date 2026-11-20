@@ -1121,3 +1121,14 @@ The developer: "Do all of them now". Picker answers: police squads no fixed spot
 City 369 / 369 / 0 (test player shielded; unshielded, 2 tests that use the real player failed while enemies hurt it and passed alone); heist 764 passed / 0 failed. Edit after: no `Tmp*`, 1 enabled SpawnLocation, no Workspace attributes, 36 rigs on their markers.
 
 NOT published
+
+## Hit registration 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Blaster.Scripts.ShotResolver.validateTag (first mirror) | 2,210 / 2497835930 | 2,248 / 971569902 |
+| ServerStorage.UnitTest.Cases.ValidateTag_Test | new | 2,307 / 2623210470 |
+
+`CityMergeDeviation` appended on validateTag; the test carries its own. City 370 / 370 / 0; heist 764 passed / 0 failed. Details: `CrimeLife Vault/70 Batches/2026-11-20 Hit Registration.md`.
+
+NOT published
