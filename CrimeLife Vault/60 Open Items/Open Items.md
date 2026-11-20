@@ -159,6 +159,12 @@ From [[2026-11-20 Walking Bank Guards and Edit Rigs]].
 - One patrolling guard was seen standing on a low object in the guard room (the path agent can jump). Cosmetic; a `PathfindingModifier` or `AgentCanJump = false` would stop it.
 - Not checked: two players, a phone, NewsStation guards in a robbery.
 
+### Smooth enemies, patrols and dropped duffels (2026-11-20 late night)
+All from [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]].
+- **Two-player checks:** how another player sees the crouch with a gun (priority change on the client), the action lock and a picked-up bag on the back; another player (not the owner) picking up a dropped bag. -> [[Character Movement and Animation]] [[Robbery Heists and Getaway]]
+- **Bank and NewsStation drops** run the same code as SlowFoods and Gas2Go but were not run live; a bag dropped in the Bank vault is reachable only by players who get into the vault. -> [[Robbery Heists and Getaway]]
+- **Patrol cost and spread:** not profiled over a long session with 24 gang NPCs, nor with several players far apart. -> [[Police and Wanted]]
+
 ### Product calls waiting
 - **Tycoon compound look (2026-11-18):** the approved Flow top view (`docs/compound-views/flow-top-result.jpg`) has a fourth guard tower at the SE corner and pyramid tower roofs; the plan has three corner towers. Confirm whether the plan should add the SE tower. [[2026-11-17 Compound Floor Plan]]
 - **Tycoon compound plan (2026-11-17):** share the artifact with the builder (Share menu), pick a room for the F2 spare slot, confirm Claude's layout rulings and price stages 0 to 8. [[2026-11-17 Compound Floor Plan]] -> [[Compound Floor Plan]]

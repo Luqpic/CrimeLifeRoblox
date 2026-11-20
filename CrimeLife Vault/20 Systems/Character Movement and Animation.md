@@ -48,6 +48,7 @@ The player character plays OBT's `Player_` clip set through one script: idle, wa
 - Hold clips and the third-person camera are in [[Weapons and Blaster]] and [[Viewmodels and Weapon Animation]].
 
 ## History
+- 2026-11-20: crouching with a tool out keeps the tool's hold: `Crouching` drops its clips (idle Action2, walk Action3) to Movement while a Tool is held, so the Blaster hold (Action) keeps the arms; robbery prompts lock the controls and ease the player into place (`InteractionAnimations`). [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 - 2026-11-20: built. Review fixes: the leaked `CharacterAdded` connection, per-frame allocations, roll refused while crouched, seated or PlatformStand and after leaving, `spend` refused while locked out. Measured: roll 18.07 studs in 0.634 s for 12.3 stamina; ledge 6.00 studs in 0.999 s; sprint hip swing 140.2 degrees before and 111.6 after. [[2026-11-20 Admin Animations Third Person]]
 
 See [[Batch Log]].

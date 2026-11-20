@@ -83,7 +83,11 @@ Details: [[2026-11-20 Heist Police and Bank Guards]], [[2026-11-20 Readable Gunf
 - Not seen by eye or on two players: the search behaviour with a second player, the sidestep ([[Enemies and Spawner]]), and the phone.
 - The 120 ms server step while a round of 10 officers builds did not reproduce (2026-11-18): builds already run one per frame (a path check that yields precedes each), at most 1 per frame across 15 builds of 4.7 to 22.3 ms; the worst step in the 10-officer round was 43.9 ms against a 45.1 ms no-police baseline. No change was made.
 
+## Patrols (2026-11-20)
+`ServerScriptService.Wanted.PolicePatrols` (WantedRunner starts it; `Constants` `PATROL_*`) keeps 6 loose Police (attribute `Patrol`) on the roads: each stands up 120 to 300 studs from a random player on road or footpath ground, out of every player's sight and with a path to them (`_findSpawn` with that player and a 4-path budget), and walks legs to road points 60 to 200 studs away (a new leg on arrival or after 60 s). A dead patrol is replaced 30 s later; one 600+ studs from every player and unseen is recycled near a player at once. They engage wanted players and criminal NPCs on sight (faction fights, [[Enemies and Spawner]]); a wanted player believed (`PoliceDispatcher.believedPosition`) within 250 studs draws them in. They count against `POLICE_CAP`. [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
+
 ## History
+- 2026-11-20: road patrols (`PolicePatrols`), police against criminal NPC fights, `PoliceDispatcher.believedPosition`, `_findSpawn` without a player. [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 - 2026-11-20: `POLICE_AGENT` radius 1.5; squads go for a robber inside a store they can walk into (not its entrance) and close in to 0.1 of their engage range there. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: timed heist police (Bank and NewsStation), vault Armed Police, `spawnLoose` with a target filter, `room()`, squad hold (`addSquadHold`, `isHeld`), guard fire through the shared shot path. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: `setStars`, `spawnOfficer` without an owner and `spawnLoose` added as admin hooks. [[2026-11-20 Admin Animations Third Person]]

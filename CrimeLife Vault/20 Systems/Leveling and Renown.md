@@ -61,6 +61,7 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]; trap in [[Luau a
 - The XP and spray icon ids were uploaded as white glyphs so `ImageColor3` can tint them.
 
 ## History
+- 2026-11-20: the level-up popup no longer stays on screen after a death (`UITransitionIgnore` on the popup, see [[UI Layout Traps]]). [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 - 2026-11-20: `Admin.Hooks.killBonus` (set by `LevelingService`): finishers and takedowns grant +50 % of the kill's XP. [[2026-11-20 Combat Feel]]
 - 2026-11-20: max health +4 a level, level armor against NPC damage, the `Health` regen script. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: set level moved behind `Admin.Hooks` and the owner role; the hard-coded account gate and the old F2 panel are gone. [[2026-11-20 Admin Animations Third Person]]

@@ -10,6 +10,7 @@ sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Remove-Snip
 Calls about guns, melee and how hits land. The code is in [[Weapons and Blaster]], [[Melee]] and [[Viewmodels and Weapon Animation]]. Only calls a log attributes to the developer say "developer"; the rest are what the log recorded, without guessing who chose.
 
 ## Standing rules
+- **2026-11-20 late night: every killing shot knocks the body back from the part it hit, "By weapon".** Pistols and rifles a few studs, shotguns and semi-auto rifles (the nearest this game has to snipers) launched like OBT; a weapon's `killPush` attribute overrides (extend by attribute). [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 
 - **Extend weapons by attribute, not by fork.** Weapon behaviour is data on the Tool (`infiniteAmmo`, `knockbackForce`, ADS zoom, burst mode, ray count); the shared blaster code reads an opt-in attribute and is never branched per weapon. (`CLAUDE.md`, rule 7)
 - **Viewmodels add a mesh to the core part, never replace it** (donor-skeleton swap; the build script copies raw meshes). See [[Viewmodels and Weapon Animation]].

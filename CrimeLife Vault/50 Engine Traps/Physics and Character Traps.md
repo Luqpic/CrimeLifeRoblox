@@ -104,5 +104,6 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 
 ### Copying a marker copies its Edit rig (CrimeLife, 2026-11-20)
 - Heist police markers carry their Edit rig as a child Model. A copy of a marker brings the rig along, still standing at the original, and `EditRig.take` moves the copy onto it at boot: four new store markers all stood up at NewsStation. Move or remove the rig on a copied marker. [[2026-11-20 Enemy Movement and Store Police]]
+- A whole-body clip at a higher priority than a held tool's pose takes the arms too: the crouch idle (Action2) and walk (Action3) buried Blaster's hold `Idle` (Action) and the gun pointed at the floor. Drop such a clip under the hold while a tool is held (or make it legs-only). [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 
 Related: [[Engine Traps MOC]] · [[Camera and Input Traps]] · [[Streaming and Replication Traps]]

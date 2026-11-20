@@ -63,6 +63,7 @@ local Forfeit = require(Heist.Services.Forfeit)
 local Getaway = require(Heist.Services.Getaway)
 local AlarmEffects = require(Heist.Services.AlarmEffects)
 local DuffelBagAttachment = require(Heist.Services.DuffelBagAttachment)
+local DuffelDrop = require(Heist.Services.DuffelDrop)
 local Net = require(Heist.Services.Net)
 
 local LocationServer = {}
@@ -219,6 +220,11 @@ function LocationServer.new(cfg)
 
 	self.duffelBagAttachment = cfg.duffelBagAttachment
 		or DuffelBagAttachment.new({ template = cfg.duffelTemplate or ReplicatedStorage.HeistShared.DuffelBag })
+	self.duffelDrop = DuffelDrop.new({
+		instance = self.bank,
+		template = cfg.duffelTemplate or ReplicatedStorage.HeistShared.DuffelBag,
+		toast = function(player, text) self.net:Toast(player, text) end,
+	})
 
 	-- Plain function, not a method: it is handed straight to every component's
 	-- own onRefused dependency.
@@ -347,7 +353,12 @@ function LocationServer:_watchCharacter(player, character)
 				if not ok then warn("[LocationServer] onDied failed: " .. tostring(err)) end
 			end
 			if self.bank:GetState() == "Active" and self.bank:IsParticipant(player) then
-				self.forfeit:Die(self.bank, player, "died")
+				-- Dropped duffels (2026-11-20): the bag falls where they died instead of vanishing (Heist.Services.DuffelDrop).
+				local amount = self.bank:GetDuffel(player)
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if self.forfeit:Die(self.bank, player, "died") and root then
+					self.duffelDrop:Drop(player, amount, root.Position)
+				end
 			end
 		end)
 	end

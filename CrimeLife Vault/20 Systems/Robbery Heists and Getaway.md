@@ -12,7 +12,7 @@ sources: ["70 Batches/2026-11-17 Heist Layers.md", "70 Batches/2026-11-17 Known 
 **Runs in Crimelife City since 2026-11-16** ([[2026-11-16 Robbery Systems Into City]]). `Robbery System.rbxl` is the frozen reference: never edit it unless it is named. The engine, config and client scripts below are the Robbery place's, imported as an exact copy and edited only where `CityMerge/after-import.md` ("Phase 3 deviations from the Robbery place") says.
 
 ## What it does
-Four robbery locations, Bank, SlowFoods, Gas2Go and NewsStation. A player triggers a robbery, works the location's puzzles ([[Robbery Puzzles]]), fills a duffel bag against a session timer, and banks the cash by getting 200 studs clear of the location from outside the building. Death or the timer running out voids the bag. Every player sees a notification when a location is robbed or reopens, and a status badge over each location. An Illegal Supplier NPC buys carried supplies.
+Four robbery locations, Bank, SlowFoods, Gas2Go and NewsStation. A player triggers a robbery, works the location's puzzles ([[Robbery Puzzles]]), fills a duffel bag against a session timer, and banks the cash by getting 200 studs clear of the location from outside the building. The timer running out voids the bag; a death drops it where the robber fell for 2 minutes, for anyone to pick up and bank (since 2026-11-20). Every player sees a notification when a location is robbed or reopens, and a status badge over each location. An Illegal Supplier NPC buys carried supplies.
 
 ## Where it lives
 - Engine: `ServerScriptService.Heist` with `BankInstance` (session state machine), `ComponentRegistry`, `Components/` (~15), `Services/` (incl. `LocationServer`, `Getaway`), `Tests/` (spec suite, `TestRunner`/`RunAll` in `ReplicatedStorage.HeistShared`).
@@ -126,7 +126,11 @@ Details: [[2026-11-20 Walking Bank Guards and Edit Rigs]].
 - Spec gate: compare the failure **set**, not the count; a minimised Studio stops `RenderStepped` and fails tween specs (594/14 swung to 581/28 with no code change).
 - `multi_edit` with `replace_all` can report success while missing call sites.
 
+## Dropped duffels (2026-11-20)
+`ServerScriptService.Heist.Services.DuffelDrop`: the `Died` handlers of `LocationServer` and `HeistServer` call `Drop` after `Forfeit:Die(..., "died")`, so a dead robber's bag (the `HeistShared.DuffelBag` model, anchored, no collision or query) lies on the floor where they fell with a "Pick up bag" prompt (hold 0.5, 8 studs, the amount as ObjectText) for `Config.DroppedBagSeconds` 120 or until that run ends. A living picker joins the robbery (`AddParticipant` clears their forfeit latch) and gets the cash over the cap (`AddBonus`, grants of at most `MaxBagGrant`); the getaway banks it, and a later death drops it again. The death pit forfeits first, so a pit death drops nothing. Spec `DuffelDropSpec` (3). [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
+
 ## History
+- 2026-11-20: dropped duffels (`DuffelDrop`); holding a robbery prompt locks the player in place facing the object. [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
 - 2026-11-20: store police waves at SlowFoods and Gas2Go (`HeistPolice`, 2 at 60 s, +1 every 60 s, cap 3, close in to 9 studs), markers `HeistPoliceSpawn1..2` with Edit rigs outside each entrance. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: timed heist police and vault Armed Police, the Bank's guards become Security and Police, guards fire real shots and Security strikes only in reach, NewsStation guards are Police rigs. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: `BankInstance:ResetCooldown` and `Admin.Hooks.heists` registrations; the death pit honours `AdminGod`. [[2026-11-20 Admin Animations Third Person]]

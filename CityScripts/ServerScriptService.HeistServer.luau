@@ -30,6 +30,7 @@ local NPCSpawnManager = require(ReplicatedStorage.SharedSystems.NPCSpawnManager)
 local C4Charge = require(Heist.Components.C4Charge)
 local ZoneService = require(Heist.Services.ZoneService)
 local Forfeit = require(Heist.Services.Forfeit)
+local DuffelDrop = require(Heist.Services.DuffelDrop)
 local Getaway = require(Heist.Services.Getaway)
 local AlarmEffects = require(Heist.Services.AlarmEffects)
 local DuffelBagAttachment = require(Heist.Services.DuffelBagAttachment)
@@ -547,6 +548,12 @@ local alarm = AlarmEffects.new({
 -- addendum, 2026-09-13) -- see pushDuffel below, the single call site that
 -- decides both.
 local duffelBagAttachment = DuffelBagAttachment.new({ template = ReplicatedStorage.HeistShared.DuffelBag })
+-- Dropped duffels (2026-11-20): a robber who dies drops the bag where they fell (see the Humanoid.Died handler).
+local duffelDrop = DuffelDrop.new({
+	instance = bank,
+	template = ReplicatedStorage.HeistShared.DuffelBag,
+	toast = function(player, text) net:Toast(player, text) end,
+})
 
 -- ATM machines (spec addendum, 2026-09-14; unlock condition corrected
 -- 2026-09-17): same one-time-per-session flat-value rob mechanic as
@@ -1061,7 +1068,11 @@ local function watchCharacter(player, character)
 			-- hazard components never see. Die, never Eject/teleport: standard
 			-- Roblox respawn (the regular SpawnLocation) proceeds untouched.
 			if bank:GetState() == "Active" and bank:IsParticipant(player) then
-				forfeit:Die(bank, player, "died")
+				local amount = bank:GetDuffel(player)
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if forfeit:Die(bank, player, "died") and root then
+					duffelDrop:Drop(player, amount, root.Position)
+				end
 			end
 		end)
 	end

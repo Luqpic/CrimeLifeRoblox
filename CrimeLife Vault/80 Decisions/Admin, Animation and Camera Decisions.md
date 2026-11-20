@@ -19,6 +19,10 @@ Calls from 2026-11-20 ([[2026-11-20 Admin Animations Third Person]]). The reques
 7. **Admin tool sets:** all four. Players (find, set level, give or take cash and Spraypaint, give weapon, heal, respawn, teleport to or bring, freeze); Heists and police (reset heist cooldowns, set or clear stars, spawn police or enemies, clear enemies, teleport to each heist); My tools (fly and noclip, god mode, invisible, walk speed, spectate); Server and moderation (announce, kick, timed ban through the Ban API, server stats, action log).
 8. **Admin look:** a CrimeLife panel on F2 with tabs down the left (Players, Heists, Me, Server), the shared close and sounds, a HUD button only admins see, works on phones. It replaces the old F2 "Set Level" panel.
 
+## Crouch and robbery actions (developer, 2026-11-20 late night)
+- **Crouching with a gun: "The gun's own hold".** The crouch poses the legs only and the arms keep the held tool's pose; done by priority (the crouch clips drop under the hold while a Tool is held), no new clip. [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
+- **Robbery actions: "Locked until it ends".** Holding a robbery prompt or with its minigame open, the player is eased into place facing the object and cannot walk until they let go or the minigame closes. [[2026-11-20 Smooth Enemies Patrols and Dropped Duffels]]
+
 ## Run mode and saving (developer, 2026-11-20)
 - **Run mode "Hybrid".** Task 1 finishes as a subagent; Task 2 (the camera) natively by the controller; Tasks 3 and 4 (admin server and panel) merged into one Opus implementer; one Sonnet review per feature (animations, camera, admin) plus a security review of the admin server; no more surveys ([[Model Assignment]]).
 - **"Yes, save after each task."** The controller saves the cloud place with `save_place` (Save, never Publish) only after a task passes its tests; implementers never save. A one-night permission ([[Save and Publish Rules]]). It made place versions 10, 15, 21 and 23.

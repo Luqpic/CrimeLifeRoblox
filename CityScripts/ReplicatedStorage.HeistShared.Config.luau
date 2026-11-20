@@ -150,6 +150,10 @@ Config.DepositBoxClickWindow = 0.25
 -- infinite and larger amounts are refused as invalid_amount.
 Config.MaxBagGrant = 100000
 
+-- Dropped duffels (2026-11-20, Heist.Services.DuffelDrop; developer picker "2 minutes"): how long a dead robber's
+-- bag lies where they fell before it and its cash are gone (sooner when the robbery ends).
+Config.DroppedBagSeconds = 120
+
 -- Open items pass 2026-11-18: the largest single credit PlayerData.CurrencyService:Add accepts (a bank-in,
 -- a supplier sale, a heavy carry). The biggest real one is a full x4 Bank bag with box cash, about 72,000;
 -- NaN, infinite and larger amounts are refused and the balance is unchanged.

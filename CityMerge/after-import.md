@@ -1325,3 +1325,54 @@ NOT published
 Place version 72.
 
 NOT published
+
+## Action lock for robbery prompts 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| StarterPlayer.StarterPlayerScripts.InteractionAnimations | 4,491 / 4136554688 | 6,930 / 2625369882 |
+
+Holding a robbery prompt locks the PlayerModule controls and eases the root into place facing the object. Place version 73.
+
+NOT published
+
+## Crouch keeps the tool hold 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| StarterPlayer.StarterCharacterScripts.Crouching | 12,383 / 2137990833 | 13,448 / 1676318611 |
+
+Place version 74.
+
+NOT published
+
+## Police patrols and faction fights 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.EnemyAI | 59,066 / 566881909 | 60,996 / 669938887 |
+| ReplicatedStorage.Blaster.Utility.canDamageHumanoid | 2,553 / 2408345008 | 3,083 / 3019973295 |
+| ServerScriptService.Wanted.PoliceDispatcher | 26,657 / 1417345805 | 27,019 / 2174252459 |
+| ReplicatedStorage.Wanted.Constants | 4,146 / 3727691275 | 4,957 / 1098450189 |
+| ServerScriptService.Wanted.WantedRunner | 673 / 399239200 | 748 / 3920101510 |
+| ServerScriptService.Wanted.PolicePatrols (new ModuleScript) | none | 5,320 / 3216108942 |
+| ServerStorage.UnitTest.Cases.FactionFights_Test (new ModuleScript) | none | 2,223 / 1158081121 |
+
+Place version 77.
+
+NOT published
+
+## Dropped duffels 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Heist.Services.LocationServer | 20,872 / 1291709925 | 21,441 / 583773474 |
+| ServerScriptService.HeistServer | 55,079 / 3980569753 | 55,599 / 1200774115 |
+| ReplicatedStorage.HeistShared.Config | 17,527 / 330888722 | 17,766 / 4013245980 |
+| ServerScriptService.Heist.Tests.RunAll | 3,116 / 338687384 | 3,165 / 2290353209 |
+| ServerScriptService.Heist.Services.DuffelDrop (new ModuleScript) | none | 4,693 / 4730971 |
+| ServerScriptService.Heist.Tests.DuffelDropSpec (new ModuleScript) | none | 2,935 / 1683144198 |
+
+Place version 78.
+
+NOT published

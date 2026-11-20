@@ -52,6 +52,7 @@ local SPECS = {
 	"SlowFoodsKeySpec", -- open items pass 2026-11-18
 	"BroadcastHooksSpec", -- open items pass 2026-11-18
 	"HeistPoliceSpec", -- heist police and Bank guards 2026-11-20
+	"DuffelDropSpec", -- dropped duffels 2026-11-20
 }
 
 return function()
