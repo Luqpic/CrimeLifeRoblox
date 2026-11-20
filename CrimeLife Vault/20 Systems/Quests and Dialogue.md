@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, quests, dialogue, npc]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["70 Batches/2026-11-17 Police and Wanted.md", ".superpowers/sdd/2026-11-17-police-and-wanted/task-5-report.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-System-Level1-KillThugs.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Feedback-NPC-Polish.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Billboard-Refactor.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Quest-Givers-Law-Enforcement-Outfits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Enemy-Roster-Rework-3-New-Recruits.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Dialogue-On-Shared-Billboard-Engine.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Supplier-Billboard-Input-And-Toast-Duration.md", "CrimeLifeRoblox/CrimeLife Vault/90 Reference/Original Prompts/FPSSystem/FPS-Quest-Expansion-5-New-Levels-Admin-SetLevel.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
@@ -56,6 +56,10 @@ Measured 2026-11-15 ([[2026-11-15 FPS Hardening In City]]):
 - **Lines** (`QuestDialogueController`, one shared set): offer "Off the books: {description} Cash, no questions."; repeat "Back again? {description} Same envelope."; in progress "Keep it quiet. {progress}/{target} {enemies} cleared so far."; ready "Clean work. {target} {enemies} gone. Your envelope's ready." (the line had a spaced double hyphen until 2026-11-18, a breach of [[Player-Facing Text]]); completed "Those {enemies} won't be missed. Not a word, ever."; under level "Not yet, kid. Earn a rep first."; accept quip "You never heard it from me."; turn-in quip "Count it later. And we never met."
 - **Fit** was computed, not read live (viewport 1 x 1): every line at 24 px or more, every name on one line at 21 px. The ready line was read back in Play on 2026-11-18 after a real E press (`user_keyboard_input`): `Workspace.Quests."Level 1 Quest".Head.gui.dialog.Text` read "Clean work. 10 Thugs gone. Your envelope's ready.", visible, `TextFits` true, bounds 229.0 x 40.4 inside 267 x 40.8, replies "Turn in quest" and "Not yet". The other lines were never seen typed in a real conversation. The six nameplates keep the hyphen between name and level: a name/tag separator, like the one in "Name - [$Price]".
 - Uniformed police who hunt you and uniformed crooked cops who pay you both exist; the lines make the difference ([[Police and Wanted]]).
+
+
+## Quest givers by their criminals (2026-11-20)
+Each `Workspace.Quests` giver stands about 80 studs from its criminals' `EnemySpawnPoint` pad, facing it. Moving a pad does not move its giver. [[2026-11-20 Quest NPCs by Their Criminals]]
 
 ## Extend it
 - New quest: one entry in `QuestConfig` (target enemy name inside the quest, never hard-coded in lines) plus a giver in `Workspace.Quests` with the same billboard, prompt and `NPCprompt` tag.

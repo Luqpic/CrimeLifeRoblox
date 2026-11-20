@@ -22,7 +22,7 @@ Rules in force: Edit is the truth (rigs in Edit), native work only (no subagents
 ## Status
 | Part | Status |
 |---|---|
-| 1 Quest NPCs | answered, to build (step 2) |
+| 1 Quest NPCs | **done** [[2026-11-20 Quest NPCs by Their Criminals]] |
 | 2 Combat | answered, to build (step 4) |
 | 3 Hit registration | **done** [[2026-11-20 Hit Registration]] |
 | 4 Crouch stealth | answered, to build (step 3) |
@@ -42,6 +42,9 @@ Rules in force: Edit is the truth (rigs in Edit), native work only (no subagents
 - **Crouch:** `StarterCharacterScripts.Crouching` (C key, speed 8) sets `IsCrouching` on the root from the client only, so the server never sees it (RollAuthority's check reads nil). Stealth needs a server-checked crouch state (a remote, refused when moving faster than crouch speed).
 - **Combat today:** hitscan Blaster with spread, recoil, headshots, a crosshair hit marker with sound, melee backstab and bleed, Baton stun, roll, crouch, sprint, ledge climb, shoulder camera; NPCs with shooter tokens, wind-up aim line, bursts, focus ramp, flinch, falloff, level armor.
 - **Weapons for the gacha:** 38 Tools in `ServerStorage.Weapons`: 36 with a Price (200 to 1,300 cash: 14 AutoRifle, 12 Pistol, 8 Shotgun, Knife 350, Baton 500), Crowbar (starter, `WeaponShopService.STARTING_WEAPON`), RPG (gamepass). Shop: `WeaponShopService`, client `WeaponaryShopController` (HUD gun button). Starting cash 500.
+
+## Notes
+- 2026-11-20: `StarterGui.AdminHudGui` was found switched on in Edit (Claude left it off; the developer probably ticked it). Left as the developer set it; the game switches it on anyway.
 
 ## Next (work order)
 All questions are answered (2026-11-20 evening). Build in this order; after each part: tests, an Edit read-back, a batch note in `70 Batches/`, the Batch Log line, the touched system notes, this note's status, one commit, a Studio save (never publish).
