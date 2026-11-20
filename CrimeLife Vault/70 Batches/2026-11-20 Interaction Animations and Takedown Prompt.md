@@ -44,7 +44,22 @@ Parts 4 and 6 of [[Current Work]]'s late-evening request. Built natively. **The 
 - **Register:** during a SlowFoods robbery, holding E on "Rob register" played the Register use (its stand-in `DeviceBrowse`, looped, weight 1); releasing E stopped it.
 - City 394 / 394 / 0; heist 764 passed / 0 failed. Edit read-back: the 5 scripts match their mirrors; no test leftovers.
 
-## Blocked
+## Uploaded (2026-11-20, on the developer's "check again")
+The upload went through on the second try (the key's permission had been fixed):
+- `CrimeRegister` 86275032162106
+- `CrimeType` 94136719654492
+- `CrimePickUp` 96438680246946
+- `CrimeChoke` 123284190249472
+- `CrimeStagger` 119918548663254
+
+They are in `ReplicatedStorage.Combat.Clips.ids` (2,688 / 619078488). Play, place version 69:
+- All five load on the client with the right lengths (0.5 to 1.6 s).
+- The register hold plays CrimeRegister (looped, weight 1).
+- The takedown plays CrimeChoke (1.6 s) on the player and Choked on the Offender, which then died.
+- A headshot reaction (`HitReaction.react`, live) plays CrimeStagger on the enemy. Its first play on that enemy read length 0, still downloading.
+- 12 real AUG shots aimed at an enemy's head made no headshot: the ray stops on its hat or hair (not `Head`).
+
+## Blocked (first try, resolved)
 **Upload refused:** Open Cloud answered 403 PERMISSION_DENIED, "unauthorized to create an Animation asset as Group 4998611". The key in `~/.roblox_key` belongs to an account that may not create Animation assets for the group. Under the scope rule, the developer fixes it: a group API key with Assets read and write, or that permission for the key's account. Then:
 1. `python3 Blender/_pipeline/upload_anims.py 4998611 --prefix Player_Crime`
 2. Put the five ids into `ReplicatedStorage.Combat.Clips.ids` (CrimeRegister, CrimeType, CrimePickUp, CrimeChoke, CrimeStagger) and into the mirror.

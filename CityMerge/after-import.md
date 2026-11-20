@@ -1285,3 +1285,13 @@ NOT published
 City 394 / 394 / 0; heist 764 passed / 0 failed. Live: the takedown prompt and chokehold; the register hold clip. The five new Crime* clips are made in Blender but not uploaded (403 on the group key); `Combat.Clips.ids` has no Crime* ids yet. Place version 68.
 
 NOT published
+
+## Crime clip ids 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ReplicatedStorage.Combat.Clips | 2,411 / 779754291 | 2,688 / 619078488 |
+
+The five Crime* clips uploaded to group 4998611 and their ids filled in. Live: CrimeRegister, CrimeChoke, CrimeStagger play. Place version 69.
+
+NOT published

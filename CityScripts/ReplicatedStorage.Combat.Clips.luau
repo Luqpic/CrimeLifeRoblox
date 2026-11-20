@@ -1,8 +1,8 @@
 --!strict
 -- Character clips for combat and robbery (2026-11-20). All are group 4998611's Player_* clips from the Blender pipeline
 -- (ids in Blender/_enemies/ids.json); they play on any R15 character or NPC. The Crime* clips are made
--- (Blender/_enemies/Player/Player_Crime*.rbxmx) and wait for an upload: until an id is filled in below, each use takes
--- the next name in its list that has one, or plays nothing.
+-- (Blender/_enemies/Player/Player_Crime*.rbxmx, uploaded 2026-11-20). Each use takes the first name in its list that has
+-- an id.
 local Clips = {}
 
 Clips.ids = {
@@ -10,7 +10,12 @@ Clips.ids = {
 	RepairKneel = "rbxassetid://121944371724979", -- down onto one knee, working at something in front
 	RepairLoop = "rbxassetid://90730140087815", -- kneeling, working it in a loop
 	DeviceBrowse = "rbxassetid://115684067438169", -- a device held in front, scrolled
-	-- Waiting for the upload (fill in the asset ids): CrimeRegister, CrimeType, CrimePickUp, CrimeChoke, CrimeStagger
+	-- The Crime* set (Blender, uploaded 2026-11-20):
+	CrimeRegister = "rbxassetid://86275032162106", -- grabbing cash from a drawer, hands in turn
+	CrimeType = "rbxassetid://94136719654492", -- typing at a desk
+	CrimePickUp = "rbxassetid://96438680246946", -- a squat and lift
+	CrimeChoke = "rbxassetid://123284190249472", -- the takedown chokehold (1.6 s)
+	CrimeStagger = "rbxassetid://119918548663254", -- an enemy's headshot stagger (0.5 s)
 } :: { [string]: string }
 
 Clips.uses = {

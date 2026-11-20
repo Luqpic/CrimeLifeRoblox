@@ -37,9 +37,9 @@ Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six
 | 1 Thug freeze | **done** [[2026-11-20 Enemy Movement and Store Police]] (no standing on the last seen spot, search sweep, kneel at Action4; the headshot stagger gets a clip with the Blender set) |
 | 2 Police stutter | **done** [[2026-11-20 Enemy Movement and Store Police]] |
 | 3 Police in stores + wave | **done** [[2026-11-20 Enemy Movement and Store Police]] |
-| 4 Interaction clips | **built** [[2026-11-20 Interaction Animations and Takedown Prompt]]; the 5 new clips wait for the upload (403: the key's account may not create Animation assets as group 4998611; the developer fixes the key, then upload and fill `Combat.Clips.ids`) |
+| 4 Interaction clips | **done** [[2026-11-20 Interaction Animations and Takedown Prompt]] (the 5 Crime clips uploaded on the second try, ids in `Combat.Clips`, version 69) |
 | 5 Enemy climb / vault / roll | **done** [[2026-11-20 Enemies Climb Vault and Roll]] |
-| 6 Takedown prompt + chokehold | **done** [[2026-11-20 Interaction Animations and Takedown Prompt]] (the player's CrimeChoke clip waits for the upload) |
+| 6 Takedown prompt + chokehold | **done** [[2026-11-20 Interaction Animations and Takedown Prompt]] (CrimeChoke uploaded and playing) |
 
 ### Design for parts 5 and 6, and the clip set (Claude, 2026-11-20 late evening; build from this)
 - **Part 5, enemy moves** (new server module `ServerScriptService.Enemy.Scripts.EnemyMoves`, EnemyAI glue; clips are the player's group clips read from `ReplicatedStorage.PlayerMovement.Animations.Roll` / `.LedgeClimb`, played on the NPC's Animator at Action4):
