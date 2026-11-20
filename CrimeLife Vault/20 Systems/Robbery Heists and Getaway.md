@@ -127,6 +127,7 @@ Details: [[2026-11-20 Walking Bank Guards and Edit Rigs]].
 - `multi_edit` with `replace_all` can report success while missing call sites.
 
 ## History
+- 2026-11-20: store police waves at SlowFoods and Gas2Go (`HeistPolice`, 2 at 60 s, +1 every 60 s, cap 3, close in to 9 studs), markers `HeistPoliceSpawn1..2` with Edit rigs outside each entrance. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: timed heist police and vault Armed Police, the Bank's guards become Security and Police, guards fire real shots and Security strikes only in reach, NewsStation guards are Police rigs. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: `BankInstance:ResetCooldown` and `Admin.Hooks.heists` registrations; the death pit honours `AdminGod`. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `GetawayMath`, `SlowFoodsKey` and `BroadcastHooks` modules, `Zone` seam, the getaway formula once, 5 NPCs tagged, leaver carry measured; duffel passes through `PassOwnership`, heist cards through the city stack, puzzles in `UI.Panels` (city 315 / 315, heist 740 / 0). [[2026-11-18 Open Items Pass]]

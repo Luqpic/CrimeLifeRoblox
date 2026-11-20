@@ -31,6 +31,7 @@ local Heist = ServerScriptService.Heist
 local ComponentRegistry = require(Heist.ComponentRegistry)
 local AccessBarrier = require(Heist.Components.AccessBarrier)
 local LocationServer = require(Heist.Services.LocationServer)
+local HeistPolice = require(Heist.Services.HeistPolice)
 local FleeingManager = require(Heist.Components.FleeingManager)
 -- Open items pass 2026-11-18: the manager-key layer's wiring (key, Use Key, storage safe), under SlowFoodsKeySpec.
 local SlowFoodsKey = require(Heist.Services.SlowFoodsKey)
@@ -117,6 +118,7 @@ local keyLayer
 -- The shared skeleton: Net.setup, Forfeit, BankInstance, zones/ZoneService,
 -- AlarmEffects (cloned into the Restaurant zone) and DuffelBagAttachment.
 -- Connects nothing yet -- see Start() at the bottom.
+local heistPolice -- store police (built below, after the bank exists), driven by the heartbeat
 local location = LocationServer.new({
 	name = "SlowFoods",
 	config = Config,
@@ -125,6 +127,9 @@ local location = LocationServer.new({
 	zoneTag = T.SlowFoodsZone,
 	markerFolder = "SlowFoodsMarkers",
 	exitCFrame = function() return exitSpawn.CFrame end,
+	heartbeatExtras = function()
+		if heistPolice then heistPolice:Update() end
+	end,
 	onPlayerRemoving = function(player)
 		if keyLayer then keyLayer:Forget(player) end
 	end,
@@ -291,6 +296,16 @@ do
 	print(string.format("[SlowFoodsServer] SlowFoods booted: %s CashRegister=%d, zones=%d",
 		table.concat(parts, " "), #cashRegisters, #location.zones))
 end
+
+-- Store police (2026-11-20, developer picker "Squads follow + a store wave"): officers sent into the restaurant from the
+-- robbery's start (Config.HeistPolice) at SlowFoodsMarkers.HeistPoliceSpawn1..2, outside the entrance.
+heistPolice = HeistPolice.new({
+	bank = bank,
+	plan = Config.HeistPolice,
+	markers = HeistPolice.markersIn(workspace.SlowFoodsMarkers),
+	isInside = function(player) return location.zoneService:IsInside(location.interiorRole, player) end,
+})
+bank:RegisterComponent(heistPolice)
 
 -- Every component is registered: connect the handlers and start the
 -- heartbeat.

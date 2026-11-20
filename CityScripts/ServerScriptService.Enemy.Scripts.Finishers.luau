@@ -69,7 +69,9 @@ local function wound(ai: any)
 		end)
 		if ok and loaded then
 			track = loaded
-			loaded.Priority = Enum.AnimationPriority.Action
+			-- Action4: at Action it blended with the held weapon's own Action clips and hardly showed, so a wounded
+			-- enemy just stood still for 6 s ("Thugs freeze with health left", 2026-11-20).
+			loaded.Priority = Enum.AnimationPriority.Action4
 			loaded.Looped = true
 			loaded:Play(0.15)
 		end

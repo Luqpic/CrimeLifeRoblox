@@ -92,7 +92,13 @@ Details: [[2026-11-20 Combat Feel]].
 - The staging folder of downloaded outfit assets (`ServerStorage.EnemyOutfitStaging`, 2026-09-16) does not exist in the city: searched in every service by exact name and by "outfitstaging" on 2026-11-18, nothing found, nothing moved. `ServerStorage.CityQuarantine.LooseTycoon` and `CityQuarantine.WorkspaceHQ` hold tycoon display outfits, a different thing.
 - The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
+## Movement fixes (2026-11-20)
+- Next waypoint on `Humanoid.MoveToFinished`; straight for the goal while a first path computes; `AgentRadius` 1.5.
+- Chase → Search on reaching the last seen spot without sight; Search sweeps spots 8 to 12 studs round it (`SEARCH_SWEEP_RADIUS`).
+- A flank spot must see the target (else the other side, else no flank). The wound's kneel clip is Action4. [[2026-11-20 Enemy Movement and Store Police]]
+
 ## History
+- 2026-11-20: fluid movement (waypoints on MoveToFinished), no standing on the last seen spot, search sweep, agent radius 1.5, flank spots that see the target, kneel at Action4. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: alert, back off, cover and flank (`Enemy.Scripts.Tactics`), `Tactic` attribute. [[2026-11-20 Smarter Enemies]]
 - 2026-11-20: hit reactions (flash, push, stagger, knockdown), wounded enemies, finishers and stealth takedowns; `Aware` attribute; no sight behind for a crouched player. [[2026-11-20 Combat Feel]]
 - 2026-11-20: shooter tokens, wind-up aim line, focus ramp, bursts, range falloff, flinch (1 s cooldown), `Enemy.Combat` and `NpcFire`; Police 12 to 9, Bandits 3 to 1.5; heist police run this same AI. [[2026-11-20 Readable Gunfights and Level Toughness]] [[2026-11-20 Heist Police and Bank Guards]]

@@ -33,6 +33,7 @@ local Heist = ServerScriptService.Heist
 local ComponentRegistry = require(Heist.ComponentRegistry)
 local AccessBarrier = require(Heist.Components.AccessBarrier)
 local LocationServer = require(Heist.Services.LocationServer)
+local HeistPolice = require(Heist.Services.HeistPolice)
 local CarryGetaway = require(Heist.Services.CarryGetaway)
 local ATMRipOut = require(Heist.Components.ATMRipOut)
 
@@ -136,6 +137,7 @@ assert(#pulseLights >= 1, "[Gas2GoServer] RobberyAlarmLights has no PointLight/S
 -- AlarmEffects (cloned into the Station zone, plus this location's own
 -- pulseLights) and DuffelBagAttachment. Connects nothing yet -- see Start()
 -- at the bottom.
+local heistPolice -- store police (built below, after the bank exists), driven by the heartbeat
 local location = LocationServer.new({
 	name = "Gas2Go",
 	config = Config,
@@ -151,6 +153,7 @@ local location = LocationServer.new({
 	},
 	heartbeatExtras = function()
 		if atmGetaway then atmGetaway:Step() end
+		if heistPolice then heistPolice:Update() end
 	end,
 	onPlayerRemoving = function(player)
 		if atmGetaway then atmGetaway:Forget(player) end
@@ -309,6 +312,16 @@ do
 		table.concat(parts, " "), #CollectionService:GetTagged(T.Gas2GoRegister), #CollectionService:GetTagged(T.Gas2GoATM),
 		#pulseLights, #location.zones))
 end
+
+-- Store police (2026-11-20, developer picker "Squads follow + a store wave"): officers sent into the station from the
+-- robbery's start (Config.HeistPolice) at Gas2GoMarkers.HeistPoliceSpawn1..2, outside the entrance.
+heistPolice = HeistPolice.new({
+	bank = bank,
+	plan = Config.HeistPolice,
+	markers = HeistPolice.markersIn(workspace.Gas2GoMarkers),
+	isInside = function(player) return location.zoneService:IsInside(location.interiorRole, player) end,
+})
+bank:RegisterComponent(heistPolice)
 
 -- Every component is registered: connect the handlers and start the
 -- heartbeat.

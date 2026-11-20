@@ -9,7 +9,39 @@ sources: ["The developer's request, 2026-11-20 evening: [[2026-11-20 Quest NPCs 
 
 **Read this first after a context compaction.** It holds the request in progress, every answer the developer gave, what is done and what is next. Update it after each step. When a part is finished, it moves to a batch note in `70 Batches/` and the line here says so.
 
-## The request (2026-11-20 evening)
+## NEW request in progress (2026-11-20 late evening): bugs, interaction clips, enemy moves, takedown prompt
+Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six parts:
+1. **Bug: Thugs freeze when shot** with health left.
+2. **Bug: police stutter while chasing** ("as if they have high ping"); they must move fluidly.
+3. **Bug: police never enter SlowFoods / Gas2Go** during a robbery; there should be gunfights inside.
+4. **Interaction animations** other players can see.
+5. **Enemies climb ledges and roll.**
+6. **Silent takedown prompt** with a takedown animation.
+
+### Answers (pickers, 2026-11-20 late evening)
+- **New clips:** "Upload straight away". Make them in Blender on the OBT player rig (`Blender/Player/Player.rest.blend`) and upload to group 4998611 with `Blender/_pipeline/upload_anims.py` and `~/.roblox_key` (never print it); no preview stop; the developer reviews in game.
+- **Which interactions:** "Every interaction": cash registers (stores and bank), safes, the computer hack (MasterComputer / broadcast desk), plus ATMs, deposit boxes, lockpicking doors, planting C4, picking up supplies.
+- **Takedown:** "Prompt + chokehold": a ProximityPrompt "Takedown" (E / pad X / tap) on the enemy's back, only when crouched behind an unaware enemy; a paired 1.6 s chokehold (both locked, silent, the enemy goes limp). Mid-takedown spotted: "It still finishes".
+- **Enemy moves** (all four): climb ledges 3.8 to 8 studs when chasing; vault walls under 3.8; roll to dodge (gun enemies, sometimes when shot, cooldown); roll to reach cover. Reuse the player's group clips `LedgeClimb` 91136281858672 and `Roll` 96743750031591 (enemies are R15).
+- **Store police:** "Squads follow + a store wave": wanted squads path through the front door, and each SlowFoods / Gas2Go robbery sends a timed wave (2 officers about 60 s in, +1 every 60 s, at most 3) through the door.
+
+### Findings (measured in Play, 2026-11-20 late evening)
+- **Stutter (police and every EnemyAI):** 5 Thugs chasing (WalkSpeed 18): 13 to 35 % of chase frames under 2 studs/s, 2 to 4 stops over 0.05 s each, longest 0.82 s, mean speed 11 to 14. Cause: `_followPath` issues the next waypoint only on the 0.25 s think, and a 4-stud waypoint takes a runner 0.2 s; also the `ComputeAsync` yield with nothing issued. Network ownership is already the server's (`EnemyRig`). Fix: advance on `Humanoid.MoveToFinished`, and head straight for the goal while a first path computes.
+- **Thug freeze:** AUG shots at charging Thugs: still (away from melee) at most 0.63 s, from path stalls, the 0.5 s headshot stagger (a stun with nothing visible), and the wound. The wound's kneel clip (89055632668771) plays at Action, the same priority as the Thug's two Crowbar hold clips (6170792878, 6783954162), so it blends to almost nothing: a wounded Thug stands still 6 s = "frozen with health left". Fix: kneel at Action4, a real stagger clip, the pathing fix.
+- **Police in stores:** SlowFoods: `ComputeAsync` with EnemyAI's `AgentRadius` 2 = NoPath to every interior point (register, kiosks, tables, cashier); radius 1 = Success. Gas2Go: radius 2 paths in from all four sides, so police there stay out by behaviour (engaging from outside). Fix: a smaller agent radius plus the store wave entering through the door.
+- `WantedService.setStars(player, 2)` at the spawn produced no squad in 40 s (no valid spawn spot near spawn?); not investigated.
+
+### Status
+| Part | Status |
+|---|---|
+| 1 Thug freeze | **done** [[2026-11-20 Enemy Movement and Store Police]] (no standing on the last seen spot, search sweep, kneel at Action4; the headshot stagger gets a clip with the Blender set) |
+| 2 Police stutter | **done** [[2026-11-20 Enemy Movement and Store Police]] |
+| 3 Police in stores + wave | **done** [[2026-11-20 Enemy Movement and Store Police]] |
+| 4 Interaction clips | to build (Blender) |
+| 5 Enemy climb / vault / roll | to build |
+| 6 Takedown prompt + chokehold | to build (Blender pair) |
+
+## Previous request (2026-11-20 evening): all done except the gacha Robux products (scope)
 Verbatim: [[2026-11-20 Quest NPCs Combat Stealth Gacha]]. Five parts:
 1. **Police quest NPCs follow the criminals.** The developer moved the criminal Edit rigs to their designated areas; move the police quest NPCs alongside.
 2. **Combat more interactive.** Propose ideas, the developer approves, then build.

@@ -67,6 +67,8 @@ local Constants = {
 	-- === Search ===
 	-- How long an enemy hunts around the player's last known position before giving up.
 	SEARCH_DURATION = 5,
+	-- A search sweeps spots this far round the last known position once it is there (2026-11-20).
+	SEARCH_SWEEP_RADIUS = 12,
 
 	-- === Patrol ===
 	-- Enemies wander to random reachable points around their spawn point rather than following

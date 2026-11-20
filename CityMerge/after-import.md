@@ -1238,3 +1238,24 @@ New instances in Edit: `ReplicatedStorage.Combat.Remotes.MeleeCharge` and `.Bloc
 City 391 / 391 / 0 (temporary Script); heist 764 passed / 0 failed. Live: combo 45 / 54 / 67.5, heavy 90 + stagger, block x0.30, parry 0 + attacker stunned 1 s. Place version 55.
 
 NOT published
+
+## Enemy movement and store police 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.EnemyAI | 53,147 / 1126838795 | 56,483 / 2361164006 |
+| ServerScriptService.Enemy.Scripts.Finishers | 6,564 / 2624693041 | 6,757 / 3239764355 |
+| ReplicatedStorage.Enemy.Constants | 6,732 / 667011660 | 6,855 / 270069932 |
+| ReplicatedStorage.Wanted.Constants | 3,934 / 1396754736 | 4,146 / 3727691275 |
+| ServerScriptService.Wanted.PoliceDispatcher | 25,074 / 3423070207 | 26,657 / 1417345805 |
+| ServerScriptService.Heist.Services.HeistPolice | 12,616 / 2808713664 | 12,854 / 1749409788 |
+| ReplicatedStorage.RestaurantShared.Config | 4,029 / 202853836 | 4,725 / 2995205378 |
+| ReplicatedStorage.Gas2GoShared.Config | 3,445 / 792494017 | 4,138 / 1172989274 |
+| ServerScriptService.SlowFoodsServer | 14,259 / 3174915992 | 14,998 / 4231357228 |
+| ServerScriptService.Gas2GoServer | 15,011 / 3117630225 | 15,705 / 1919366720 |
+
+New in Edit: `Workspace.SlowFoodsMarkers.HeistPoliceSpawn1` (93, 4.05, 1784), `HeistPoliceSpawn2` (100.5, 4.05, 1784); `Workspace.Gas2GoMarkers.HeistPoliceSpawn1` (-990.5, 4.05, 1961), `HeistPoliceSpawn2` (-982.5, 4.05, 1961): copies of NewsStation's marker (2 x 1 x 2, invisible, anchored), each with a `Police` Edit rig standing on it facing the store.
+
+City 391 / 391 / 0; heist 764 passed / 0 failed. Live: Thug chase stalls gone; SlowFoods and Gas2Go robberies end with 4 officers fighting inside. Place version 65.
+
+NOT published

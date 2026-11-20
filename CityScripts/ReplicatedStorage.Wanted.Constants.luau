@@ -57,7 +57,9 @@ return {
 	-- frames. 2,000 samples find a point there about 93 % of the time.
 	SPAWN_SAMPLES = 2000,
 	SPAWN_PATH_BUDGET = 20, -- ComputeAsync calls per player per round
-	POLICE_AGENT = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true },
+	-- AgentRadius 1.5 (was 2, 2026-11-20), the same as EnemyAI's own paths: at 2 nothing inside SlowFoods was reachable
+	-- (its double door has 4-stud leaves), so police were never sent in after a robber there.
+	POLICE_AGENT = { AgentRadius = 1.5, AgentHeight = 5, AgentCanJump = true },
 	-- An officer whose player is cleared, dead or gone and who sees no other wanted player walks this far away
 	-- from the nearest player, and despawns once no player has line of sight to it, or after LEAVE_TIMEOUT.
 	LEAVE_DISTANCE = 200,

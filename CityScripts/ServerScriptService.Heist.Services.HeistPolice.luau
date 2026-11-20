@@ -229,6 +229,10 @@ function HeistPolice:_sendWave(entry, index: number)
 				if entry.plan.patrolRadius then
 					ai.patrolRadius = entry.plan.patrolRadius -- EnemyAI wanders this far from where it stood up
 				end
+				if entry.plan.preferredRangeFraction then
+					-- Store police (2026-11-20): this officer closes in to this share of its engage range (its own config).
+					ai.config.preferredRangeFraction = entry.plan.preferredRangeFraction
+				end
 			end
 			self.wait() -- one officer a frame
 		end

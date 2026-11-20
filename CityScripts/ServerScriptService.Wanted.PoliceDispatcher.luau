@@ -543,10 +543,32 @@ end
 -- gives the place away (design section 9); otherwise the spot an officer or guard last saw them. The search
 -- window adds no live tracking (developer decision 2026-11-18): officers search the last-seen spot and
 -- re-engage only on sight; a squad that never saw the player patrols where it last went.
+-- Robbers inside a building the police can walk into (2026-11-20, developer: "the polices wouldn't enter the building.
+-- They should"): whether a path from the entrance reaches the robber, rechecked every REACH_RECHECK seconds.
+local REACH_RECHECK = 3
+-- While their robber is in there, squad officers close in to this share of their engage range (about 9 studs), as
+-- the store waves do (HeistPolice plan preferredRangeFraction), instead of shooting in from 50 studs out.
+local STORE_CLOSE_IN = 0.1
+local reachCache: { [Player]: { at: number, inside: boolean } } = {}
+Players.PlayerRemoving:Connect(function(player)
+	reachCache[player] = nil
+end)
+
 local function believedPosition(player: Player, root: BasePart?): Vector3?
 	if root and WantedService.inActiveRobbery(player) then
-		-- Inside a robbery building the interior is off the navmesh: go to its entrance.
-		return entranceNear(root.Position) or root.Position
+		-- In a robbery building: the robber themselves when the interior is reachable from its entrance (SlowFoods and
+		-- Gas2Go since the 1.5-stud agent, 2026-11-20), else the entrance (past the Bank's obby pit, for one).
+		local entrance = entranceNear(root.Position)
+		if not entrance then
+			return root.Position
+		end
+		local now = os.clock()
+		local cached = reachCache[player]
+		if not cached or now - cached.at >= REACH_RECHECK then
+			cached = { at = now, inside = PoliceDispatcher._reaches(entrance, root.Position) }
+			reachCache[player] = cached
+		end
+		return if cached.inside then root.Position else entrance
 	end
 	return lastSeen[player]
 end
@@ -578,6 +600,11 @@ local function tick(now: number)
 					record.ai.spawnPosition = believed -- a later patrol circles here, not the spawn point
 					record.ai:investigate(believed)
 				end
+				-- Squads follow a robber into a store (2026-11-20, developer picker "Squads follow + a store wave").
+				local cached = reachCache[player]
+				local inside = root ~= nil and WantedService.inActiveRobbery(player) and cached ~= nil and cached.inside
+				record.preferredRange = record.preferredRange or record.ai.config.preferredRangeFraction
+				record.ai.config.preferredRangeFraction = if inside then STORE_CLOSE_IN else record.preferredRange
 			end
 		end
 		if wanted then

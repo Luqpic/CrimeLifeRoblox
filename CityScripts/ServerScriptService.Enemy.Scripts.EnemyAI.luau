@@ -114,6 +114,8 @@ function EnemyAI.new(
 		-- One-shot guard for the Search-state look-around. Reset on every fresh entry into Search,
 		-- see _setState.
 		hasLookedAround = false,
+		-- The spot a search is sweeping toward (2026-11-20), nil until the last known position is reached.
+		searchPoint = nil :: Vector3?,
 		fireGeneration = 0,
 		-- Used to average travel speed across think ticks for locomotion animation selection.
 		lastSpeedPosition = nil :: Vector3?,
@@ -160,6 +162,12 @@ function EnemyAI.new(
 
 	table.insert(self.connections, humanoid.Died:Connect(function()
 		self:_enterDead()
+	end))
+	-- Fluid movement (2026-11-20, developer: police "freeze as if they have high ping"; measured: chasing Thugs
+	-- spent 13 to 35 % of frames nearly still): the next waypoint goes out the moment one is reached, not at the
+	-- next think, 0.25 s later (a 4-stud waypoint takes a runner 0.2 s).
+	table.insert(self.connections, humanoid.MoveToFinished:Connect(function()
+		self:_nextWaypoint()
 	end))
 
 	activeEnemies[self] = true
@@ -230,8 +238,10 @@ function EnemyAI:_needsNewPath(destination: Vector3, now: number): boolean
 end
 
 function EnemyAI:_computePath(destination: Vector3, now: number): boolean
+	-- AgentRadius 1.5 (was 2, 2026-11-20): at 2 the navmesh had no way into SlowFoods (NoPath to every point inside),
+	-- so police never followed a robber in; 1.75 and below get in, and an R15 body is about 2 studs wide.
 	local path = PathfindingService:CreatePath({
-		AgentRadius = 2,
+		AgentRadius = 1.5,
 		AgentHeight = 5,
 		AgentCanJump = true,
 	})
@@ -256,6 +266,9 @@ function EnemyAI:_followPath(destination: Vector3, speed: number, now: number)
 	self.humanoid.WalkSpeed = speed
 
 	if self:_needsNewPath(destination, now) then
+		if not self.waypoints then
+			self.humanoid:MoveTo(destination) -- under way at once: a first path takes a moment to compute
+		end
 		self:_computePath(destination, now)
 	end
 
@@ -267,17 +280,7 @@ function EnemyAI:_followPath(destination: Vector3, speed: number, now: number)
 		return
 	end
 
-	-- Advance past any waypoints we have already reached.
-	while self.waypointIndex <= #waypoints do
-		local waypoint = waypoints[self.waypointIndex]
-		local offset = waypoint.Position - self.rootPart.Position
-		if Vector3.new(offset.X, 0, offset.Z).Magnitude > 4 then
-			break
-		end
-		self.waypointIndex += 1
-	end
-
-	local waypoint = waypoints[self.waypointIndex]
+	local waypoint = self:_currentWaypoint()
 	if not waypoint then
 		self:_clearPath()
 		self.humanoid:MoveTo(destination)
@@ -288,6 +291,36 @@ function EnemyAI:_followPath(destination: Vector3, speed: number, now: number)
 		self.humanoid.Jump = true
 	end
 	self.humanoid:MoveTo(waypoint.Position)
+end
+
+-- The first waypoint of the current path not yet reached (more than 4 studs away, flat), stepping past the rest.
+function EnemyAI:_currentWaypoint(): PathWaypoint?
+	local waypoints = self.waypoints
+	if not waypoints then
+		return nil
+	end
+	while self.waypointIndex <= #waypoints do
+		local offset = waypoints[self.waypointIndex].Position - self.rootPart.Position
+		if Vector3.new(offset.X, 0, offset.Z).Magnitude > 4 then
+			break
+		end
+		self.waypointIndex += 1
+	end
+	return waypoints[self.waypointIndex]
+end
+
+-- MoveToFinished: on to the next waypoint of the path being followed (none while stopped, stunned or dead).
+function EnemyAI:_nextWaypoint()
+	if self.destroyed or self.state == STATE.Dead or self.humanoid.WalkSpeed <= 0 then
+		return
+	end
+	local waypoint = self:_currentWaypoint()
+	if waypoint then
+		if waypoint.Action == Enum.PathWaypointAction.Jump then
+			self.humanoid.Jump = true
+		end
+		self.humanoid:MoveTo(waypoint.Position)
+	end
 end
 
 function EnemyAI:_stopMoving()
@@ -699,7 +732,16 @@ function EnemyAI:_flankPoint(aimPosition: Vector3, distance: number, engageRange
 	end
 	local preferred = math.max(Tactics.FLANK_MIN_DISTANCE, engageRange * self.config.preferredRangeFraction)
 	local radius = math.clamp(distance, Tactics.FLANK_MIN_DISTANCE, preferred)
-	return Tactics.flankPoint(aimPosition, first.rootPart.Position, radius, self.flankDegrees :: number)
+	-- The spot must see the target (2026-11-20: in the Gas2Go shop three flankers piled up against a wall short of a
+	-- spot behind it). A walled-off side tries the other side; both walled off, no flank.
+	for _ = 1, 2 do
+		local point = Tactics.flankPoint(aimPosition, first.rootPart.Position, radius, self.flankDegrees :: number)
+		if not Stealth.solidCast(aimPosition, point - aimPosition) then
+			return point
+		end
+		self.flankDegrees = -(self.flankDegrees :: number)
+	end
+	return nil
 end
 
 function EnemyAI:_reload()
@@ -978,6 +1020,7 @@ function EnemyAI:_setState(newState: string)
 	if newState == STATE.Search then
 		self.searchUntil = os.clock() + Constants.SEARCH_DURATION
 		self.hasLookedAround = false
+		self.searchPoint = nil
 	elseif newState == STATE.Attack then
 		self.attackSince = os.clock()
 	elseif newState == STATE.Patrol then
@@ -1118,6 +1161,14 @@ function EnemyAI:_thinkChase(now: number)
 			self:_setState(STATE.Attack)
 			return
 		end
+	elseif self.lastKnownPosition then
+		-- Lost sight and reached where the target was last seen: search there (2026-11-20). Chase used to go on
+		-- standing on that spot for as long as the target stayed in range ("Thugs freeze with health left").
+		local offset = self.lastKnownPosition - self.rootPart.Position
+		if Vector3.new(offset.X, 0, offset.Z).Magnitude < 6 then
+			self:_setState(STATE.Search)
+			return
+		end
 	end
 
 	self:_followPath(self.lastKnownPosition or aimPosition, self.config.chaseSpeed, now)
@@ -1228,20 +1279,37 @@ function EnemyAI:_thinkSearch(now: number)
 		return
 	end
 
-	local offset = lastKnown - self.rootPart.Position
+	-- Search sweep (2026-11-20): it goes to the last known position, looks round once, then keeps walking to spots
+	-- within SEARCH_SWEEP_RADIUS of it until the search ends (it used to stand there the whole SEARCH_DURATION, which
+	-- read as frozen).
+	local goal = self.searchPoint or lastKnown
+	local offset = goal - self.rootPart.Position
 	if Vector3.new(offset.X, 0, offset.Z).Magnitude < 6 then
-		-- Arrived at the last known position: look around ONCE rather than immediately giving up.
-		-- Gated by hasLookedAround so this fires exactly one time per Search-state entry -- left
-		-- unconditional, it re-added another 50 degrees every THINK_INTERVAL for the whole
-		-- SEARCH_DURATION (~20 ticks), which read as the enemy continuously spinning in place next
-		-- to wherever it lost its target (most visibly: standing over a player's corpse).
-		self:_stopMoving()
 		if not self.hasLookedAround then
+			-- Once per Search entry: left unconditional it turned the enemy 50 degrees every think, spinning in place.
 			self.hasLookedAround = true
+			self:_stopMoving()
 			self.rootPart.CFrame = self.rootPart.CFrame * CFrame.Angles(0, math.rad(50), 0)
+			return
+		end
+		-- 8 studs or more out, and 7 or more from where it stands: a spot within the 6-stud arrival distance counted as
+		-- reached at once, so it picked again without moving (measured: stops of 0.3 s and more in Search).
+		local here = self.rootPart.Position
+		for _ = 1, 6 do
+			local angle = math.random() * 2 * math.pi
+			local radius = 8 + math.random() * (Constants.SEARCH_SWEEP_RADIUS - 8)
+			local point = lastKnown + Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+			if Vector3.new(point.X - here.X, 0, point.Z - here.Z).Magnitude >= 7 then
+				self.searchPoint = point
+				break
+			end
+		end
+		self:_clearPath()
+		if self.searchPoint then
+			self:_followPath(self.searchPoint, self.config.walkSpeed, now) -- off at once, not a think later
 		end
 	else
-		self:_followPath(lastKnown, self.config.chaseSpeed, now)
+		self:_followPath(goal, if self.searchPoint then self.config.walkSpeed else self.config.chaseSpeed, now)
 	end
 end
 
@@ -1295,6 +1363,9 @@ end
 function EnemyAI:investigate(position: Vector3)
 	if self.state ~= STATE.Patrol and self.state ~= STATE.Search then
 		return
+	end
+	if not self.lastKnownPosition or (position - self.lastKnownPosition).Magnitude > Constants.SEARCH_SWEEP_RADIUS then
+		self.searchPoint = nil -- a new place to search, not a sweep round the old one
 	end
 	self.lastKnownPosition = position
 	self:_setState(STATE.Search)

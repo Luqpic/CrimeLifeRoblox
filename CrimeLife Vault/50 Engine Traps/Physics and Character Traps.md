@@ -96,4 +96,13 @@ Humanoids, raycasts, collision groups, rigs and knockback. Systems: [[Weapons an
 ### AutomaticScalingEnabled writes values onto the rig (OBT)
 - Deleted `OriginalSize` values come back while scaling is on.
 
+### MoveTo waypoints from a think loop stop and go (CrimeLife, 2026-11-20)
+- An NPC that issues `Humanoid:MoveTo` to the next path waypoint only on a periodic think (0.25 s) stands still after each 4-stud waypoint: a runner reaches it in 0.2 s. Chasing Thugs spent 13 to 35 % of frames nearly still, which players read as lag ("as if they have high ping"). Issue the next waypoint on `Humanoid.MoveToFinished`, and start moving before a first `ComputeAsync` returns. [[2026-11-20 Enemy Movement and Store Police]]
+
+### A navmesh agent radius of 2 misses 4-stud doors (CrimeLife, 2026-11-20)
+- `CreatePath({ AgentRadius = 2 })` found no path into SlowFoods (a double door with 4-stud leaves); 1.75 and below got in. Check every agent table (EnemyAI's own and `Wanted.Constants.POLICE_AGENT`): one left at 2 kept saying "unreachable". [[2026-11-20 Enemy Movement and Store Police]]
+
+### Copying a marker copies its Edit rig (CrimeLife, 2026-11-20)
+- Heist police markers carry their Edit rig as a child Model. A copy of a marker brings the rig along, still standing at the original, and `EditRig.take` moves the copy onto it at boot: four new store markers all stood up at NewsStation. Move or remove the rig on a copied marker. [[2026-11-20 Enemy Movement and Store Police]]
+
 Related: [[Engine Traps MOC]] · [[Camera and Input Traps]] · [[Streaming and Replication Traps]]

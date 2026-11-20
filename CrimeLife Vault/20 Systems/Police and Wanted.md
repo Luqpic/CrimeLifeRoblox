@@ -84,6 +84,7 @@ Details: [[2026-11-20 Heist Police and Bank Guards]], [[2026-11-20 Readable Gunf
 - The 120 ms server step while a round of 10 officers builds did not reproduce (2026-11-18): builds already run one per frame (a path check that yields precedes each), at most 1 per frame across 15 builds of 4.7 to 22.3 ms; the worst step in the 10-officer round was 43.9 ms against a 45.1 ms no-police baseline. No change was made.
 
 ## History
+- 2026-11-20: `POLICE_AGENT` radius 1.5; squads go for a robber inside a store they can walk into (not its entrance) and close in to 0.1 of their engage range there. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: timed heist police (Bank and NewsStation), vault Armed Police, `spawnLoose` with a target filter, `room()`, squad hold (`addSquadHold`, `isHeld`), guard fire through the shared shot path. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: `setStars`, `spawnOfficer` without an owner and `spawnLoose` added as admin hooks. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: a character reset keeps the stars (`hurtAt` damage record, search window and drain restart at the death, squad persists through the respawn); police investigate the last-seen spot only, no live tracking (`believedPosition`, `inActiveRobbery`); the Bank death pit calls `WantedService.markHurt`; a damage death forgets `hurtAt`. Tests `WantedService_Test` 265 / 265 after Task 1, 267 / 267 after Task 2. [[2026-11-18 Open Items Pass]]

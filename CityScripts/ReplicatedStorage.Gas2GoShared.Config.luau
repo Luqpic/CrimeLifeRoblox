@@ -68,4 +68,12 @@ function Config.effective(key: string): number
 	return (Config :: any)[key]
 end
 
+-- Police sent INTO the store while robbers are inside (Heist.Services.HeistPolice; developer picker 2026-11-20, "Squads
+-- follow + a store wave"): 2 at 60 s, then 1 more every 60 s, at most 3 alive, from Gas2GoMarkers.HeistPoliceSpawn1..2 outside
+-- the entrance; they come in through the door, so the gunfight happens inside.
+-- preferredRangeFraction 0.1: they keep closing in to about 9 studs (90-stud engage range), so they come inside
+-- rather than shooting in from the forecourt at the usual 0.6 (measured at Gas2Go: 19 and 30 studs out).
+Config.HeistPolice = table.freeze({ template = "Police", first = 60, count = 2, every = 60, more = 1, cap = 3,
+	preferredRangeFraction = 0.1 })
+
 return table.freeze(Config)
