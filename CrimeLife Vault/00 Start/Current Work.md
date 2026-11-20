@@ -53,6 +53,30 @@ Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six
   - server `Finishers.request(Takedown)` then plays a paired 1.6 s chokehold: the player's clip on their character, the victim's clip on the enemy; both rooted (the player anchored, CFrame placed behind the enemy, facing the same way), the enemy stunned; the kill lands at the end ("it still finishes" if spotted)
 - **Clip set (Blender, OBT player rig `Blender/Player/Player.rest.blend`, upload with `Blender/_pipeline/upload_anims.py 4998611 --prefix Crime_`, ids recorded in the vault):** RobRegister (loop), CrackSafe (loop, crouched dial), Hack (loop, typing), Lockpick (loop, crouched), PlantC4 (one-shot, kneel), PickUp (one-shot), Takedown_Attacker + Takedown_Victim (paired, 1.6 s), HitStagger (enemy headshot stagger, 0.5 s). ATMs use RobRegister, deposit boxes use Lockpick.
 
+### Clip plan (decided while building, 2026-11-20 late evening)
+- **Reuse uploaded group clips** (in `Blender/_enemies/ids.json`, group 4998611, they load in the city):
+  - `Player_Choked` 84852849800147 = the takedown victim
+  - `Player_Repair_Kneel` 121944371724979 + `Player_Repair_Loop` 90730140087815 = safe, lockpick, deposit boxes, C4
+  - `Player_DeviceBrowse` 115684067438169 kept as a fallback for hacking
+- **New clips** in `Blender/_pipeline/animate_player.py`, a section built only with `--only` like Repair:
+  - `CrimeRegister` (loop, both hands grabbing from a drawer)
+  - `CrimeType` (loop, typing at a desk)
+  - `CrimePickUp` (one-shot squat and lift)
+  - `CrimeChoke` (one-shot 48 f = 1.6 s, the attacker's chokehold from behind)
+  - `CrimeStagger` (one-shot 15 f, an enemy's headshot stagger)
+  - Names have no underscore (the bake loop special-cases names with one).
+- **Pipeline:** back up `Player/Player.blend` as `Player.before_crime.blend`, then:
+  1. `Blender -b Player/Player.blend --python _pipeline/animate_player.py -- --only CrimeRegister,...`
+  2. `Blender -b Player/Player.blend --python _pipeline/export.py -- Player --anims-only`
+  3. `make_rbxmx.py`
+  4. `split_motor_anims.py <file> Player_Motor6D Player`
+  5. `upload_anims.py 4998611 --prefix Player_Crime` (only new names go up)
+- **Hook:** a client LocalScript plays the clip on the local character (it replicates) while a robbery prompt is held and while its minigame is open. Clips by the robbable object's tag:
+  - registers and ATMs: CrimeRegister
+  - safes, lockpicks, deposit boxes, C4: Repair_Kneel then Repair_Loop
+  - the computer hack and the broadcast desk: CrimeType
+  - supplies: CrimePickUp
+
 ## Previous request (2026-11-20 evening): all done except the gacha Robux products (scope)
 Verbatim: [[2026-11-20 Quest NPCs Combat Stealth Gacha]]. Five parts:
 1. **Police quest NPCs follow the criminals.** The developer moved the criminal Edit rigs to their designated areas; move the police quest NPCs alongside.
