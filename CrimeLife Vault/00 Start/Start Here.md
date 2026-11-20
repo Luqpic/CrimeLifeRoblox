@@ -7,6 +7,8 @@ sources: ["CLAUDE.md (Roblox Development, Operating Context)", ".superpowers/sdd
 
 # Start Here
 
+> **Work in progress: read [[Current Work]] first.** It holds the open request, the developer's answers and the next step.
+
 ## Which project this is
 
 - **This vault:** CrimeLife, a Roblox crime game built from two places that share UI modules. See [[Which Project This Is]].
