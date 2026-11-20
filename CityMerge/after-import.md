@@ -1310,7 +1310,7 @@ NOT published
 
 | Script | Before | After |
 |---|---|---|
-| StarterPlayer.StarterPlayerScripts.LevelingHud | 13,456 / 3006033539 | 13,711 / 2819421582 |
+| StarterPlayer.StarterPlayerScripts.LevelingHud | 13,316 / 3006033539 | 13,711 / 2819421582 |
 
 The popup gets `UITransitionIgnore` so UI.Transitions never restores it visible after a respawn.
 
