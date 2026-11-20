@@ -225,9 +225,10 @@ end
 
 -- A valid point in the ring rMin..rMax (horizontal) around `center`, or nil after SPAWN_SAMPLES samples or
 -- when `budget` runs out of path checks (slow fill fix, 2026-11-17: only path checks are budgeted).
-local function findSpawn(center: Vector3, rMin: number, rMax: number, player: Player, budget): Vector3?
+-- No player and no budget (patrols, 2026-11-20): the cheap checks only.
+local function findSpawn(center: Vector3, rMin: number, rMax: number, player: Player?, budget): Vector3?
 	for i = 1, Constants.SPAWN_SAMPLES do
-		if budget.paths <= 0 then
+		if budget and budget.paths <= 0 then
 			return nil
 		end
 		if i % 50 == 0 then
@@ -239,7 +240,7 @@ local function findSpawn(center: Vector3, rMin: number, rMax: number, player: Pl
 		local hit = Workspace:Raycast(top, Vector3.new(0, -Constants.SAMPLE_DEPTH, 0), worldParams())
 		if hit and isGround(hit.Instance) then
 			local position = hit.Position + Vector3.new(0, Constants.SPAWN_HEIGHT, 0)
-			if not PoliceDispatcher._cheapReason(position, player) and reachesPlayer(position, player, budget) then
+			if not PoliceDispatcher._cheapReason(position, player) and (player == nil or reachesPlayer(position, player, budget)) then
 				return position
 			end
 		end
@@ -571,6 +572,11 @@ local function believedPosition(player: Player, root: BasePart?): Vector3?
 		return if cached.inside then root.Position else entrance
 	end
 	return lastSeen[player]
+end
+
+-- Patrols (2026-11-20): where the police believe a wanted player is (the squads' own rule), or nil.
+function PoliceDispatcher.believedPosition(player: Player): Vector3?
+	return if isWanted(player) then believedPosition(player, rootOf(player)) else nil
 end
 
 -- Every DISPATCH_TICK: squads of players no longer wanted break up, squads head for the believed position,

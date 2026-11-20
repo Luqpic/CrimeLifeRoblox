@@ -33,6 +33,13 @@ local function canDamageHumanoid(shooter: Player | Model, taggedHumanoid: Humano
 		if taggedCharacter == shooter then
 			return false
 		end
+		-- Faction fights (2026-11-20, developer: police and criminals "can get into a gun fight"): an AI's shot hurts
+		-- an NPC of another faction (Police against Criminal). Heist guards stay out of it (GuardsCleared needs players).
+		local shooterFaction = shooter:GetAttribute("Faction")
+		local taggedFaction = taggedCharacter and taggedCharacter:GetAttribute("Faction")
+		if shooterFaction and taggedFaction and shooterFaction ~= taggedFaction and taggedCharacter:GetAttribute("WitnessRole") ~= "Guard" then
+			return true
+		end
 		if taggedCharacter and CollectionService:HasTag(taggedCharacter, EnemyConstants.ENEMY_TAG) then
 			return false
 		end

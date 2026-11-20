@@ -6,6 +6,8 @@ local WantedService = require(script.Parent.WantedService)
 WantedService.start()
 -- Police squads for wanted players, and the seen provider (Task 2).
 require(script.Parent.PoliceDispatcher).start()
+-- Road patrols (2026-11-20).
+require(script.Parent.PolicePatrols).start()
 
 while true do
 	task.wait(1 / Constants.SEEN_CHECK_HZ)

@@ -67,6 +67,14 @@ local function getAimPosition(humanoid: Humanoid): Vector3?
 	return rootPart and rootPart.Position or nil
 end
 
+-- A target is a Player or, for faction fights (2026-11-20), a hostile NPC's character Model.
+local function characterOf(target: any): Model?
+	if typeof(target) == "Instance" and target:IsA("Model") then
+		return target
+	end
+	return target and target.Character
+end
+
 -- ============================================================================
 -- CONSTRUCTION
 -- ============================================================================
@@ -457,6 +465,9 @@ end
 -- only) never takes, keeps or retaliates against a player the filter refuses. Gangs pass no filter, so for
 -- them this is always true and nothing changes.
 function EnemyAI:_accepts(player): boolean
+	if typeof(player) == "Instance" and player:IsA("Model") then
+		return self:_hostileTo(player) -- an NPC: by faction, not by the player filter
+	end
 	local filter = self.config.targetFilter
 	return filter == nil or filter(player) == true
 end
@@ -469,7 +480,7 @@ end
 -- Nearest living player inside DETECTION_RADIUS with a clear line of sight, using the resolver's own
 -- occlusion query so "can I see you" and "can I shoot you" cannot disagree. An enemy whose config has
 -- `preferTarget` (police: its squad's player) takes that player whenever it is visible.
-function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
+function EnemyAI:_findVisibleTarget(): (any, Humanoid?)
 	local eyePosition = self:_eyePosition()
 	local bestPlayer, bestHumanoid, bestDistance = nil, nil, math.huge
 	local preferred = self.config.preferTarget and self.config.preferTarget()
@@ -506,6 +517,24 @@ function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
 		end
 
 		bestPlayer, bestHumanoid, bestDistance = player, humanoid, distance
+	end
+
+	-- Faction fights (2026-11-20): a hostile NPC in sight competes with the players on distance.
+	if self:_faction() then
+		for other in activeEnemies do
+			if other == self or other.destroyed or other.state == STATE.Dead or not self:_hostileTo(other.character) then
+				continue
+			end
+			local humanoid = other.humanoid
+			local aimPosition = humanoid.Health > 0 and getAimPosition(humanoid)
+			local distance = if aimPosition then (aimPosition - eyePosition).Magnitude else math.huge
+			if distance > self.config.detectionRadius or distance >= bestDistance then
+				continue
+			end
+			if ShotResolver.hasLineOfSight(self.character, eyePosition, humanoid) then
+				bestPlayer, bestHumanoid, bestDistance = other.character, humanoid, distance
+			end
+		end
 	end
 
 	return bestPlayer, bestHumanoid
@@ -563,7 +592,7 @@ function EnemyAI:_targetHumanoid(): Humanoid?
 	if player and not self:_accepts(player) then
 		return nil -- e.g. a wanted player's heat reached 0 mid-fight: no longer chased or shot
 	end
-	local character = player and player.Character
+	local character = characterOf(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if humanoid and humanoid.Health > 0 then
 		return humanoid
@@ -578,7 +607,7 @@ end
 -- correct and unchanged).
 function EnemyAI:_isTargetDead(): boolean
 	local player = self.target
-	local character = player and player.Character
+	local character = characterOf(player)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	return humanoid ~= nil and humanoid.Health <= 0
 end
@@ -685,6 +714,14 @@ function EnemyAI:_faction(): string?
 	return self.character:GetAttribute("Faction") or self.config.faction
 end
 
+-- Faction fights (2026-11-20, developer: "if a police sees a criminal and vice versa, they can get into a gun fight"):
+-- an NPC of another faction (Police against Criminal, the models' Faction attributes) is a target like a player, and
+-- canDamageHumanoid lets their shots land.
+function EnemyAI:_hostileTo(model: Model): boolean
+	local mine, theirs = self:_faction(), model:GetAttribute("Faction")
+	return mine ~= nil and theirs ~= nil and mine ~= theirs and model ~= self.character
+end
+
 -- What the Attack think is doing (Cover, Flank, BackOff, or nil), published like AIState for Studio.
 function EnemyAI:_setTactic(tactic: string?)
 	if self.tactic ~= tactic then
@@ -697,7 +734,8 @@ end
 -- where the player is (investigate: they come over and must still see the player to fight).
 function EnemyAI:_alertAllies(player: Player)
 	local faction = self:_faction()
-	local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+	local character = characterOf(player)
+	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not faction or not root then
 		return
 	end
@@ -1076,6 +1114,7 @@ function EnemyAI:_enterDead()
 	self:_stopFiring()
 	self:_clearPath()
 	self:_releaseFacing()
+	NpcFire.tokens:clear(self.character) -- the shooter tokens other NPCs held on this one as a target
 
 	for _, track in self.locomotionTracks or {} do
 		if track.IsPlaying then
@@ -1422,7 +1461,11 @@ end
 -- Called when something damages this enemy. Being shot from outside the detection radius is itself a
 -- detection event, otherwise an enemy would ignore a sniper indefinitely.
 function EnemyAI:onDamagedBy(attacker: Player | Model)
-	if self.state == STATE.Dead or typeof(attacker) ~= "Instance" or not attacker:IsA("Player") then
+	if self.state == STATE.Dead or typeof(attacker) ~= "Instance" then
+		return
+	end
+	-- A player, or an NPC of another faction (faction fights, 2026-11-20).
+	if not attacker:IsA("Player") and not (attacker:IsA("Model") and self:_hostileTo(attacker)) then
 		return
 	end
 	self:_flinch(os.clock())
@@ -1430,7 +1473,7 @@ function EnemyAI:onDamagedBy(attacker: Player | Model)
 		return
 	end
 
-	local character = attacker.Character
+	local character = characterOf(attacker)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 or not self:_accepts(attacker) then
 		return

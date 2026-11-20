@@ -72,6 +72,23 @@ return {
 	HEIST_POLICE_TICK = 1,
 	HEIST_POLICE_SCATTER = 1.5,
 
+	-- Patrols (2026-11-20, Wanted.PolicePatrols; developer picker "6, also chase wanted"): PATROL_COUNT Police walk
+	-- the roads; one that dies is replaced PATROL_RESPAWN s later. Each stands up on road ground PATROL_SPAWN_MIN..MAX
+	-- studs from a player, out of every player's sight, then walks legs to road points PATROL_LEG_MIN..MAX away (a
+	-- new leg on arrival or after PATROL_LEG_TIMEOUT). One further than PATROL_FAR from every player and unseen goes
+	-- and comes back near a player at once. A wanted player believed within PATROL_RESPOND draws them in.
+	PATROL_COUNT = 6,
+	PATROL_RESPAWN = 30,
+	PATROL_TICK = 2,
+	PATROL_SPAWN_MIN = 120,
+	PATROL_SPAWN_MAX = 300,
+	PATROL_SPAWN_PATHS = 4,
+	PATROL_LEG_MIN = 60,
+	PATROL_LEG_MAX = 200,
+	PATROL_LEG_TIMEOUT = 60,
+	PATROL_FAR = 600,
+	PATROL_RESPOND = 250,
+
 	-- Security guards
 	NEWSSTATION_GUARDS = 3,
 }
