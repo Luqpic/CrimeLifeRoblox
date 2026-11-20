@@ -89,7 +89,43 @@ local FLING_UPWARD_RATIO = 0.35
 --
 -- With both, the response is steep -- 30 studs/s travels ~13 studs, 38 travels ~19, 45 travels ~24,
 -- 100 travels ~108 -- so knockbackForce is a sensitive dial for these weapons, not a linear one.
-local function flingRagdoll(taggedHumanoid: Humanoid, direction: Vector3, speed: number)
+-- Every killing shot knocks the body back from the part it hit (2026-11-20, developer: "if the enemy dies from a
+-- headshot, their head gets first impact and the whole body knocks back"; picker "By weapon": pistols and rifles a
+-- few studs, shotguns and snipers launched like OBT). studs/s into flingRagdoll (see the travel table above); a
+-- weapon's killPush attribute wins.
+local KILL_PUSH = { Pistol = 18, AutoRifle = 22, Melee = 20, Shotgun = 55 }
+local KILL_PUSH_MARKSMAN = 42 -- semi-automatic rifles (M14 EBR, HK G3): the nearest this game has to snipers
+local KILL_PUSH_DEFAULT = 20
+local HIT_PART_LEAD = 1.6 -- the hit part moves first at this share of the push, dragging the body after it
+local BODY_SHARE = 0.75 -- the rest of the body's share
+local HIT_SPIN = 0.06 -- torso spin from an off-centre hit: rad/s per stud of lever per stud/s of push
+
+local function killPushFor(weapon: Tool): number
+	local override = weapon:GetAttribute("killPush")
+	if typeof(override) == "number" then
+		return override
+	end
+	local category = weapon:GetAttribute("Category")
+	if category == "AutoRifle" and weapon:GetAttribute(Constants.FIRE_MODE_ATTRIBUTE) == Constants.FIRE_MODE.SEMI then
+		return KILL_PUSH_MARKSMAN
+	end
+	return if typeof(category) == "string" and KILL_PUSH[category] then KILL_PUSH[category] else KILL_PUSH_DEFAULT
+end
+
+-- The body part a hit belongs to: an accessory (hat, hair) counts as the part it is worn on.
+local function bodyPartOf(hit: Instance?, character: Instance): BasePart?
+	if not (hit and hit:IsA("BasePart") and hit:IsDescendantOf(character)) then
+		return nil
+	end
+	if hit:FindFirstAncestorOfClass("Accessory") then
+		local weld = hit:FindFirstChildWhichIsA("JointInstance")
+		local other = weld and (if (weld :: any).Part0 == hit then (weld :: any).Part1 else (weld :: any).Part0)
+		return if other and other:IsA("BasePart") then other else character:FindFirstChild("Head") :: BasePart?
+	end
+	return hit
+end
+
+local function flingRagdoll(taggedHumanoid: Humanoid, direction: Vector3, speed: number, hitPart: BasePart?, hitPosition: Vector3?)
 	local character = taggedHumanoid.Parent
 	if not character or not character:IsA("Model") then
 		return
@@ -111,8 +147,16 @@ local function flingRagdoll(taggedHumanoid: Humanoid, direction: Vector3, speed:
 			-- A carried weapon is welded to the hand and follows the arm on its own; pushing it
 			-- separately only fights that weld.
 			if descendant:IsA("BasePart") and not descendant:FindFirstAncestorOfClass("Tool") then
-				descendant.AssemblyLinearVelocity = velocity
+				-- With a hit part, it leads and the body follows (each ragdoll part is its own assembly).
+				descendant.AssemblyLinearVelocity = if not hitPart then velocity
+					elseif descendant == hitPart then velocity * HIT_PART_LEAD
+					else velocity * BODY_SHARE
 			end
+		end
+		-- An off-centre hit turns the body: a head shot tips it backwards, a shoulder shot twists it.
+		local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+		if hitPart and hitPosition and torso and torso:IsA("BasePart") then
+			torso.AssemblyAngularVelocity += (hitPosition - torso.Position):Cross(direction * speed) * HIT_SPIN
 		end
 	end)
 end
@@ -654,7 +698,12 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 		local appliedKnockback = if knockbackOnKill
 			then (if killedByThisRay then knockbackForce else 0)
 			else knockbackPerRay
-		if appliedKnockback > 0 then
+		if killedByThisRay then
+			-- Every killing shot (2026-11-20): from the exact part and point it hit, by weapon (killPushFor).
+			local offset = rayResult.position - origin.Position
+			local direction = if offset.Magnitude > 1e-3 then offset.Unit else origin.LookVector
+			flingRagdoll(taggedHumanoid, direction, killPushFor(weapon), bodyPartOf(rayResult.instance, taggedHumanoid.Parent :: Instance), rayResult.position)
+		elseif appliedKnockback > 0 then
 			local rootPart = taggedHumanoid.RootPart
 			if rootPart then
 				local offset = rayResult.position - origin.Position

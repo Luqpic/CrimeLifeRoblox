@@ -33,7 +33,7 @@ Verbatim: [[2026-11-20 Smooth Enemies Action Lock Crouch Gun Police Patrols Ragd
 | 2 Action lock | to build |
 | 3 Crouch gun | to build |
 | 4 Police patrols + faction fights | to build |
-| 5 Death knockback | to build |
+| 5 Death knockback | **done** (version 72): every killing shot flings the ragdoll from the part it hit (`ShotResolver.flingRagdoll(..., hitPart, hitPosition)`: the hit part 1.6x, the body 0.75x, the torso spun by the off-centre lever; a hat or hair counts as the part it is worn on); push by weapon (`killPushFor`: Pistol 18, AutoRifle 22, Melee 20, Shotgun 55, semi-auto rifles 42, a `killPush` attribute wins). Live: AUG kill 2.0 studs (hit hand first, 24 studs/s), S&W 29 4.3 studs (head first, 36), Remington 870 12.8 studs (hit hand first, 54). ShotResolver 43,510 / 245144580 |
 | 6 Duffel drop on death | to build |
 | 7 Level-up GUI stuck | **done**: reproduced (a level-up, then a death: after the respawn the popup stayed at 0.88 / 0.94). Cause: `ReplicatedStorage.UI.Transitions` fades the HUD back in after the death screen and restores each element to the transparency it had when it joined the GUI; the popup joins with its template's near-visible values. Fix: `popup:SetAttribute("UITransitionIgnore", true)` before parenting (LevelingHud 13,711 / 2819421582); after the fix nothing visible after a respawn |
 

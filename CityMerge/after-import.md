@@ -1315,3 +1315,13 @@ NOT published
 The popup gets `UITransitionIgnore` so UI.Transitions never restores it visible after a respawn.
 
 NOT published
+
+## Death knockback from the hit part 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Blaster.Scripts.ShotResolver | 40,515 / 1106162204 | 43,510 / 245144580 |
+
+Place version 72.
+
+NOT published
