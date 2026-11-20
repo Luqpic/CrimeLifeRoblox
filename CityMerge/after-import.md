@@ -1305,3 +1305,13 @@ NOT published
 Each enemy gets `HumanoidRootPart.FacingAttachment` and an `AlignOrientation` `Facing` (made at runtime). Place version 70.
 
 NOT published
+
+## Level-up popup stuck 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| StarterPlayer.StarterPlayerScripts.LevelingHud | 13,456 / 3006033539 | 13,711 / 2819421582 |
+
+The popup gets `UITransitionIgnore` so UI.Transitions never restores it visible after a respawn.
+
+NOT published

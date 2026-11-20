@@ -35,7 +35,7 @@ Verbatim: [[2026-11-20 Smooth Enemies Action Lock Crouch Gun Police Patrols Ragd
 | 4 Police patrols + faction fights | to build |
 | 5 Death knockback | to build |
 | 6 Duffel drop on death | to build |
-| 7 Level-up GUI stuck | to reproduce |
+| 7 Level-up GUI stuck | **done**: reproduced (a level-up, then a death: after the respawn the popup stayed at 0.88 / 0.94). Cause: `ReplicatedStorage.UI.Transitions` fades the HUD back in after the death screen and restores each element to the transparency it had when it joined the GUI; the popup joins with its template's near-visible values. Fix: `popup:SetAttribute("UITransitionIgnore", true)` before parenting (LevelingHud 13,711 / 2819421582); after the fix nothing visible after a respawn |
 
 ## Earlier request (done) (2026-11-20 late evening): bugs, interaction clips, enemy moves, takedown prompt
 Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six parts:

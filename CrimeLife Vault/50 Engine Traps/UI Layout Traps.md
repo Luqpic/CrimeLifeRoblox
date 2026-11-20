@@ -114,6 +114,9 @@ ScreenGui layout, drawing order and text. The shared UI code is described in [[H
 ### A cloned GUI keeps its scripts (OBT)
 - Strip `LuaSourceContainer`s from a GUI copied only for its look.
 
+### UI.Transitions restores join-time transparency (CrimeLife, 2026-11-20)
+- `ReplicatedStorage.UI.Transitions` records each element's resting transparency once, when it joins a bound ScreenGui, and fades back to it after the GUI is switched off and on (the death screen does that to the HUD). A self-fading element that joins visible (the level-up popup, from its template) comes back visible and stays. Give such elements `UITransitionIgnore = true` before parenting.
+
 Related: [[Engine Traps MOC]] · [[Billboard and World GUI Traps]] · [[Tween and Render Traps]]
 
 - **A CanvasGroup's children did not draw in the Studio capture** (2026-11-20): the stealth vignette's four edge frames under a CanvasGroup at GroupTransparency 0.15 showed nothing; the same frames as plain Frames did. Fade plain frames' BackgroundTransparency for a full-screen overlay. [[2026-11-20 Crouch Stealth]]

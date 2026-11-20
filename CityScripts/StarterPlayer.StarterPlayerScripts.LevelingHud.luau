@@ -53,6 +53,10 @@ barIcon.Parent = bar
 -- LEVEL-UP POPUP (still transient)
 -- ============================================
 local popup = guiTemplates:WaitForChild("LevelUpPopup"):Clone()
+-- Kept out of UI.Transitions (2026-11-20, developer: "the level up GUI sometimes gets stuck on teh screen"): after a
+-- death the HUD fades back in, restoring each element to the transparency it had when it joined the GUI, and the
+-- popup joins with its template's near-visible values, so it came back at 0.88 and stayed. The popup fades itself.
+popup:SetAttribute("UITransitionIgnore", true)
 popup.Parent = gui
 
 local popupLabel = popup:WaitForChild("Label")
