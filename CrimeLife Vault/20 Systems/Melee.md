@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, melee, combat]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Knife-Bleed-Melee.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Baton-Stun-Becomes-A-Stagger.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Shop-View-And-Bleed-Effect.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Melee-Hit-And-LevelUp-VFX.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Crowbar-*.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Weaponary-Melee-Display-Fixes-And-Baton.md", "CrimeLifeRoblox/FPSSystem/Blaster/ShotResolver.luau", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-3-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md"]
 ---
 
@@ -32,6 +32,15 @@ Crowbar, Baton and Knife swing on the shared blaster ([[Weapons and Blaster]]) a
 - Hit VFX: `MeleeImpact` emits each emitter's `EmitCount`, lives 1.4 s, culled past 250 studs; past 12 concurrent impacts particles drop but part and sound stay.
 - Shop preview stands melee upright and spins it at half a gun's rate ([[Weapon Shop and Upgrades]]).
 
+## Combos, heavy, block and parry (2026-11-20)
+- **Combo:** a press within the cooldown + 0.6 s of the last swing is the next step, x1, x1.2, x1.5, then over again. The server keys it on the swings' timestamps (`Blaster.Scripts.MeleeMoves.onSwing`, `resolveShot{damageMultiplier}`).
+- **Heavy:** hold after a swing; past the cooldown the weapon coils (`Combat.Remotes.MeleeCharge` with that swing's timestamp); let go 0.8 s or more after the swing: x2 and a 0.8 s stagger.
+- **Block:** hold F, gamepad L1 or touch BLOCK (replaces RELOAD for melee) with a melee weapon. A melee hit from the front takes 30 % and does not stun or bleed. In the block's first 0.25 s it is a parry: nothing, and the attacker is stunned 1 s. One parry per press; presses must start 1 s apart.
+- **Clips:** OBT `PLAYER_SWORD`: Slash1 to 3, Charge, Heavy, and Hold as the guard, Action4 on the character, preloaded on equip.
+- **Code:** numbers in `ReplicatedStorage.Combat.MeleeRules`; client `ReplicatedStorage.Blaster.Scripts.MeleeController`.
+
+[[2026-11-20 Melee Combos and Block]]
+
 ## Extend it
 New melee: clone the Baton / Crowbar Tool and viewmodel, keep `Body` as the invisible rig hub, weld a cloned MeshPart blade (not a `SpecialMesh` scale), add a `profiles` entry, set `Category = Melee` and a `Price`. Stun, bleed, backstab are attributes.
 
@@ -47,6 +56,7 @@ New melee: clone the Baton / Crowbar Tool and viewmodel, keep `Body` as the invi
 - Not verified by eye: Knife blade roll and third-person hold, the bleed damage number, `MeleeImpact` look in motion, the procedural swing from a real click.
 
 ## History
+- 2026-11-20: combo, heavy, block and parry; OBT sword clips on the character; touch BLOCK. [[2026-11-20 Melee Combos and Block]]
 - 2026-11-18: the melee shot is stamped at the press, not at contact; third-person melee aims from the head at the crosshair; Crowbar, Knife and Baton `swingDelay` read as 0.2 in Studio; `Security.Baton` has none. [[2026-11-18 Open Items Pass]]
 - 2026-09-24: Knife backstab ×2. [[FPS-Kill-Toast-Title-Buy-To-Equip-Knife-Backstab]]
 - 2026-09-21: Knife upright in the shop, visible bleed, tick numbers. [[FPS-Melee-Shop-View-And-Bleed-Effect]]

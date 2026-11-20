@@ -12,6 +12,7 @@ local TouchInputController = require(script.Parent.TouchInputController)
 local CameraRecoiler = require(script.Parent.CameraRecoiler)
 local ViewModelController = require(script.Parent.ViewModelController)
 local CharacterAnimationController = require(script.Parent.CharacterAnimationController)
+local MeleeController = require(script.Parent.MeleeController)
 local GuiController = require(script.Parent.GuiController)
 local disconnectAndClear = require(ReplicatedStorage.Utility.disconnectAndClear)
 local getRayDirections = require(script.Parent.Parent.Utility.getRayDirections)
@@ -71,6 +72,11 @@ function BlasterController.new(blaster: Tool)
 		aimAssistBound = false,
 	}
 	setmetatable(self, BlasterController)
+
+	-- Melee combos, heavy swings and block (combat depth, 2026-11-20).
+	if blaster:GetAttribute(Constants.MELEE_HIT_EFFECT_ATTRIBUTE) ~= nil then
+		self.melee = MeleeController.new(self)
+	end
 
 	self:initialize()
 
@@ -139,6 +145,7 @@ function BlasterController:shoot()
 	-- The timestamp (also the spread seed) is taken at the press, not at contact: the server paces shots
 	-- by it, and a frame hitch during a melee swingDelay would otherwise shorten the gap to the next swing.
 	local now = Workspace:GetServerTimeNow()
+	self.lastShotTime = now -- MeleeController keys the combo and the heavy on it
 	local function resolveHit()
 		-- In first person the camera sits essentially at the character's head, so it's a valid shot origin.
 		-- In third person the camera is off the shoulder and a long gun's muzzle is past the 5 studs the
@@ -438,6 +445,10 @@ function BlasterController:activate()
 	end
 	self.activated = true
 
+	if self.melee then
+		self.melee:press()
+		return
+	end
 	self:startShooting()
 end
 
@@ -446,6 +457,9 @@ function BlasterController:deactivate()
 		return
 	end
 	self.activated = false
+	if self.melee then
+		self.melee:release()
+	end
 end
 
 function BlasterController:equip()
@@ -473,6 +487,9 @@ function BlasterController:equip()
 
 	-- Enable character animations
 	self.characterAnimationController:enable()
+	if self.melee then
+		self.melee:enable()
+	end
 
 	-- Keep track of the humanoid in the character currently equipping the blaster.
 	self.humanoid = self.blaster.Parent:FindFirstChildOfClass("Humanoid")
@@ -529,6 +546,9 @@ function BlasterController:unequip()
 
 	-- Disable character animations
 	self.characterAnimationController:disable()
+	if self.melee then
+		self.melee:disable()
+	end
 
 	-- Clean up zoom connections
 	if self.connections.zoomIn then

@@ -7,6 +7,7 @@ local validateShootArguments = require(script.validateShootArguments)
 local validateShot = require(script.validateShot)
 local validateReload = require(script.validateReload)
 local ShotResolver = require(script.Parent.ShotResolver)
+local MeleeMoves = require(script.Parent.MeleeMoves)
 local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 
 local remotes = ReplicatedStorage.Blaster.Remotes
@@ -38,6 +39,12 @@ local function onShootEvent(
 		Stealth.expose(player)
 	end
 
+	-- Melee combos and heavy swings (combat depth, 2026-11-20): the swing's combo step or heavy, from its timestamp.
+	local damageMultiplier, heavy = 1, false
+	if blaster:GetAttribute(Constants.MELEE_HIT_EFFECT_ATTRIBUTE) then
+		damageMultiplier, heavy = MeleeMoves.onSwing(player, blaster, timestamp)
+	end
+
 	ShotResolver.resolveShot({
 		shooter = player,
 		weapon = blaster,
@@ -46,6 +53,8 @@ local function onShootEvent(
 		-- spread pattern the client drew.
 		seed = timestamp,
 		claimedTags = tagged,
+		damageMultiplier = damageMultiplier,
+		heavy = heavy,
 	})
 end
 
@@ -87,6 +96,7 @@ end
 
 local function initialize()
 	shootRemote.OnServerEvent:Connect(onShootEvent)
+	MeleeMoves.start()
 	reloadRemote.OnServerEvent:Connect(onReloadEvent)
 end
 

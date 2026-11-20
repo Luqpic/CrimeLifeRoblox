@@ -1220,3 +1220,21 @@ NOT published
 City 387 / 387 / 0 (temporary Script); heist 764 passed / 0 failed. Live: alert, flank, cover (temporary wall, removed) and back off verified; melee unchanged. Place version 53.
 
 NOT published
+
+## Combat E, melee combos and block 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ReplicatedStorage.Combat.MeleeRules | new | 2,890 / 3927750303 |
+| ServerScriptService.Blaster.Scripts.MeleeMoves | new | 5,901 / 1172238321 |
+| ReplicatedStorage.Blaster.Scripts.MeleeController | new | 6,756 / 3211335603 |
+| ServerStorage.UnitTest.Cases.MeleeMoves_Test | new | 3,352 / 3154458956 |
+| ReplicatedStorage.Blaster.Scripts.BlasterController | 20,422 / 318981244 | 20,953 / 224588844 |
+| ServerScriptService.Blaster.Scripts.Blaster | 2,997 / 3941799855 | 3,432 / 1576774553 |
+| ServerScriptService.Blaster.Scripts.ShotResolver | 38,919 / 2033886659 | 40,515 / 1106162204 |
+
+New instances in Edit: `ReplicatedStorage.Combat.Remotes.MeleeCharge` and `.Block` (RemoteEvents); `ReplicatedStorage.Blaster.Scripts.TouchInputController.BlasterTouchGui.Buttons.BlockButton` (copy of ViewButton, 100 x 100 at the RELOAD spot, label BLOCK, Visible false).
+
+City 391 / 391 / 0 (temporary Script); heist 764 passed / 0 failed. Live: combo 45 / 54 / 67.5, heavy 90 + stagger, block x0.30, parry 0 + attacker stunned 1 s. Place version 55.
+
+NOT published

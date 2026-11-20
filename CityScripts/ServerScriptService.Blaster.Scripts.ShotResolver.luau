@@ -27,6 +27,7 @@ local Workspace = game:GetService("Workspace")
 local Constants = require(ReplicatedStorage.Blaster.Constants)
 local Combat = require(ReplicatedStorage.Enemy.Combat)
 local HitReaction = require(game:GetService("ServerScriptService").Enemy.Scripts.HitReaction)
+local MeleeMoves = require(script.Parent.MeleeMoves)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 local canDamageHumanoid = require(ReplicatedStorage.Blaster.Utility.canDamageHumanoid)
 local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
@@ -135,6 +136,9 @@ export type ShotRequest = {
 	origin: CFrame,
 	seed: number,
 	claimedTags: { [string]: Humanoid }?,
+	-- Melee combos and heavy swings (combat depth, 2026-11-20): a player swing's multiplier, and a heavy staggers.
+	damageMultiplier: number?,
+	heavy: boolean?,
 }
 
 export type ShotHit = {
@@ -565,9 +569,31 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 	local hits: { ShotHit } = {}
 
 	local reacted: { [Humanoid]: boolean } = {} -- hit reactions: once per shot per enemy
+	local defended: { [Humanoid]: { factor: number, parried: boolean } } = {} -- block: once per swing per victim
+	local staggered: { [Humanoid]: boolean } = {} -- heavy swing: once per swing per victim
 	local function applyDamage(taggedHumanoid: Humanoid, rayResult: castRays.RayResult)
 		if taggedHumanoid.Health <= 0 then
 			return
+		end
+
+		-- Block and parry (combat depth, 2026-11-20): a melee hit from the front on a blocking player deals
+		-- MeleeRules.BLOCK_FACTOR (and does not stun or bleed); one right after the block started is parried: nothing,
+		-- and the attacker is stunned (Blaster.Scripts.MeleeMoves).
+		local blockFactor = 1
+		if isMeleeHit then
+			local defence = defended[taggedHumanoid]
+			if not defence then
+				local factor, parried = MeleeMoves.defend(taggedHumanoid, origin.Position)
+				defence = { factor = factor, parried = parried }
+				defended[taggedHumanoid] = defence
+				if parried then
+					MeleeMoves.stunAttacker(shooter)
+				end
+			end
+			if defence.parried then
+				return
+			end
+			blockFactor = defence.factor
 		end
 
 		-- Bonus hit. A weapon declaring backstabMultiplier (the Knife) gets that bonus INSTEAD of the
@@ -583,7 +609,10 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 			isHeadshot = hitPart ~= nil and hitPart.Name == HEADSHOT_PART_NAME
 			multiplier = HEADSHOT_DAMAGE_MULTIPLIER
 		end
-		local appliedDamage = isHeadshot and (damagePerRay * multiplier) or damagePerRay
+		-- Melee combos and heavy swings (combat depth, 2026-11-20): the swing's multiplier, then a block's share.
+		local appliedDamage = (isHeadshot and (damagePerRay * multiplier) or damagePerRay)
+			* (request.damageMultiplier or 1)
+			* blockFactor
 		-- Readable gunfights (combat balance, 2026-11-20): an NPC's hit (gangs, police, guards) loses damage with range
 		-- and a player's level armor takes its share (Enemy.Combat.npcDamage). Players' shots are unchanged (PvP too).
 		if not shooterIsPlayer then
@@ -646,7 +675,7 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 		-- tick, the way IsSprinting/CanSprint already work. os.clock() matches the clock both of
 		-- those systems already tick against.
 		local stunDuration = weapon:GetAttribute(Constants.STUN_DURATION_ATTRIBUTE)
-		if typeof(stunDuration) == "number" and stunDuration > 0 then
+		if typeof(stunDuration) == "number" and stunDuration > 0 and blockFactor == 1 then
 			local stunRootPart = taggedHumanoid.RootPart
 			if stunRootPart then
 				stunRootPart:SetAttribute("StunnedUntil", os.clock() + stunDuration)
@@ -663,6 +692,12 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 			end
 		end
 
+		-- A heavy swing (combat depth, 2026-11-20) staggers what it hits, once per swing.
+		if request.heavy and not staggered[taggedHumanoid] and taggedHumanoid.Health > 0 then
+			staggered[taggedHumanoid] = true
+			MeleeMoves.stagger(taggedHumanoid)
+		end
+
 		-- Bleed, for a weapon that declares one. Skipped on a target the swing already killed --
 		-- there is nothing left to bleed, and starting a loop against a corpse would keep firing
 		-- Tagged at whatever is left of it.
@@ -672,6 +707,7 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 			typeof(bleedDuration) == "number" and bleedDuration > 0
 			and typeof(bleedDamage) == "number" and bleedDamage > 0
 			and taggedHumanoid.Health > 0
+			and blockFactor == 1
 		then
 			applyBleed(shooter, taggedHumanoid, bleedDuration, bleedDamage, weapon)
 		end
