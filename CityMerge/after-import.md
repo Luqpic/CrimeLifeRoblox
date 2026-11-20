@@ -1259,3 +1259,15 @@ New in Edit: `Workspace.SlowFoodsMarkers.HeistPoliceSpawn1` (93, 4.05, 1784), `H
 City 391 / 391 / 0; heist 764 passed / 0 failed. Live: Thug chase stalls gone; SlowFoods and Gas2Go robberies end with 4 officers fighting inside. Place version 65.
 
 NOT published
+
+## Enemies climb, vault and roll 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.EnemyMoves | new | 10,428 / 3521284780 |
+| ServerStorage.UnitTest.Cases.EnemyMoves_Test | new | 2,661 / 2957464572 |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 56,483 / 2361164006 | 57,600 / 753662010 |
+
+City 394 / 394 / 0; heist 764 passed / 0 failed. Live: climb onto a 6-stud block, vault a 2.5-stud wall, dodge rolls. Place version 67.
+
+NOT published

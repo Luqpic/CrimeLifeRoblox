@@ -35,6 +35,7 @@ local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomoti
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
 local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 local Tactics = require(ServerScriptService.Enemy.Scripts.Tactics)
+local EnemyMoves = require(ServerScriptService.Enemy.Scripts.EnemyMoves)
 
 local taggedEvent = ServerScriptService.Blaster.Events.Tagged
 
@@ -288,7 +289,7 @@ function EnemyAI:_followPath(destination: Vector3, speed: number, now: number)
 	end
 
 	if waypoint.Action == Enum.PathWaypointAction.Jump then
-		self.humanoid.Jump = true
+		self.jumpAt = waypoint.Position -- EnemyMoves.checkJump: climb, vault or jump there
 	end
 	self.humanoid:MoveTo(waypoint.Position)
 end
@@ -317,7 +318,7 @@ function EnemyAI:_nextWaypoint()
 	local waypoint = self:_currentWaypoint()
 	if waypoint then
 		if waypoint.Action == Enum.PathWaypointAction.Jump then
-			self.humanoid.Jump = true
+			self.jumpAt = waypoint.Position -- EnemyMoves.checkJump: climb, vault or jump there
 		end
 		self.humanoid:MoveTo(waypoint.Position)
 	end
@@ -702,6 +703,10 @@ function EnemyAI:_maybeTakeCover(targetHumanoid: Humanoid)
 		self.coverPoint = spot
 		self.coverUntil = os.clock() + Tactics.COVER_SECONDS
 		self.pauseUntil = math.max(self.pauseUntil, self.coverUntil)
+		-- Roll there when it is far enough (2026-11-20, "Roll to reach cover").
+		if (spot - self.rootPart.Position).Magnitude >= EnemyMoves.COVER_ROLL_MIN then
+			EnemyMoves.rollTo(self, spot)
+		end
 	end
 end
 
@@ -1344,6 +1349,15 @@ function EnemyAI:think(now: number)
 		self.wasStunned = false -- the next Attack think starts a new burst
 	end
 
+	-- Climb, vault and roll (2026-11-20, Enemy.Scripts.EnemyMoves): the AI waits while a move runs; a stuck enemy in a
+	-- moving state goes over the obstacle in front of it when it can.
+	if now < (self.moveLockUntil or 0) then
+		return
+	end
+	if EnemyMoves.checkJump(self, now) or (self.state ~= STATE.Patrol and EnemyMoves.checkStuck(self, now)) then
+		return
+	end
+
 	if self.state == STATE.Patrol then
 		self:_thinkPatrol(now)
 	elseif self.state == STATE.Chase then
@@ -1387,6 +1401,12 @@ function EnemyAI:onDamagedBy(attacker: Player | Model)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not humanoid or humanoid.Health <= 0 or not self:_accepts(attacker) then
 		return
+	end
+
+	-- Roll to dodge (2026-11-20): a gun enemy already fighting sometimes rolls aside when shot (only a shooter it may
+	-- fight: police do not roll from a player who is not wanted).
+	if self.weapon and not self:_isMelee() and (self.state == STATE.Attack or self.state == STATE.Chase) and humanoid.RootPart then
+		EnemyMoves.dodge(self, humanoid.RootPart.Position)
 	end
 
 	self:_setTarget(attacker)

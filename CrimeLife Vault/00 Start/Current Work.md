@@ -38,8 +38,20 @@ Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six
 | 2 Police stutter | **done** [[2026-11-20 Enemy Movement and Store Police]] |
 | 3 Police in stores + wave | **done** [[2026-11-20 Enemy Movement and Store Police]] |
 | 4 Interaction clips | to build (Blender) |
-| 5 Enemy climb / vault / roll | to build |
+| 5 Enemy climb / vault / roll | **done** [[2026-11-20 Enemies Climb Vault and Roll]] |
 | 6 Takedown prompt + chokehold | to build (Blender pair) |
+
+### Design for parts 5 and 6, and the clip set (Claude, 2026-11-20 late evening; build from this)
+- **Part 5, enemy moves** (new server module `ServerScriptService.Enemy.Scripts.EnemyMoves`, EnemyAI glue; clips are the player's group clips read from `ReplicatedStorage.PlayerMovement.Animations.Roll` / `.LedgeClimb`, played on the NPC's Animator at Action4):
+  - stuck detection in `EnemyAI:think`: a moving state (Chase / Search / Attack closing in) with a MoveTo goal over 3 studs away and under 1.5 studs/s for 0.6 s, then look for an obstacle within 3 studs ahead
+  - the obstacle's top (a downward ray 2.5 studs ahead, from 8.5 studs above the feet): 3.8 to 8 studs up = climb (LedgeClimb clip, 1 s); 1.5 to 3.8 = vault (the same clip at 1.6x)
+  - the move anchors the root and tweens it up and over, then unanchors; a `moveLockUntil` makes `think` skip the AI while it runs
+  - roll to dodge: a gun enemy hit by a player in Attack or Chase, 30 % chance, 4 s cooldown, not stunned or wounded: 12 studs sideways (the side with a clear line and ground; else the other; else none), WalkSpeed 24 for 0.62 s with the Roll clip
+  - roll to cover: `_maybeTakeCover` rolls to the cover spot when it is 6 studs or more away
+- **Part 6, takedown prompt + chokehold:**
+  - a ProximityPrompt "Takedown" (E / pad X / tap, HoldDuration 0) made on the client on the enemy's root, shown only while `CombatActions` judges a takedown possible (crouched, behind, unaware); the current hint stays for FINISH only
+  - server `Finishers.request(Takedown)` then plays a paired 1.6 s chokehold: the player's clip on their character, the victim's clip on the enemy; both rooted (the player anchored, CFrame placed behind the enemy, facing the same way), the enemy stunned; the kill lands at the end ("it still finishes" if spotted)
+- **Clip set (Blender, OBT player rig `Blender/Player/Player.rest.blend`, upload with `Blender/_pipeline/upload_anims.py 4998611 --prefix Crime_`, ids recorded in the vault):** RobRegister (loop), CrackSafe (loop, crouched dial), Hack (loop, typing), Lockpick (loop, crouched), PlantC4 (one-shot, kneel), PickUp (one-shot), Takedown_Attacker + Takedown_Victim (paired, 1.6 s), HitStagger (enemy headshot stagger, 0.5 s). ATMs use RobRegister, deposit boxes use Lockpick.
 
 ## Previous request (2026-11-20 evening): all done except the gacha Robux products (scope)
 Verbatim: [[2026-11-20 Quest NPCs Combat Stealth Gacha]]. Five parts:
