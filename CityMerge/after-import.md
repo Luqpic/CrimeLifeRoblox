@@ -1170,3 +1170,9 @@ NOT published
 (Before column: Adler-32 only.) New instances: `ReplicatedStorage.Gacha` (Folder: Config, Draw, Remotes { Roll RemoteFunction, BuyKeys RemoteEvent }, OpenCrates BindableEvent), `ServerScriptService.Gacha` (Folder), `StarterGui.CrateGui` (ScreenGui, 61 instances, Panel hidden, CardTemplate). `Rarity` attributes on the 36 crate weapons in `ServerStorage.Weapons`. City 378 / 378 / 0; heist 764 passed / 0 failed.
 
 NOT published
+
+## Combat A, hit feedback 2026-11-20
+
+`ReplicatedStorage.Blaster.Scripts.GuiController` 3610573378 -> 8,430 / 151342320: body hit white, headshot red (higher ding), kill a bigger red X (lower, louder), from the existing DamageIndicator and KillConfirmed remotes. Verified in Play (remotes fired at the player: rotation 45 red after a kill, 0 red after a headshot; no errors).
+
+NOT published

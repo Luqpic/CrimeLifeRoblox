@@ -12,6 +12,18 @@ local playerGui = player.PlayerGui
 local blasterGuiTemplate = script.BlasterGui
 local reticleGuiTemplate = script.ReticleGui
 local hitmarkerSound = script.Hitmarker
+local HITMARKER_SOUND_VOLUME = hitmarkerSound.Volume
+-- Richer hit feedback (combat, 2026-11-20): a body hit marks white, a server-confirmed headshot red with a higher
+-- ding, a kill a bigger red X with a lower, louder one. The server confirms through the existing DamageIndicator
+-- (isHeadshot) and KillConfirmed remotes.
+local remotes = ReplicatedStorage.Blaster.Remotes
+local HIT_COLOR = Color3.fromRGB(255, 255, 255)
+local HEADSHOT_COLOR = Color3.fromRGB(255, 62, 65)
+local MARKS = {
+	hit = { color = HIT_COLOR, rotation = 0, scale = 2, pitch = 1, volume = 1 },
+	headshot = { color = HEADSHOT_COLOR, rotation = 0, scale = 2.3, pitch = 1.3, volume = 1.2 },
+	kill = { color = HEADSHOT_COLOR, rotation = 45, scale = 2.8, pitch = 0.8, volume = 1.6 },
+}
 -- Dry-fire click for a trigger press the client's own fire-rate cooldown held back (BlasterController).
 local dryFireSound = script.DryFire
 
@@ -62,6 +74,24 @@ function GuiController.new(blaster: Tool)
 		connections = {},
 	}
 	setmetatable(self, GuiController)
+	-- The server's word on a hit this player landed: a headshot or a kill re-marks the reticle (only while this
+	-- weapon's reticle is the live one).
+	local damageIndicator = remotes:FindFirstChild("DamageIndicator")
+	if damageIndicator then
+		table.insert(self.connections, damageIndicator.OnClientEvent:Connect(function(_humanoid, _total, isHeadshot)
+			if self.enabled and isHeadshot then
+				self:showHitmarker("headshot")
+			end
+		end))
+	end
+	local killConfirmed = remotes:FindFirstChild("KillConfirmed")
+	if killConfirmed then
+		table.insert(self.connections, killConfirmed.OnClientEvent:Connect(function()
+			if self.enabled then
+				self:showHitmarker("kill")
+			end
+		end))
+	end
 	self:initialize()
 	return self
 end
@@ -145,9 +175,18 @@ function GuiController:playDryFire()
 	dryFireSound:Play()
 end
 
-function GuiController:showHitmarker()
+function GuiController:showHitmarker(kind: string?)
+	local mark = MARKS[kind or "hit"] or MARKS.hit
+	for _, line in self.reticleGui.Hitmarker:GetChildren() do
+		if line:IsA("Frame") then
+			line.BackgroundColor3 = mark.color
+		end
+	end
+	self.reticleGui.Hitmarker.Rotation = mark.rotation
 	-- Slightly delay the hitmarker sound so it doesn't overlap the shooting sound
 	task.delay(Constants.HITMARKER_SOUND_DELAY, function()
+		hitmarkerSound.PlaybackSpeed = mark.pitch
+		hitmarkerSound.Volume = HITMARKER_SOUND_VOLUME * mark.volume
 		hitmarkerSound:Play()
 	end)
 
@@ -159,7 +198,7 @@ function GuiController:showHitmarker()
 	end
 
 	self.reticleGui.Hitmarker.GroupTransparency = 0
-	self.reticleGui.Hitmarker.UIScale.Scale = 2
+	self.reticleGui.Hitmarker.UIScale.Scale = mark.scale
 
 	self.hitmarkerScaleTween:Play()
 	self.hitmarkerTransparencyTween:Play()
