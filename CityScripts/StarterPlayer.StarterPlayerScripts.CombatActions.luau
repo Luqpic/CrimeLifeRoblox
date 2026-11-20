@@ -49,17 +49,38 @@ local function pick(): (Model?, string?)
 	return best, bestKind
 end
 
+-- Finish: the hint and E / pad X / a tap on it. Takedown (developer picker 2026-11-20, "Prompt + chokehold"): a
+-- ProximityPrompt on the enemy's back, made here so only this player sees it (E / pad X / tap).
 local function act()
-	if current and currentKind then
+	if current and currentKind == "Finish" then
 		finishRemote:FireServer(current, currentKind)
 	end
 end
 
+local takedownPrompt = Instance.new("ProximityPrompt")
+takedownPrompt.Name = "TakedownPrompt"
+takedownPrompt.ActionText = "Takedown"
+takedownPrompt.ObjectText = "Silent"
+takedownPrompt.KeyboardKeyCode = Enum.KeyCode.E
+takedownPrompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+takedownPrompt.HoldDuration = 0
+takedownPrompt.MaxActivationDistance = TAKEDOWN_RANGE + 1
+takedownPrompt.RequiresLineOfSight = false
+takedownPrompt.Triggered:Connect(function()
+	if current and currentKind == "Takedown" then
+		finishRemote:FireServer(current, "Takedown")
+	end
+end)
+
 task.spawn(function()
 	while true do
 		current, currentKind = pick()
-		hint.Visible = current ~= nil
-		if currentKind then
+		hint.Visible = currentKind == "Finish"
+		local back = if currentKind == "Takedown" and current then current.PrimaryPart else nil
+		if takedownPrompt.Parent ~= back then
+			takedownPrompt.Parent = back
+		end
+		if currentKind == "Finish" then
 			local word = if currentKind == "Finish" then "FINISH" else "TAKEDOWN"
 			hint.Text = if UserInputService.PreferredInput == Enum.PreferredInput.Touch then word else "E  " .. word
 		end

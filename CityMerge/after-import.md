@@ -1271,3 +1271,17 @@ NOT published
 City 394 / 394 / 0; heist 764 passed / 0 failed. Live: climb onto a 6-stud block, vault a 2.5-stud wall, dodge rolls. Place version 67.
 
 NOT published
+
+## Interaction animations and takedown prompt 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ReplicatedStorage.Combat.Clips | new | 2,411 / 779754291 |
+| StarterPlayer.StarterPlayerScripts.InteractionAnimations (LocalScript) | new | 4,491 / 4136554688 |
+| ServerScriptService.Enemy.Scripts.Finishers | 6,757 / 3239764355 | 8,936 / 80850049 |
+| StarterPlayer.StarterPlayerScripts.CombatActions | 3,121 / 2575240800 | 4,085 / 248207702 |
+| ServerScriptService.Enemy.Scripts.HitReaction | 3,671 / 4239444562 | 4,237 / 429229658 |
+
+City 394 / 394 / 0; heist 764 passed / 0 failed. Live: the takedown prompt and chokehold; the register hold clip. The five new Crime* clips are made in Blender but not uploaded (403 on the group key); `Combat.Clips.ids` has no Crime* ids yet. Place version 68.
+
+NOT published

@@ -81,4 +81,6 @@ The method from another project's guide (`docs/GUIDE-Walker-Animation-Pipeline.m
 - Never keep a backup folder where the upload script globs for clips; read each uploaded asset back before handing ids over.
 - Render at most three Blender jobs in parallel; Blender 5 has no FFMPEG image format (render PNG frames, encode with ffmpeg).
 
+**CrimeLife's first Route B clips (2026-11-20):** `Crime*` in `Blender/_pipeline/animate_player.py` on the OBT player rig; the city plays group 4998611's `Player_*` clips (ids in `Blender/_enemies/ids.json`). Upload with `upload_anims.py 4998611 --prefix Player_Crime`; the first try was refused (403: the key's account may not create Animation assets for the group). Ids live in `ReplicatedStorage.Combat.Clips`. [[2026-11-20 Interaction Animations and Takedown Prompt]]
+
 Related: [[Blender Pipeline]], [[Trailer and Cinematic Pipeline]].

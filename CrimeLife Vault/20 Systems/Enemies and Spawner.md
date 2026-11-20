@@ -98,6 +98,7 @@ Details: [[2026-11-20 Combat Feel]].
 - A flank spot must see the target (else the other side, else no flank). The wound's kneel clip is Action4. [[2026-11-20 Enemy Movement and Store Police]]
 
 ## History
+- 2026-11-20: the takedown is a client ProximityPrompt and a 1.6 s chokehold (`Finishers.chokehold`, both anchored, Choked clip); headshot stagger plays `CrimeStagger` once uploaded. [[2026-11-20 Interaction Animations and Takedown Prompt]]
 - 2026-11-20: climb and vault (path Jump waypoints and stuck enemies, `Enemy.Scripts.EnemyMoves`), roll to dodge and to cover, with the player's LedgeClimb and Roll clips. [[2026-11-20 Enemies Climb Vault and Roll]]
 - 2026-11-20: fluid movement (waypoints on MoveToFinished), no standing on the last seen spot, search sweep, agent radius 1.5, flank spots that see the target, kneel at Action4. [[2026-11-20 Enemy Movement and Store Police]]
 - 2026-11-20: alert, back off, cover and flank (`Enemy.Scripts.Tactics`), `Tactic` attribute. [[2026-11-20 Smarter Enemies]]

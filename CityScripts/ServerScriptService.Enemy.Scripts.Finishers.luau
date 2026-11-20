@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local EnemyConstants = require(ReplicatedStorage.Enemy.Constants)
+local Clips = require(ReplicatedStorage.Combat.Clips)
 
 local Finishers = {}
 
@@ -26,6 +27,8 @@ Finishers.BEHIND_DOT = -0.5 -- the enemy's look direction against the direction 
 Finishers.BONUS = 0.5
 Finishers.REQUEST_GAP = 0.4
 Finishers.KNEEL_CLIP = "rbxassetid://89055632668771" -- Animate2's crouch idle
+Finishers.CHOKE_SECONDS = 1.6
+Finishers.CHOKE_BEHIND = 1.6 -- studs behind the enemy's root
 
 -- Pure: is a player at `playerPos` behind an enemy at `enemyCFrame` (within range, outside its view)?
 function Finishers.isBehind(enemyCFrame: CFrame, playerPos: Vector3, range: number): boolean
@@ -117,6 +120,45 @@ local function kill(player: Player, humanoid: Humanoid, kind: string)
 	end
 end
 
+-- The takedown (developer picker 2026-11-20, "Prompt + chokehold"): a CHOKE_SECONDS chokehold from behind, both locked
+-- in place (the enemy stunned, both roots anchored, the player CHOKE_BEHIND studs behind it facing the same way), the
+-- player's Choker clip and the enemy's Choked clip (Combat.Clips), then the kill. It finishes even if another enemy sees
+-- it ("It still finishes").
+local function chokehold(player: Player, humanoid: Humanoid, enemyRoot: BasePart, root: BasePart)
+	local model = humanoid.Parent :: Model
+	local character = root.Parent :: Model
+	model:SetAttribute("TakenDown", true)
+	enemyRoot:SetAttribute("StunnedUntil", math.max(enemyRoot:GetAttribute("StunnedUntil") or 0, os.clock() + Finishers.CHOKE_SECONDS + 0.3))
+	enemyRoot.Anchored = true
+	root.Anchored = true
+	character:PivotTo(enemyRoot.CFrame * CFrame.new(0, 0, Finishers.CHOKE_BEHIND))
+	local tracks: { AnimationTrack } = {}
+	for _, pair in { { humanoid, "Choked" }, { character:FindFirstChildOfClass("Humanoid"), "Choker" } } do
+		local animator = pair[1] and (pair[1] :: Humanoid):FindFirstChildOfClass("Animator")
+		local track = animator and Clips.track(animator, pair[2] :: string, {})
+		if track then
+			track.Looped = pair[2] == "Choked"
+			track:Play(0.1)
+			table.insert(tracks, track)
+		end
+	end
+	task.delay(Finishers.CHOKE_SECONDS, function()
+		for _, track in tracks do
+			track:Stop(0.15)
+		end
+		if root.Parent then
+			root.Anchored = false
+		end
+		if enemyRoot.Parent then
+			enemyRoot.Anchored = false
+		end
+		model:SetAttribute("TakenDown", nil)
+		if humanoid.Health > 0 then
+			kill(player, humanoid, "Takedown")
+		end
+	end)
+end
+
 -- E from CombatActions: kind "Finish" or "Takedown" on `model`. Checked here; true when it killed.
 function Finishers.request(player: Player, model: unknown, kind: unknown): boolean
 	local now = os.clock()
@@ -135,6 +177,9 @@ function Finishers.request(player: Player, model: unknown, kind: unknown): boole
 	if not (humanoid and enemyRoot and root and own) or humanoid.Health <= 0 or own.Health <= 0 then
 		return false
 	end
+	if model:GetAttribute("TakenDown") == true or character:GetAttribute("TakingDown") == true then
+		return false -- one at a time
+	end
 	if kind == "Finish" then
 		if model:GetAttribute("Wounded") ~= true or (enemyRoot.Position - root.Position).Magnitude > Finishers.FINISH_RANGE then
 			return false
@@ -147,6 +192,14 @@ function Finishers.request(player: Player, model: unknown, kind: unknown): boole
 		end
 	else
 		return false
+	end
+	if kind == "Takedown" then
+		(character :: Model):SetAttribute("TakingDown", true)
+		task.delay(Finishers.CHOKE_SECONDS, function()
+			(character :: Model):SetAttribute("TakingDown", nil)
+		end)
+		chokehold(player, humanoid, enemyRoot, root)
+		return true
 	end
 	kill(player, humanoid, kind :: string)
 	return true

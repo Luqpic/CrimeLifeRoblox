@@ -4,6 +4,8 @@
 -- firing); a shotgun blast within KNOCKDOWN_RANGE knocks it down (the Humanoid's own FallingDown state, which gets
 -- back up by itself) and stuns it while it is down. Once per shot per enemy (ShotResolver), with cooldowns so a fast
 -- gun cannot stun-lock. No animation clips: the engine's own states and a Highlight.
+local Clips = require(game:GetService("ReplicatedStorage").Combat.Clips)
+
 local HitReaction = {}
 
 HitReaction.FLASH_SECONDS = 0.12
@@ -26,6 +28,7 @@ function HitReaction.kind(isHeadshot: boolean, category: unknown, distance: numb
 end
 
 local lastStagger: { [Humanoid]: number } = setmetatable({}, { __mode = "k" }) :: any
+local staggerTracks: { [Humanoid]: { [string]: AnimationTrack } } = setmetatable({}, { __mode = "k" }) :: any
 local lastKnockdown: { [Humanoid]: number } = setmetatable({}, { __mode = "k" }) :: any
 
 local function flash(character: Model)
@@ -82,6 +85,15 @@ function HitReaction.react(humanoid: Humanoid, from: Vector3, weapon: Instance?,
 	if kind ~= "flinch" and now - (lastStagger[humanoid] or -math.huge) >= HitReaction.STAGGER_COOLDOWN then
 		lastStagger[humanoid] = now
 		root:SetAttribute("StunnedUntil", math.max(root:GetAttribute("StunnedUntil") or 0, now + HitReaction.STAGGER_SECONDS))
+		-- The stagger clip (Combat.Clips "Stagger", 2026-11-20: a stun with nothing to see read as a freeze).
+		local animator = humanoid:FindFirstChildOfClass("Animator")
+		local cache = staggerTracks[humanoid] or {}
+		staggerTracks[humanoid] = cache
+		local track = animator and Clips.track(animator, "Stagger", cache)
+		if track then
+			track.Looped = false
+			track:Play(0.05)
+		end
 	end
 	push(root, from, HitReaction.PUSH_SPEED)
 end
