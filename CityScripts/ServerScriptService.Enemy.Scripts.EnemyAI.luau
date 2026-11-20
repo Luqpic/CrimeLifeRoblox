@@ -420,6 +420,11 @@ function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
 		if distance > Stealth.noticeRange(character, self.config.detectionRadius) or (distance >= bestDistance and player ~= preferred) then
 			continue
 		end
+		-- Crouch stealth (2026-11-20): a crouched or hidden player behind the enemy (outside its front half) goes unseen,
+		-- so a takedown from behind is possible. A standing player is seen all round, as before.
+		if character:GetAttribute("StealthRange") ~= nil and self.rootPart.CFrame.LookVector:Dot((aimPosition - eyePosition).Unit) < 0 then
+			continue
+		end
 		if not ShotResolver.hasLineOfSight(self.character, eyePosition, humanoid) then
 			continue
 		end
@@ -456,6 +461,10 @@ function EnemyAI:_setTarget(player: Player?)
 		self.lastSightAt = nil
 	end
 	self.target = player
+	-- Takedowns (combat, 2026-11-20): whether this enemy has a target, for the client's TAKEDOWN hint.
+	if self.character:GetAttribute("Aware") ~= (player ~= nil) then
+		self.character:SetAttribute("Aware", player ~= nil)
+	end
 end
 
 -- Sight of the current target this think (combat balance, 2026-11-20): continuous sight drives the focus ramp, and

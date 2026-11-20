@@ -50,5 +50,8 @@ Related: [[Tools MOC]] · [[Studio MCP Gotchas]] · [[Persistence and Saves]]
 
 - **Shield the Play player for a full city run** (2026-11-20). `WantedService_Test` and `EnemyTargetFilter_Test` use the real player and fail if an enemy hurts them mid-run (the spawn is near the criminals' area). Parent a `ForceField` (Visible false) to the character for the run, then remove it. [[2026-11-20 Edit Rigs on Every Spawner]]
 
+- **Run the city suite from a Script, not from `execute_luau`** (2026-11-20). From a Server `execute_luau` in Play, `ProfileAdoption_Test` showed 5 false failures (quest, kill-stats and cash hydrators "expected true, got nil", "expected 1300, got 800"): that context's `require` gets its own `ProfileGateway`, whose hydrator list is empty because the Script services registered theirs in the live server's copy. The same run from a temporary Script parented to `ServerScriptService` (write the result to an attribute, read it, destroy the Script): 382 / 382. `Heist.Tests.RunAll` is fine from `execute_luau`. [[2026-11-20 Combat Feel]]
+
 ## History
+- 2026-11-20: city 382 / 382 from a temporary Script; the `execute_luau` hydrator trap. [[2026-11-20 Combat Feel]]
 - 2026-11-18: closing totals city 315 / 315, heist 740 / 0; RunAll's result is its return value. [[2026-11-18 Open Items Pass]]

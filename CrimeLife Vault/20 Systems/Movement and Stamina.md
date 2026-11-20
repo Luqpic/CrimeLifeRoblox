@@ -59,6 +59,7 @@ The crouch reaches the server through `PlayerMovement.Crouch`; `Movement.Scripts
 - Deleting `Bobbing Camera` would drop max zoom to the authority default of 30.
 
 ## History
+- 2026-11-20: `Stealth.isCrouched(player)` (the server's crouch) gates stealth takedowns. [[2026-11-20 Combat Feel]]
 - 2026-11-20: an accepted roll stamps `RollingUntil` for NPC aim. [[2026-11-20 Readable Gunfights and Level Toughness]]
 - 2026-11-20: OBT movement clips, roll and ledge climb added ([[Character Movement and Animation]]); `SprintAuthority.spend`; admin walk speed. [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: `Crouching` `Stop()` caps `WalkSpeed` at once for a carrier (`carryCapped`); not measured in Play; carriers cross the Bank ledges through the `Carrier` collision group; fall and climb defaults confirmed as fine by the developer. [[2026-11-18 Open Items Pass]]

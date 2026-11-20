@@ -56,6 +56,7 @@ A Standard roll costs 300 cash (ten for 2,700); a duplicate pays 60 / 150 / 400 
 - Leaderstats setup once depended on service init order; `CashService` is now robust to either order.
 
 ## History
+- 2026-11-20: `Admin.Hooks.cashBonus` (set by `CashService`): finishers and takedowns credit +50 % of the kill's cash drop value straight to Cash. [[2026-11-20 Combat Feel]]
 - 2026-11-18: `CurrencyService.Add` bound (`MaxCashCredit` 1,000,000), `CashService.hydrate` `PreBindBase` merge, `CashClaimVFX` waits for `leaderstats.Cash`. [[2026-11-18 Open Items Pass]]
 - 2026-11-16 (city): Robbery cash bridged onto `leaderstats.Cash`; one cash display. [[2026-11-16 Robbery Systems Into City]]
 - 2026-09-24: `CashBurst` takes an optional style (spray-can burst for skins). [[FPS-Skins-Card-Preview-Hover-Feedback-Vip-On-Hold]]

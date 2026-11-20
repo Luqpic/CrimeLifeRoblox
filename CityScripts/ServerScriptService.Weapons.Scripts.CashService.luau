@@ -278,3 +278,13 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 
 	spawnCashDrop(dropPosition, CASH_VALUES[getEnemyTier(character :: Model)])
 end)
+
+-- Finishers and takedowns (combat, 2026-11-20): a share of the kill's cash drop on top, credited at once.
+require(game:GetService("ServerScriptService").Admin.Hooks).cashBonus = function(player: Player, character: Model, fraction: number)
+	local value = CASH_VALUES[getEnemyTier(character)]
+	local leaderstats = player:FindFirstChild("leaderstats")
+	local cash = leaderstats and leaderstats:FindFirstChild("Cash")
+	if cash and typeof(value) == "number" and typeof(fraction) == "number" then
+		cash.Value += math.floor(value * fraction)
+	end
+end

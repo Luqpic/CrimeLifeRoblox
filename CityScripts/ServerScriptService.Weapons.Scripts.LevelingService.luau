@@ -277,3 +277,11 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 		grantXp(shooter, LevelingConstants.XP_VALUES[getCharacterTier(character :: Model)])
 	end
 end)
+
+-- Finishers and takedowns (combat, 2026-11-20): a share of the kill's XP on top (Enemy.Scripts.Finishers).
+require(game:GetService("ServerScriptService").Admin.Hooks).killBonus = function(player: Player, character: Model, fraction: number)
+	local amount = LevelingConstants.XP_VALUES[getCharacterTier(character)]
+	if typeof(amount) == "number" and typeof(fraction) == "number" then
+		grantXp(player, math.floor(amount * fraction))
+	end
+end

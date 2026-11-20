@@ -65,6 +65,12 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 ## Crouch stealth (2026-11-20)
 `EnemyAI` notices and keeps a target only within `Stealth.noticeRange(character, detectionRadius)`: 25 when hidden, 70 when crouched in the open. [[2026-11-20 Crouch Stealth]]
 
+## Hit reactions, wounds, finishers, takedowns (2026-11-20)
+- `Enemy.Scripts.HitReaction` (from `ShotResolver.applyDamage`, once per shot per NPC a player hits): red flash and a 6 studs/s push; headshot stagger 0.5 s (once per 1.5 s); shotgun within 8 studs knocks down (once per 3 s).
+- `Enemy.Scripts.Finishers` (Script `FinishersServer` starts it): below 20 % health a player's hit has a 40 % chance, once per life, to kneel the enemy 6 s (`Wounded` attribute, stun, crouch idle clip). E within 8 studs finishes it; crouched within 5 studs behind an enemy with no target, E takes it down silently. +50 % XP and cash on top of the normal kill.
+- `EnemyAI` publishes `Aware` (true while it has a target) and does not see a crouched player behind it (look dot below 0).
+Details: [[2026-11-20 Combat Feel]].
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.
@@ -72,6 +78,7 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 
 ## Watch out
 - Scripts in a template never run: the spawner strips them.
+- A stunned enemy (`StunnedUntil` on its root) cannot be moved by other code: `EnemyAI`'s think sets WalkSpeed to 0 every tick and cancels moves on the first stunned tick. That is why a wounded enemy kneels in place. [[2026-11-20 Combat Feel]]
 - In `EnemyGUI` the label `Name` and the script `Text` collide with built-in properties; the scripts deliberately never index them by name. Keep it that way.
 - A Tool's geometry sits in its own Model inside the Tool: one `Parent` hop from a hit part does not reach the character. Always use `findOwningHumanoid`.
 - Cash/XP tier comes from the weapon's firing mode; there is no shotgun tier, so Smuggler and Bandits pay at pistol rate (accepted).
@@ -83,6 +90,7 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 - The three newest types as measured on 2026-11-18 (placeholders, not changed): Smuggler MaxHealth 85, WalkSpeed 11, ChaseSpeed 17, DetectionRadius 95, DamageOverride 4, weapon PB (semi, 480 rpm, range 650); Bandits 100, 12, 19, 110, 3, Mossberg 590 (8 pellets, spread 9, range 550); Saboteur 130, 12, 21, 150, 2, FN P-90 (auto, 850 rpm, range 1000). All three have PreferredRangeFraction 0.6 and Faction Criminal.
 
 ## History
+- 2026-11-20: hit reactions (flash, push, stagger, knockdown), wounded enemies, finishers and stealth takedowns; `Aware` attribute; no sight behind for a crouched player. [[2026-11-20 Combat Feel]]
 - 2026-11-20: shooter tokens, wind-up aim line, focus ramp, bursts, range falloff, flinch (1 s cooldown), `Enemy.Combat` and `NpcFire`; Police 12 to 9, Bandits 3 to 1.5; heist police run this same AI. [[2026-11-20 Readable Gunfights and Level Toughness]] [[2026-11-20 Heist Police and Bank Guards]]
 - 2026-11-20: the admin panel spawns non-police enemy types (1 to 6, no spawner accounting) and clears them (CLEAR MINE for admin-spawned, CLEAR ALL with `EnemyAI.getLive()` kills with `Health = 0` so the spawner refilled 30 live within 10 s; the spawner's accounting stayed intact). [[Admin Panel]] [[2026-11-20 Admin Animations Third Person]]
 - 2026-11-18: enemies hold a shot with an ally in the line and sidestep (`_allyInLine`, `_sidestep`, `ALLY_SIDESTEP` 4; melee exempt); the outfit staging folder does not exist in the city. Tests: Play measurements only, no unit spec. [[2026-11-18 Open Items Pass]]

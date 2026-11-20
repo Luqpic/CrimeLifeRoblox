@@ -1188,3 +1188,22 @@ NOT published
 City 380 / 380 / 0; heist 764 passed / 0 failed. Live: a Glock shot flashed and pushed a Thug 0.97 studs.
 
 NOT published
+
+## Combat C, wounded finishers and stealth takedowns 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.Finishers | new | 6,564 / 2624693041 |
+| ServerScriptService.Enemy.Scripts.FinishersServer (Script) | new | 115 / 3157862005 |
+| ServerStorage.UnitTest.Cases.Finishers_Test | new | 1,201 / 2275184061 |
+| StarterPlayer.StarterPlayerScripts.CombatActions (LocalScript) | new | 3,121 / 2575240800 |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 46,573 / 3743326890 | 47,159 / 1283614048 |
+| ServerScriptService.Movement.Scripts.Stealth | 7,602 / 1517421686 | 7,756 / 395983637 |
+| ServerScriptService.Weapons.Scripts.LevelingService | 11,656 / 305578906 | 12,098 / 2658098006 |
+| ServerScriptService.Weapons.Scripts.CashService | 11,722 / 2069142257 | 12,269 / 4069217708 |
+
+New instances in Edit: `ReplicatedStorage.Combat.Remotes.Finish` (RemoteEvent); `StarterGui.CombatHint` (ScreenGui) with `Hint` (TextButton 200 x 40, Visible false).
+
+City 382 / 382 / 0 (temporary Script); heist 764 passed / 0 failed. Live: takedown, finish and the wound roll verified. Place version 51.
+
+NOT published

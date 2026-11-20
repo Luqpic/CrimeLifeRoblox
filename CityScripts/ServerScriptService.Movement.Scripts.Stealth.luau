@@ -72,6 +72,11 @@ function Stealth.setCrouch(player: Player, on: unknown)
 	crouched[player] = if on then true else nil
 end
 
+-- Takedowns (Finishers): the server's crouch for this player.
+function Stealth.isCrouched(player: Player): boolean
+	return crouched[player] == true
+end
+
 function Stealth.expose(player: Player, seconds: number?)
 	local untilTime = os.clock() + (seconds or Stealth.EXPOSE_SECONDS)
 	exposedUntil[player] = math.max(exposedUntil[player] or 0, untilTime)
