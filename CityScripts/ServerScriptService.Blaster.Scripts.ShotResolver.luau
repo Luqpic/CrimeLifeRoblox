@@ -26,6 +26,7 @@ local Workspace = game:GetService("Workspace")
 
 local Constants = require(ReplicatedStorage.Blaster.Constants)
 local Combat = require(ReplicatedStorage.Enemy.Combat)
+local HitReaction = require(game:GetService("ServerScriptService").Enemy.Scripts.HitReaction)
 local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 local canDamageHumanoid = require(ReplicatedStorage.Blaster.Utility.canDamageHumanoid)
 local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
@@ -563,6 +564,7 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 
 	local hits: { ShotHit } = {}
 
+	local reacted: { [Humanoid]: boolean } = {} -- hit reactions: once per shot per enemy
 	local function applyDamage(taggedHumanoid: Humanoid, rayResult: castRays.RayResult)
 		if taggedHumanoid.Health <= 0 then
 			return
@@ -595,6 +597,12 @@ function ShotResolver.resolveShot(request: ShotRequest): ShotResult
 		-- Player or an enemy character Model -- listeners must not assume Player.
 		taggedHumanoid:TakeDamage(appliedDamage)
 		taggedEvent:Fire(shooter, taggedHumanoid, appliedDamage)
+		-- Enemy hit reactions (combat, 2026-11-20): a player's hit on an NPC flashes and pushes it, a headshot staggers
+		-- it, a close shotgun blast knocks it down (HitReaction), once per shot per enemy.
+		if shooterIsPlayer and not reacted[taggedHumanoid] and not Players:GetPlayerFromCharacter(taggedHumanoid.Parent) then
+			reacted[taggedHumanoid] = true
+			HitReaction.react(taggedHumanoid, origin.Position, weapon, isHeadshot)
+		end
 		if shooterIsPlayer then
 			damagedEvent:Fire(shooter, taggedHumanoid, appliedDamage)
 		end

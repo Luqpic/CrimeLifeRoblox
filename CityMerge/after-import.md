@@ -1176,3 +1176,15 @@ NOT published
 `ReplicatedStorage.Blaster.Scripts.GuiController` 3610573378 -> 8,430 / 151342320: body hit white, headshot red (higher ding), kill a bigger red X (lower, louder), from the existing DamageIndicator and KillConfirmed remotes. Verified in Play (remotes fired at the player: rotation 45 red after a kill, 0 red after a headshot; no errors).
 
 NOT published
+
+## Combat B, enemy hit reactions 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.HitReaction | new | 3,671 / 4239444562 |
+| ServerStorage.UnitTest.Cases.HitReaction_Test | new | 1,794 / 3747304629 |
+| ServerScriptService.Blaster.Scripts.ShotResolver | 2940260377 | 38,919 / 2033886659 |
+
+City 380 / 380 / 0; heist 764 passed / 0 failed. Live: a Glock shot flashed and pushed a Thug 0.97 studs.
+
+NOT published
