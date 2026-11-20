@@ -263,6 +263,10 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 	if not (character and CollectionService:HasTag(character, Constants.ENEMY_TAG)) then
 		return
 	end
+	-- A heist guard killed outside a robbery pays nothing (GuardPost sets NoKillReward; developer, 2026-11-20).
+	if character:GetAttribute("NoKillReward") then
+		return
+	end
 
 	if math.random() > DROP_CHANCE then
 		return

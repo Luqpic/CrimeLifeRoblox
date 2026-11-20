@@ -89,7 +89,11 @@ Config.GuardProvokeSeconds = 30
 -- then `more` every `every` seconds, at most `cap` of the plan alive. HeistPolice runs from the session's start,
 -- HeistPoliceVault (armed) from the vault door's opening.
 Config.HeistPolice = table.freeze({ template = "Police", first = 120, count = 3, every = 90, more = 2, cap = 8 })
-Config.HeistPoliceVault = table.freeze({ template = "Armed Police", first = 0, count = 4, every = 60, more = 2, cap = 8 })
+-- The armed police stand up in the lobby (HeistMarkers.HeistPoliceUpperSpawn<n>) and stay upstairs: they fight only
+-- robbers in the Lobby zone and wander at most patrolRadius studs (developer, 2026-11-20 morning: "only the normal
+-- polices come to the vault"). The timed plan takes HeistPoliceSpawn<n> (before the obby pit) and
+-- HeistPoliceInnerSpawn<n> (after it) in turn.
+Config.HeistPoliceVault = table.freeze({ template = "Armed Police", first = 0, count = 4, every = 60, more = 2, cap = 8, patrolRadius = 12 })
 
 -- C4 breach (replaces "both terminals -> teleport unlocked" with "both
 -- terminals -> plant C4 -> countdown -> explosion -> teleport unlocked")

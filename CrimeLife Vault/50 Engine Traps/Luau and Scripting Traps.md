@@ -62,6 +62,8 @@ Language and runtime behaviour that shipped bugs or misled a measurement.
 ### A think loop repeats one-shot actions
 - An enemy re-thinks four times a second; a search-state turn with no guard added another 50 degrees each time, about 20 turns in a 5 s search. Guard one-shot actions the way the patrol arrival already did. [[FPS-Enemy-Search-State-Spin-Fix]].
 
+- **`Path:ComputeAsync` can fail without yielding** (an agent far off the navmesh). Work spawned with `task.spawn` around it may finish before the next line of the caller runs; a test should accept either the in-progress or the finished state. [[2026-11-20 Walking Bank Guards and Edit Rigs]]
+
 ## Setup and structure
 
 ### One strict check at the top of a setup aborts all wiring

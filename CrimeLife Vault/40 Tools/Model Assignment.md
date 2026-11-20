@@ -1,11 +1,13 @@
 ---
 type: tool
 tags: [tool, models, workflow]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["The developer's request in the 2026-11-14 planning session", "The developer's request, 2026-11-18 session"]
 ---
 
 # Model Assignment
+
+**Since 2026-11-20 morning: native only.** The developer: "I think we should go native since the usage was too much." All work runs in the main thread; no subagents unless the developer asks ([[Vault Skills Only and Model Routing]]). The split below is kept as history.
 
 Which Claude model does which CrimeLife work. From 2026-11-18 the developer's rule is to juggle **Opus 5.5 and Sonnet 5.5** for great output with efficient token use ([[Vault Skills Only and Model Routing]]). The 2026-11-14 split also named Fable; Fable is not in the rotation from 2026-11-18, and its work (design, hard bugs, final reviews) moved to Opus.
 

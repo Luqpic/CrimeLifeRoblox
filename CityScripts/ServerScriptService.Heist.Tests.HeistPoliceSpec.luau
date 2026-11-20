@@ -83,6 +83,9 @@ return function()
 			plan = BankConfig.HeistPolice,
 			vaultPlan = if opts.vault then BankConfig.HeistPoliceVault else nil,
 			markers = { f.marker },
+			innerMarkers = opts.inner,
+			vaultMarkers = opts.upper,
+			vaultFilter = opts.vaultFilter,
 			isInside = function(player) return f.inside[player] == true end,
 			now = function() return f.clock end,
 			players = function() return opts.players end,
@@ -244,6 +247,62 @@ return function()
 		f.at(1122)
 		expect.equal(f.spawned[1].went, Vector3.new(160, 5000, 0), "a path again: sent")
 		expect.equal(f.spawned[2].went, nil, "one already fighting is left to its own chase")
+		robber.Character:Destroy()
+	end)
+
+	-- 2026-11-20 morning: police also after the Bank's obby pit; the armed police stay upstairs; Edit rigs.
+	suite:test("markersIn: by prefix, in name order; each marker takes its Edit rig (the marker moves to it, the rig leaves)", function(expect)
+		local folder = Instance.new("Folder")
+		local function marker(name)
+			local part = Instance.new("Part")
+			part.Name = name
+			part.Parent = folder
+			return part
+		end
+		local _, first, inner = marker("HeistPoliceSpawn2"), marker("HeistPoliceSpawn1"), marker("HeistPoliceInnerSpawn1")
+		local rig = Instance.new("Model")
+		local root = Instance.new("Part")
+		root.Parent = rig
+		rig.PrimaryPart = root
+		rig:PivotTo(CFrame.new(10, 5003, 4))
+		rig.Parent = first
+		local found = HeistPolice.markersIn(folder)
+		expect.equal(#found, 2, "the HeistPoliceSpawn ones only")
+		expect.equal(found[1], first, "in name order")
+		expect.equal(rig.Parent, nil, "the rig left")
+		expect.equal(first.Position, Vector3.new(10, 5003, 4), "the marker moved to its rig")
+		expect.equal(HeistPolice.markersIn(folder, "HeistPoliceInnerSpawn")[1], inner, "another prefix")
+		folder:Destroy()
+	end)
+
+	suite:test("the timed plan takes the two sides in turn; the vault plan has its own markers, filter and patrol, unsteered", function(expect)
+		local robber = standIn(3)
+		local inner, upper = Instance.new("Part"), Instance.new("Part")
+		inner.Position, upper.Position = Vector3.new(200, 5000, 0), Vector3.new(300, 5000, 0)
+		local upstairs = false
+		local f = fixture({ players = { robber }, vault = true, inner = { inner }, upper = { upper },
+			vaultFilter = function() return upstairs end })
+		f.bank:TryStart(robber)
+		f.inside[robber] = true
+		f.at(1120)
+		local function near(ai, part)
+			return (ai.position - part.Position).Magnitude <= SCATTER * 1.5
+		end
+		expect.truthy(near(f.spawned[1], f.marker) and near(f.spawned[2], inner) and near(f.spawned[3], f.marker), "before the pit, after it, before it")
+		f.police:OnVaultOpened()
+		f.at(1121)
+		local armed = {}
+		for _, ai in ipairs(f.spawned) do
+			if ai.template == "Armed Police" then table.insert(armed, ai) end
+		end
+		expect.equal(#armed, 4, "4 armed at the opening")
+		expect.truthy(near(armed[1], upper) and near(armed[4], upper), "upstairs")
+		expect.equal(armed[1].patrolRadius, BankConfig.HeistPoliceVault.patrolRadius, "a short patrol")
+		expect.equal(armed[1].filter(robber), false, "not a robber downstairs")
+		upstairs = true
+		expect.equal(armed[1].filter(robber), true, "a robber upstairs")
+		expect.equal(armed[1].went, nil, "never steered")
+		expect.equal(f.spawned[1].patrolRadius, nil, "the timed plan keeps the usual patrol")
 		robber.Character:Destroy()
 	end)
 

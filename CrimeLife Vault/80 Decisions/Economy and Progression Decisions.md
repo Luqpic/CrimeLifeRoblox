@@ -11,6 +11,7 @@ Calls about Cash, XP, levels, quests and saving. The code is in [[Economy and Ca
 
 ## Newest first
 
+- **2026-11-20 morning: no free starter gun; weapons go gacha.** The developer: "NO free gun, actually I want to revamp the weaponary. Instead of buying, we are doing gacha." A future batch. [[2026-11-20 Walking Bank Guards and Edit Rigs]]
 - **2026-11-20: levels add health and a little armor.** Picker answer "Health + armor by level". Claude's numbers: max health 100 + 4 a level (376 at 70, was +2), armor 0.4 % a level up to 25 % against NPC damage, regen 6 % a second after 6 s without a loss. No free starter gun was added: a new player owns only the Crowbar and the Glock 17 costs 400 of the 500 starting cash, so the target was measured with the Glock and a Crowbar rush. The free starter gun is left to the developer (see [[Open Items]]). [[2026-11-20 Readable Gunfights and Level Toughness]]
 - **2026-11-18: no lifetime "cash earned" stat** on the player card for now; the pill keeps the current balance. [[2026-11-18 Open Items Pass]]
 - **2026-09-24: seven criminal ranks of ten levels each**; a player never sees their own overhead plate. [[FPS-Criminal-Ranks-Overhead-Health-Icons-Toast-Icons]]

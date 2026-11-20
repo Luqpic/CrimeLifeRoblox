@@ -272,5 +272,8 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 	end
 
 	killConfirmedRemote:FireClient(shooter, victimName(character :: Model))
-	grantXp(shooter, LevelingConstants.XP_VALUES[getCharacterTier(character :: Model)])
+	-- A heist guard killed outside a robbery pays nothing (GuardPost sets NoKillReward; developer, 2026-11-20).
+	if not character:GetAttribute("NoKillReward") then
+		grantXp(shooter, LevelingConstants.XP_VALUES[getCharacterTier(character :: Model)])
+	end
 end)

@@ -953,9 +953,12 @@ require(game:GetService("ServerScriptService").Wanted.WantedService).addActiveRo
 	return bank:GetState() == "Active" and bank:IsParticipant(player) and getaway:IsNear(player)
 end)
 
--- Heist police and Bank guards (2026-11-20): police sent into the vault from the robbery's start (Config.HeistPolice)
--- and armed police from the vault door's opening (Config.HeistPoliceVault), at HeistMarkers.HeistPoliceSpawn1..3
--- round the corner from TeleporterBankB's arrival. A bank component: it starts with the session, leaves at the seal.
+-- Heist police and Bank guards (2026-11-20): police sent into the vault from the robbery's start (Config.HeistPolice),
+-- taking in turn HeistMarkers.HeistPoliceSpawn1..3 (round the corner from TeleporterBankB's arrival, before the obby
+-- pit) and HeistPoliceInnerSpawn1..3 (after the pit, before the money vault: robbers can fight from the vault; developer,
+-- 2026-11-20 morning); armed police from the vault door's opening (Config.HeistPoliceVault) at
+-- HeistPoliceUpperSpawn1..4 in the lobby, fighting only robbers upstairs. Each marker carries its officer as an Edit rig.
+-- A bank component: it starts with the session, leaves at the seal.
 local heistPoliceMarkers = HeistPolice.markersIn(heistMarkers)
 assert(#heistPoliceMarkers >= 1, "[HeistServer] HeistMarkers has no HeistPoliceSpawn marker")
 local heistPolice = HeistPolice.new({
@@ -963,6 +966,11 @@ local heistPolice = HeistPolice.new({
 	plan = Config.HeistPolice,
 	vaultPlan = Config.HeistPoliceVault,
 	markers = heistPoliceMarkers,
+	innerMarkers = HeistPolice.markersIn(heistMarkers, "HeistPoliceInnerSpawn"),
+	vaultMarkers = HeistPolice.markersIn(heistMarkers, "HeistPoliceUpperSpawn"),
+	vaultFilter = function(player)
+		return zoneService:IsInside("Lobby", player)
+	end,
 	isInside = isInsideBank,
 	now = now,
 })

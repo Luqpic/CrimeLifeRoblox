@@ -940,7 +940,7 @@ function EnemyAI:_thinkPatrol(now: number)
 	-- unreachable the path simply fails and a different point is tried on the next replan.
 	if not self.pathDestination then
 		local angle = math.random() * math.pi * 2
-		local distance = math.random() * Constants.PATROL_RADIUS
+		local distance = math.random() * (self.patrolRadius or Constants.PATROL_RADIUS) -- heist police may keep closer
 		local destination = self.spawnPosition
 			+ Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance)
 		self:_computePath(destination, now)

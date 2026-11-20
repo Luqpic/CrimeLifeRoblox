@@ -154,7 +154,8 @@ eliminatedEvent.Event:Connect(function(shooter: Player | Model, humanoid: Humano
 	end
 	local character = humanoid.Parent
 	local enemyTemplate = character and character:GetAttribute("EnemyTemplate")
-	if not enemyTemplate then
+	-- A heist guard killed outside a robbery pays nothing (GuardPost sets NoKillReward; developer, 2026-11-20).
+	if not enemyTemplate or character:GetAttribute("NoKillReward") then
 		return
 	end
 

@@ -1,7 +1,7 @@
 ---
 type: rule
 tags: [rule, gui, ui]
-updated: 2026-11-14
+updated: 2026-11-20
 sources: ["CLAUDE.md (Systems: UI; Known traps)", "70 Batches/FPS System/FPS-Banner-Title-Centring-And-UI-Fades.md", "70 Batches/FPS System/Close-Button-Unified-With-Robbery.md", "70 Batches/FPS System/FPS-Dialogue-Responses-Clickable-Fix.md", "70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass.md", "OBT Vault/10 Rules/GUI Rules.md (generic parts)"]
 ---
 
@@ -12,6 +12,8 @@ sources: ["CLAUDE.md (Systems: UI; Known traps)", "70 Batches/FPS System/FPS-Ban
 - **Route through the shared UI modules.** `UI.Panels` owns HUD visibility and panel exclusivity; `UI.Effects` owns hover, click and close-button behaviour; `UI.Transitions` owns fades; `UI.Theme` holds the look; `Modules.CameraAuthority` arbitrates camera claims; `Modules.MenuFovBlur` reference-counts blur; `Modules.NotificationController` owns toasts. A new panel uses them; it does not rebuild them ([[Shared Code Extended by Attributes]]).
 - **Clickable UI lives under the player's PlayerGui.** A GUI parented into the world is drawn but never hit-tested for the mouse; point a PlayerGui GUI at the world object with `Adornee` instead ([[Billboard and World GUI Traps]]).
 - **Panel art is Figma-exported slices at 4x** via the REST `/v1/images` pipeline ([[Figma and UI Art Pipeline]]). **Titles are baked into the banner artwork**, so re-centring a title is an export change, not a layout property.
+- **No GUI is cut** (developer, 2026-11-20 morning: "Ensure no GUIs is cut"): every button, label and outline fits inside its frame on PC and phone. The admin panel has cut buttons today; they wait for the planned GUI revamp ([[Open Items]]).
+- **A GUI built at run time also exists in Edit** ([[Verify in Edit and by Screenshot]]).
 - **No text may overlap or clip**, and no outline may be cut off. Measure with `AbsolutePosition` / `AbsoluteSize`, not with the arithmetic you intended ([[Verify in Edit and by Screenshot]]).
 - **A layout owns what it stacks.** Never animate Position or Size of a child under a `UIListLayout` or `UIGridLayout`; animate a `UIScale` or a wrapper ([[UI Layout Traps]]).
 - **Mind the Known traps** before any GUI change: `UIPadding` offsets children; a `CanvasGroup` does not fade its own `UIStroke`; `ZIndexBehavior` is per ScreenGui; `AnchorPoint` and `Position` must agree; `AbsolutePosition` sits below the top-bar inset. All in [[UI Layout Traps]].

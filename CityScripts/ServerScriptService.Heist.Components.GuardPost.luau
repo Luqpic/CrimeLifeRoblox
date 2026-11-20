@@ -14,6 +14,8 @@ local NpcFire = require(ServerScriptService.Enemy.Scripts.NpcFire) :: any
 local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
+local EditRig = require(ServerScriptService.Heist.EditRig)
+local EnemyAI = require(ServerScriptService.Enemy.Scripts.EnemyAI) :: any
 
 local GuardPost = {}
 GuardPost.__index = GuardPost
@@ -21,11 +23,44 @@ GuardPost.__index = GuardPost
 -- The weapon clips of each EnemyTemplates guard (its shoot animation), by guard model.
 local animationOf = setmetatable({}, { __mode = "k" })
 
--- Close enough to cover to stop pathing. Recomputing a path for a guard that
--- is already standing in cover is pure waste.
-local ARRIVE_TOLERANCE = 6
--- Minimum seconds between ComputeAsync calls while still travelling.
-local PATH_RECOMPUTE_INTERVAL = 1.0
+-- Guards walk (developer, 2026-11-20 morning: the pinned guards "didn't move at all"). A walk is one path per goal,
+-- computed off the update thread, then its waypoints in turn; it ends within WALK_ARRIVE studs (flat) of the goal or
+-- after WALK_GIVE_UP seconds.
+local WALK_ARRIVE = 2
+local WALK_GIVE_UP = 10
+local PATH_AGENT = { AgentRadius = 2, AgentHeight = 5, AgentCanJump = true }
+-- Before a robbery: a beat round the post, a point within PATROL_RADIUS at PATROL_WALK_SPEED, then a pause.
+local PATROL_RADIUS = 8
+local PATROL_WALK_SPEED = 6
+local PATROL_DWELL_MIN, PATROL_DWELL_MAX = 3, 6
+-- A melee guard (Security's Baton) has no use for cover: it goes for its target while the target stays within
+-- MELEE_LEASH studs of its post.
+local MELEE_LEASH = 20
+
+local function flatDistance(a: Vector3, b: Vector3): number
+	return Vector3.new(a.X - b.X, 0, a.Z - b.Z).Magnitude
+end
+
+-- The idle / walk / run clips of a guard that can walk, in the shape EnemyAI:_updateLocomotionAnimation reads (it picks
+-- the clip from how far the root travelled between updates, as for every enemy). Nil for an anchored guard.
+local function locomotionOf(guard: Model, humanoid: Humanoid?, walkSpeed: number)
+	local root = guard.PrimaryPart
+	if not humanoid or not root or root.Anchored then
+		return nil
+	end
+	local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+	local tracks = {}
+	for _, setName in { "idle", "walk", "run" } do
+		local animation = locomotionAnimations.get(setName)
+		if animation then
+			local track = (animator :: Animator):LoadAnimation(animation)
+			track.Priority = AnimationPriorities.Locomotion
+			track.Looped = true
+			tracks[setName] = track
+		end
+	end
+	return { locomotionTracks = tracks, rootPart = root, config = { walkSpeed = walkSpeed }, currentLocomotionSet = nil }
+end
 
 -- Pure decisions, unit-testable. Movement quality can only be judged in Play.
 
@@ -95,59 +130,46 @@ end
 -- Clone-from-template rather than resetting a corpse: unragdolling a dead R15
 -- rig and rebuilding its Motor6Ds is far more bug-prone than starting fresh.
 -- `lift` (config.GuardSpawnLift, default 3 as before): studs above the marker for the template's pivot.
--- GuardTemplate's pivot is at its feet (NewsStation uses 0 so its guards stand on the floor its markers sit
--- on); an EnemyTemplates rig's is its root, 3.2 over its feet (the Bank's lift).
--- A guard from ServerStorage.EnemyTemplates[name] (heist police and Bank guards, 2026-11-20), built the way police
--- are (EnemyRig: look, weapon held, health, nameplate, ragdoll on death) and kept a witness and a guard. Its root is
--- anchored at the post (it never walks: cover is skipped for an anchored guard), with the idle and the weapon's hold
--- clips playing; on death the root lets go and the body ragdolls.
-local function templateSpawn(name: string, targetCFrame: CFrame, lift: number?): Model?
-	local templates = ServerStorage:FindFirstChild("EnemyTemplates")
-	local template = templates and templates:FindFirstChild(name)
-	if not template then
-		warn("[GuardPost] ServerStorage.EnemyTemplates." .. name .. " is missing")
-		return nil
-	end
+-- GuardTemplate's pivot is at its feet; an EnemyTemplates rig's is its root, 3.2 over its feet.
+-- A guard built from `template` (its post's Edit rig, or ServerStorage.EnemyTemplates[name]) the way police are
+-- (EnemyRig: look, weapon held, health, nameplate, ragdoll on death; nameplate and EnemyTemplate from the template's
+-- name), kept a witness and a guard. Free to walk (2026-11-20 morning): GuardPost drives its walk and its clips.
+local function templateSpawn(template: Model, targetCFrame: CFrame, lift: number?): Model?
 	local EnemyRig = require(ServerScriptService.Enemy.Scripts.EnemyRig) :: any
-	local guard, weapon = EnemyRig.build(template, name)
+	local guard, weapon = EnemyRig.build(template, template.Name)
 	if not guard or not weapon then
 		return nil
 	end
 	guard.Name = "Guard"
 	CollectionService:AddTag(guard, "Witness")
 	guard:SetAttribute("WitnessRole", "Guard")
+	;(guard.PrimaryPart :: BasePart).Anchored = false -- an Edit rig stands anchored so it cannot fall before Play takes it
 	EnemyRig.place(guard, weapon, targetCFrame + Vector3.new(0, lift or 3, 0), workspace)
-	local humanoid = guard:FindFirstChildOfClass("Humanoid") :: Humanoid
-	local root = guard.PrimaryPart :: BasePart
-	root.Anchored = true
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-	local idle = locomotionAnimations.get("idle")
-	if idle then
-		local track = (animator :: Animator):LoadAnimation(idle)
-		track.Priority = AnimationPriorities.Locomotion
-		track.Looped = true
-		track:Play()
-	end
 	pcall(function()
 		local controller = CharacterAnimationController.new(weapon)
 		controller:enable()
 		animationOf[guard] = controller
 	end)
+	local humanoid = guard:FindFirstChildOfClass("Humanoid") :: Humanoid
 	humanoid.Died:Once(function()
-		root.Anchored = false
 		RagdollController.ragdoll(guard)
 	end)
 	return guard
 end
 
--- `templateName` (config.GuardTemplates) builds that EnemyTemplates rig; without one, ServerStorage.GuardTemplate.
-local function defaultSpawn(targetCFrame: CFrame, lift: number?, templateName: string?): Model?
-	if templateName then
-		return templateSpawn(templateName, targetCFrame, lift)
+-- `template` (the post's Edit rig) or `templateName` (config.GuardTemplates: that EnemyTemplates rig) builds a rig;
+-- with neither, ServerStorage.GuardTemplate.
+local function defaultSpawn(targetCFrame: CFrame, lift: number?, templateName: string?, template: Model?): Model?
+	if not template and templateName then
+		local templates = ServerStorage:FindFirstChild("EnemyTemplates")
+		template = templates and templates:FindFirstChild(templateName) :: any
+		if not template then
+			warn("[GuardPost] ServerStorage.EnemyTemplates." .. templateName .. " is missing")
+			return nil
+		end
+	end
+	if template then
+		return templateSpawn(template, targetCFrame, lift)
 	end
 	local template = ServerStorage:FindFirstChild("GuardTemplate")
 	if not template then
@@ -256,7 +278,6 @@ function GuardPost.new(marker: BasePart, deps)
 		_coverTarget = nil,
 		_lastFired = nil,
 		_activated = false,
-		_lastPathAt = nil,
 		_diedConn = nil,
 		-- [Player] = until when a player who hurt this guard is its target (Provoke).
 		_provoked = setmetatable({}, { __mode = "k" }),
@@ -278,7 +299,22 @@ function GuardPost.new(marker: BasePart, deps)
 		_melee = false,
 		_automatic = false,
 		_aim = nil,
+		-- Walking (2026-11-20 morning): the post's Edit rig (its guard's template), the clips EnemyAI's locomotion
+		-- update reads, the walk in progress (goal, waypoints, start) or the last one ended, the next patrol leg, and
+		-- the template's walk speed.
+		_template = nil,
+		_loco = nil,
+		_walkGoal = nil,
+		_walkDone = nil,
+		_waypoints = nil,
+		_waypointIndex = 1,
+		_walkStartedAt = 0,
+		_patrolNextAt = -math.huge,
+		_walkSpeed = 16,
 	}, GuardPost)
+	-- Edit is the truth (developer rule, 2026-11-20): the post's Edit rig is its guard's template, and the post stands
+	-- where that rig stands.
+	self._template = EditRig.take(marker, if deps.config and deps.config.GuardSpawnLift then deps.config.GuardSpawnLift else 3)
 	if self:_alwaysPosted() then
 		self:OnSessionStart()
 	end
@@ -315,7 +351,7 @@ function GuardPost:OnSessionStart()
 	self._lastFired = nil
 
 	local templateName = self.config and GuardPost.templateFor(self.marker.Name, self.config.GuardTemplates)
-	local guard = self.spawnGuard(self.marker.CFrame, self.config and self.config.GuardSpawnLift, templateName)
+	local guard = self.spawnGuard(self.marker.CFrame, self.config and self.config.GuardSpawnLift, templateName, self._template)
 	self._guard = guard
 	if not guard then return end
 
@@ -335,6 +371,11 @@ function GuardPost:OnSessionStart()
 	end
 
 	self._humanoid = guard:FindFirstChildOfClass("Humanoid")
+	-- Its clips follow its feet, and it walks a beat round the post until it is needed.
+	self._walkGoal, self._walkDone, self._waypoints, self._patrolNextAt = nil, nil, nil, -math.huge
+	self._walkSpeed = if self._humanoid then self._humanoid.WalkSpeed else 16
+	local locoOk, loco = pcall(locomotionOf, guard, self._humanoid, self._walkSpeed)
+	self._loco = if locoOk then loco else nil
 	if self._humanoid then
 		self._diedConn = self._humanoid.Died:Connect(function()
 			self:_handleDeath()
@@ -353,21 +394,19 @@ function GuardPost:_handleDeath()
 	if not ok then warn("[GuardPost] onGuardDied failed: " .. tostring(err)) end
 end
 
+-- Engaged where the place has cover: claim the nearest free HeistCoverPoint once and walk there.
 function GuardPost:_moveToCover()
 	if not self._guard or not self._humanoid then return end
 	local root = self._guard.PrimaryPart
 	if not root then return end
 	if not self.config.Tags.HeistCoverPoint then return end -- no cover here: hold the post
-	-- An anchored guard (both rigs, 2026-11-20: they stand at their posts at all times) holds its post: no cover
-	-- claim and no path computed for a body that cannot move.
-	if root.Anchored then return end
+	if root.Anchored then return end -- a body that cannot move holds its post
 
 	if self._coverTarget == nil then
 		-- ONE GetTagged call, held in `markers`, and every index derived from it.
 		-- CollectionService:GetTagged returns instances in unspecified order, so
 		-- calling it twice and indexing the second result with an index computed
-		-- from the first can claim the WRONG cover point — two guards claiming one
-		-- point while another is never claimed at all.
+		-- from the first can claim the WRONG cover point.
 		local markers = CollectionService:GetTagged(self.config.Tags.HeistCoverPoint)
 		local points, claimed = {}, {}
 		for i, marker in ipairs(markers) do
@@ -381,33 +420,98 @@ function GuardPost:_moveToCover()
 		self._coverTarget = position
 		markers[index]:SetAttribute("ClaimedBy", self.marker.Name)
 	end
+	self:_walkTo(self._coverTarget, true)
+end
 
-	-- Arrived: stop pathing entirely. Without this the guard recomputes a path
-	-- every tick for the rest of the session while standing perfectly still —
-	-- at 10 Hz across 4 guards for 600s that is ~24,000 ComputeAsync calls,
-	-- one of the most expensive calls on the engine, for zero movement.
-	if (root.Position - self._coverTarget).Magnitude <= ARRIVE_TOLERANCE then
+-- Starts a walk to `goal`; a no-op while already walking there or once the last walk there has ended (so a guard in
+-- cover computes no more paths). The path is computed on its own thread; with none the guard goes straight at the
+-- goal when `straight`, else the walk ends.
+function GuardPost:_walkTo(goal: Vector3, straight: boolean)
+	local root = self._guard and self._guard.PrimaryPart
+	if not root or root.Anchored or not self._humanoid then return end
+	if self._walkGoal == goal or self._walkDone == goal then return end
+	self._walkGoal, self._walkDone, self._waypoints = goal, nil, nil
+	self._walkStartedAt = self.now()
+	task.spawn(function()
+		local path = PathfindingService:CreatePath(PATH_AGENT)
+		local ok = pcall(function() path:ComputeAsync(root.Position, goal) end)
+		if self._walkGoal ~= goal then return end -- a newer walk since
+		if ok and path.Status == Enum.PathStatus.Success then
+			self._waypoints, self._waypointIndex = path:GetWaypoints(), 2
+		elseif straight then
+			self._waypoints, self._waypointIndex = { { Position = goal, Action = Enum.PathWaypointAction.Walk } } :: any, 1
+		else
+			self:_endWalk()
+		end
+	end)
+end
+
+function GuardPost:_endWalk()
+	self._walkDone, self._walkGoal, self._waypoints = self._walkGoal, nil, nil
+end
+
+-- One update of the walk in progress: on to the next waypoint within WALK_ARRIVE. True once there is no walk (it
+-- reached its goal, gave up after WALK_GIVE_UP, or ran out of waypoints).
+function GuardPost:_stepWalk(now: number): boolean
+	local goal = self._walkGoal
+	local root = self._guard and self._guard.PrimaryPart
+	if not goal or not root or not self._humanoid then return true end
+	if flatDistance(root.Position, goal) <= WALK_ARRIVE or now - self._walkStartedAt > WALK_GIVE_UP then
+		self:_endWalk()
+		return true
+	end
+	local waypoints = self._waypoints
+	if not waypoints then return false end -- the path is still being computed
+	local waypoint = waypoints[self._waypointIndex]
+	while waypoint and flatDistance(root.Position, waypoint.Position) <= WALK_ARRIVE do
+		self._waypointIndex += 1
+		waypoint = waypoints[self._waypointIndex]
+	end
+	if not waypoint then
+		self:_endWalk()
+		return true
+	end
+	if waypoint.Action == Enum.PathWaypointAction.Jump then
+		self._humanoid.Jump = true
+	end
+	self._humanoid:MoveTo(waypoint.Position)
+	return false
+end
+
+function GuardPost:_pace(speed: number)
+	if self._humanoid then self._humanoid.WalkSpeed = speed end
+	if self._loco then self._loco.config.walkSpeed = speed end
+end
+
+-- Before a robbery, with no provocation running (developer picker, 2026-11-20 morning): a beat round the post at
+-- PATROL_WALK_SPEED, to a point within PATROL_RADIUS, then a pause of PATROL_DWELL_MIN to MAX seconds; a point with
+-- no path is skipped.
+function GuardPost:_patrol(now: number)
+	self:_pace(PATROL_WALK_SPEED)
+	if self._walkGoal then
+		if self:_stepWalk(now) then
+			self._patrolNextAt = now + PATROL_DWELL_MIN + math.random() * (PATROL_DWELL_MAX - PATROL_DWELL_MIN)
+		end
 		return
 	end
+	if now < self._patrolNextAt then return end
+	self._patrolNextAt = now + PATROL_DWELL_MAX -- the wait when this leg's path fails
+	local angle, distance = math.random() * 2 * math.pi, PATROL_RADIUS * math.sqrt(math.random())
+	self:_walkTo(self.marker.Position + Vector3.new(math.cos(angle) * distance, 0, math.sin(angle) * distance), false)
+end
 
-	-- Throttle recomputes even while travelling; a path a second is ample.
-	local nowSeconds = self.now()
-	if self._lastPathAt and (nowSeconds - self._lastPathAt) < PATH_RECOMPUTE_INTERVAL then
-		return
+-- A melee guard goes straight for its target (in sight) while the target stays within MELEE_LEASH of the post;
+-- otherwise it walks back to the post.
+function GuardPost:_chase(candidates, target)
+	for _, candidate in ipairs(candidates) do
+		if candidate.player == target and flatDistance(candidate.position, self.marker.Position) <= MELEE_LEASH then
+			self._walkGoal, self._walkDone, self._waypoints = nil, nil, nil
+			if self._humanoid then self._humanoid:MoveTo(candidate.position) end
+			return
+		end
 	end
-	self._lastPathAt = nowSeconds
-
-	-- Fall back to a direct MoveTo when pathfinding cannot reach the cover, so a
-	-- guard with a blocked route still fights rather than standing inert.
-	local path = PathfindingService:CreatePath({ AgentRadius = 2, AgentHeight = 5, AgentCanJump = true })
-	local ok = pcall(function() path:ComputeAsync(root.Position, self._coverTarget) end)
-	if ok and path.Status == Enum.PathStatus.Success then
-		local waypoints = path:GetWaypoints()
-		local nextWaypoint = waypoints[math.min(2, #waypoints)]
-		if nextWaypoint then self._humanoid:MoveTo(nextWaypoint.Position) end
-	else
-		self._humanoid:MoveTo(self._coverTarget)
-	end
+	self:_walkTo(self.marker.Position, true)
+	self:_stepWalk(self.now())
 end
 
 function GuardPost:_candidates()
@@ -553,21 +657,47 @@ function GuardPost:_staggered(target): boolean
 end
 
 function GuardPost:Update()
-	if self.bank:GetState() ~= "Active" then
+	local active = self.bank:GetState() == "Active"
+	if not active then
 		self:_respawnIfDue()
-		-- Heist police and Bank guards (2026-11-20): outside a session a guard is passive unless a player hurt it.
-		if not self:_anyProvoked() then
-			self:_track(nil)
-			return
-		end
 	end
 	if not self:IsAlive() then return end
-
 	local root = self._guard.PrimaryPart
 	if not root then return end
+	local now = self.now()
+	-- Guard pay (developer, 2026-11-20 morning): XP, cash, spraypaint and quest credit only for a guard killed during a
+	-- robbery (CashService, LevelingService, QuestService and SpraypaintService skip a NoKillReward body).
+	local unpaid = if active then nil else true
+	if self._guard:GetAttribute("NoKillReward") ~= unpaid then
+		self._guard:SetAttribute("NoKillReward", unpaid)
+	end
+	if self._loco then
+		EnemyAI._updateLocomotionAnimation(self._loco) -- idle / walk / run from how far it moved since the last update
+	end
+
+	-- Outside a robbery a guard is passive unless a player hurt it (heist police and Bank guards, 2026-11-20); passive,
+	-- it walks its beat.
+	if not active and not self:_anyProvoked() then
+		self:_track(nil)
+		self:_patrol(now)
+		return
+	end
+	self:_pace(self._walkSpeed)
+
+	-- Engaged (developer picker, 2026-11-20 morning): a gun guard runs for cover at once (back to its post where the
+	-- place has none); a melee guard goes for its target below.
+	if not self._melee then
+		if self.config.Tags.HeistCoverPoint then
+			self:_moveToCover()
+		else
+			self:_walkTo(self.marker.Position, true)
+		end
+		self:_stepWalk(now)
+	end
+
 	local candidates = self:_candidates()
 
-	-- Hold the post until a player is actually near. See shouldActivate.
+	-- Hold fire until a player is actually near. See shouldActivate.
 	if not self._activated then
 		local positions = {}
 		for _, candidate in ipairs(candidates) do
@@ -579,27 +709,36 @@ function GuardPost:Update()
 		self._activated = true
 	end
 
-	self:_moveToCover()
-
 	local target = GuardPost.selectTarget(root.Position, candidates, self.config.GuardSightRange, function(player)
 		return GuardPost.mayTarget(self.bank, player) or self:_isProvokedBy(player)
 	end)
-	local now = self.now()
 	self:_track(target, now)
-	if not target then return end
 
-	-- Turned toward its target first: a melee guard's reach is measured from its weapon's muzzle.
-	self:_face(candidates, target)
 	if self._melee then
 		-- Combat balance (2026-11-20): a guard holding a melee weapon (Security's Baton) strikes only within its
-		-- weapon's reach, and not at a target still staggered by its last strike. No token, no aim line.
-		if not self:_inReach(target) or self:_staggered(target) then return end
+		-- weapon's reach (turned toward the target first: reach is measured from the muzzle), and not at a target
+		-- still staggered by its last strike. No token, no aim line. Out of reach it closes in (_chase).
+		if not target then
+			self:_walkTo(self.marker.Position, true)
+			self:_stepWalk(now)
+			return
+		end
+		self:_face(candidates, target)
+		if not self:_inReach(target) then
+			self:_chase(candidates, target)
+			return
+		end
+		if self:_staggered(target) then return end
 		if not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
 		self._lastFired = now
 		self:_fire(target)
 		return
 	end
+	if not target then return end
 
+	-- A gun guard fires standing, not while it runs for cover.
+	if self._loco and self._loco.currentLocomotionSet ~= nil and self._loco.currentLocomotionSet ~= "idle" then return end
+	self:_face(candidates, target)
 	if not self:_ready(target, now) then return end
 	if now < self._shotAfter or not GuardPost.shouldFire(now, self._lastFired, self.config.GuardFireInterval) then return end
 	self._lastFired = now
@@ -676,7 +815,7 @@ function GuardPost:Rearm()
 	self._coverTarget = nil
 	self._lastFired = nil
 	self._activated = false
-	self._lastPathAt = nil
+	self._walkGoal, self._walkDone, self._waypoints = nil, nil, nil
 	local coverTag = self.config.Tags.HeistCoverPoint
 	for _, marker in ipairs(if coverTag then CollectionService:GetTagged(coverTag) else {}) do
 		if marker:GetAttribute("ClaimedBy") == self.marker.Name then

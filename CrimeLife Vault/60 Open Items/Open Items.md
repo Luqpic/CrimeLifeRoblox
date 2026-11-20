@@ -120,9 +120,9 @@ All from [[2026-11-20 Admin Animations Third Person]]; systems: [[Admin Panel]],
 From [[2026-11-20 Heist Police and Bank Guards]] and [[2026-11-20 Readable Gunfights and Level Toughness]]; systems: [[Police and Wanted]], [[Robbery Heists and Getaway]], [[Enemies and Spawner]], [[Leveling and Renown]], [[Weapons and Blaster]], [[Movement and Stamina]].
 
 Questions for the developer:
-- **Vault-side spawn markers for the vault Armed Police (Batch 2 review I2).** They spawn at the markers by the `TeleporterBankB` arrival and cannot path past the obby pit, so they hold the gauntlet and the way out instead of reaching the vault. A marker set inside the vault for `HeistPoliceVault` would put them there.
-- **Guard pay outside a robbery (Batch 3 review I1).** Guards built through EnemyRig pay XP, a 30 % cash drop and quest credit when killed outside a robbery and respawn every 60 s. Ceiling across all 7 guards (Bank 2 Security and 2 Police, NewsStation 3 Police): about 95 XP and 64 cash a minute, plus 5 Police quest kills a minute. Police guards also give police heat. NewsStation guards newly pay cash and quest credit because they are Police rigs now. The smallest fix is a `NoKillReward` attribute on guard rigs that CashService, LevelingService and QuestService skip, or paying only while the Bank is Active.
-- **A free starter gun.** A new player owns only the Crowbar (`WeaponShopService` `STARTING_WEAPON`); the cheapest pistol, the Glock 17, costs 400 of the 500 starting cash. The 1v2 target was measured with the Glock.
+- **Done 2026-11-20 morning:** the developer chose the other way round: the armed police stay upstairs in the lobby, and normal police also spawn after the obby pit. [[2026-11-20 Walking Bank Guards and Edit Rigs]]
+- **Done 2026-11-20 morning:** guards pay only during a robbery (`NoKillReward`). [[2026-11-20 Walking Bank Guards and Edit Rigs]]
+- **Answered 2026-11-20 morning: no free gun.** The weapons will move from buying to a gacha (a future batch; see below).
 - **Offender `DamageOverride` 8 to 6 if 1v2 feels hard.** Standing damage rose from 7.2 to 14.0 dps (62 % health left) because recoil no longer ruins follow-up shots; strafing is unchanged. The lever is a Studio attribute on `ServerStorage.EnemyTemplates.Offender`.
 - **A level-up still fully heals mid-fight.** Rare after the first levels, except by farming guards.
 
@@ -135,7 +135,7 @@ Not yet checked (needs a person or a longer run):
 - The 1v2 verdict assumes 4 clicks a second; at the Glock's 650 rpm cap every case ended above 75 %. Run-to-run variance is large (Police standing 8.0 to 22.7 dps) and the before cells are single runs; Bandits standing is the tightest (one run ended at 50 %).
 
 Minors left open:
-- **Batch 2 M2:** one steering path check a second from marker 1 while robbers are inside.
+- **Batch 2 M2:** one steering path check a second while robbers are inside (since 2026-11-20 morning from one side a tick, in turn).
 - **A roll in place gets the widest NPC cone.** `RollAuthority` stamps `RollingUntil` for any accepted roll, moving or not. Bounded by stamina (12.3 a roll, regen 6.25 a second) and the 0.9 s cooldown, about 37 % uptime sustained. Fix if it matters: require horizontal speed above about 8 at request time.
 - **The 8 s token timeout against a very slow weapon.** A burst longer than 8 s would free a slot early; no current weapon does that (Mateba 220 rpm, a burst is at most about 3 s).
 - **NPC explosions and bleed ticks bypass falloff and armor** (by design; no current NPC weapon is known to use either).
@@ -147,6 +147,16 @@ Concerns carried from the reports (pre-existing or measured, not fixed):
 - After the squad hold ends, a non-participant left in the Bank lobby is unseen and their stars drain.
 - A wanted bystander who was in the building when the session started is held and counted as seen for the first 2 minutes (review I1 narrowed it to those present at the start).
 - The police damage window in Batch 2 used MaxHealth 1000; the `Tagged` total (63) is more reliable than the 53.5 HP net.
+
+### Walking guards and Edit rigs (2026-11-20 morning)
+From [[2026-11-20 Walking Bank Guards and Edit Rigs]].
+- **The admin panel has cut buttons.** Left as asked until the GUI revamp; the rule is in [[GUI Rules]].
+- **Weapons by gacha instead of buying** (developer: "Instead of buying, we are doing gacha"). A future batch, pickers first: currency (cash or Robux), odds shown, duplicates, pity, and the paid random item rules (`PolicyService` restrictions) if Robux is involved.
+- **Edit rigs elsewhere.** The Edit rule now covers every Play spawn. Not yet done: the city's enemy spawners, star squads, loose and admin-spawned NPCs, and GUIs that only exist in ServerStorage (the admin panel is delivered per admin for security, so it cannot sit in StarterGui; a disabled preview copy would need its scripts removed). Apply when each is next touched, or in one pass if the developer wants.
+- **The armed wave was not watched live:** the vault door prompt did not fire for the test player (teleported, likely not a participant). Covered by the spec and the boot read-back.
+- **Guard room damage.** A player standing still in the open lost 178 HP in 10 s (2 Police guards from cover, 17 hits of 6; the near Security guard chasing, about 5 swings). Levers: `MELEE_LEASH` 20 in GuardPost, `GuardDamage` 6 in the Bank config.
+- One patrolling guard was seen standing on a low object in the guard room (the path agent can jump). Cosmetic; a `PathfindingModifier` or `AgentCanJump = false` would stop it.
+- Not checked: two players, a phone, NewsStation guards in a robbery.
 
 ### Product calls waiting
 - **Tycoon compound look (2026-11-18):** the approved Flow top view (`docs/compound-views/flow-top-result.jpg`) has a fourth guard tower at the SE corner and pyramid tower roofs; the plan has three corner towers. Confirm whether the plan should add the SE tower. [[2026-11-17 Compound Floor Plan]]

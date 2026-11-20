@@ -57,6 +57,10 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 - **Template changes.** `EnemyTemplates.Police.DamageOverride` 9 (was 12), `Bandits` 1.5 a pellet (was 3); other types as read: Thug 9, Security 9, Offender 8, Smuggler 4, Disrupters 4, Saboteur 2, Armed Police 3.
 - **Measured.** 1v2 at 35 studs, level 1, Glock 17: Offender 62 % health left standing, Police 59 %, Bandits 59 %; 1v5 mixed gangs 56.1 to 14.9 dps; Crowbar rush 1v1 arrives with 92 HP. See the batch note for the full table.
 
+## Edit rigs and patrol radius (2026-11-20 morning)
+- EnemyAI's patrol reads `self.patrolRadius` before `Constants.PATROL_RADIUS` (heist armed police: 12).
+- The Edit rule ([[Verify in Edit and by Screenshot]]): NPCs that appear in Play are rigs in Edit. Heist guards and heist police have them ([[2026-11-20 Walking Bank Guards and Edit Rigs]]); the city's enemy spawners, star squads and admin-spawned NPCs do not yet (see [[Open Items]]).
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.

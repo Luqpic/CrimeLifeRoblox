@@ -1079,3 +1079,28 @@ Review of 86a0073 (`.superpowers/sdd/2026-11-20-combat-balance/review.md`): 0 Cr
 `CityMergeDeviation` appended on all 5. City 366 / 366 / 0; heist 760 passed / 0 failed (run from the Server command bar: from a temp Script, the two `Source` specs fail on capability).
 
 NOT published
+
+## Walking Bank guards and Edit rigs 2026-11-20
+
+The developer's morning asks: Edit is the truth (Play spawns shown as rigs in Edit), guards that move, armed police upstairs, police after the obby pit, guards pay only during a robbery. Pickers: "Patrol, then cover", "Split each wave", "Only during a robbery", "Real rigs". Built natively (no subagents).
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Heist.EditRig | new | 859 / 2289180871 |
+| ServerScriptService.Heist.Components.GuardPost | 28,220 / 1048495103 | 34,661 / 3389669030 |
+| ServerScriptService.Heist.Services.HeistPolice | 9,961 / 2268077868 | 12,616 / 2808713664 |
+| ReplicatedStorage.HeistShared.Config | 17,128 / 4046351343 | 17,527 / 330888722 |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 46,253 / 4086379001 | 46,308 / 3345696100 |
+| ServerScriptService.HeistServer | 54,540 / 3417567474 | 55,079 / 3980569753 |
+| ServerScriptService.Weapons.Scripts.CashService | 11,550 / 1501192552 | 11,722 / 2069142257 |
+| ServerScriptService.Weapons.Scripts.LevelingService | 11,488 / 2460912467 | 11,656 / 305578906 |
+| ServerScriptService.Quests.Scripts.QuestService | 9,734 / 1723410977 | 9,886 / 2053135860 |
+| ServerScriptService.Spraypaint.Scripts.SpraypaintService | 14,858 / 524183879 | 15,010 / 758029594 |
+| ServerScriptService.Heist.Tests.GuardSpec | 27,070 / 3281672243 | 29,699 / 4045192435 |
+| ServerScriptService.Heist.Tests.HeistPoliceSpec | 11,515 / 2543879123 | 14,284 / 511578777 |
+
+`CityMergeDeviation` appended on all 12 (the new module carries its own). World (one undo step "Bank Edit rigs and police spawns", plus "Move HeistPoliceInnerSpawn3 in front of the vault corridor"): new markers `HeistMarkers.HeistPoliceInnerSpawn1..3` ((1350, -94.5, 2548), (1382, -94.5, 2548), (1366, -94.5, 2551)) and `HeistPoliceUpperSpawn1..4` ((1255, 13.4, 2340), (1230, 13.3, 2340), (1240, 13.3, 2300), (1210, 13.4, 2320)), copies of `HeistPoliceSpawn1` (invisible, anchored, no collide / query / touch). 20 Edit rigs (clones of `ServerStorage.EnemyTemplates` Security / Police / Armed Police, root anchored, weapon in the right hand) as Model children of the Bank's 4 guard posts, NewsStation's 3 guard posts, the Bank's 10 police spawns and NewsStation's 3.
+
+City 366 / 366 / 0; heist 764 passed / 0 failed. Edit after: no `Tmp*`, 1 enabled SpawnLocation, no Workspace attributes, no cover point claimed, 20 rigs on their markers.
+
+NOT published

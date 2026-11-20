@@ -1,7 +1,7 @@
 ---
 type: system
 tags: [system, economy, cash, fps, robbery]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["CrimeLifeRoblox/FPSSystem/Weapons/CashService.luau", "CrimeLifeRoblox/FPSSystem/UI/CashBurst.luau", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Billboard-Scale-And-Cash-Drop-System.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/Cash-Spend-Burst-Replaces-Price-Label.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Persistence-Phase-3.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/FPS System/FPS-Figma-UI-Bugfix-Pass-4.md", "CrimeLifeRoblox/CrimeLife Vault/70 Batches/Robbery System/Cash-Burst-Emitter-Icon.md", "CrimeLifeRoblox/docs/superpowers/specs/2026-09-22-cosmetics-monetisation-design.md", "CLAUDE.md (Systems: Economy)", ".superpowers/sdd/2026-11-18-open-items-pass/task-5-report.md"]
 ---
 
@@ -31,6 +31,9 @@ Cash is the combat currency in the FPS place: earned from enemy cash drops, leve
 - **Spend feedback.** `CashBurst` throws 8-20 coins (scaled by amount; 11 for a 1500 spend) from the clicked button's centre, scattering and fading. Each call owns and destroys its own overlay. Optional style (image, colour, size) is used for the spray-can burst.
 - **Earn feedback.** Robbery's `CashClaimVFX` flies coins into the cash HUD as the counter ticks — the deliberate mirror of the FPS spend burst, same coin slice.
 - No lifetime-earnings figure exists; every "cash" display is the current balance.
+
+### Heist guards pay only during a robbery (2026-11-20)
+GuardPost sets `NoKillReward` on its guard while no robbery runs at its location; CashService (drop), LevelingService (XP; the kill toast still shows), QuestService (kill credit) and SpraypaintService skip a body with it. Developer: "Pay should start after robbery" (picker: only during a robbery). [[2026-11-20 Walking Bank Guards and Edit Rigs]]
 
 ## Extend it
 - New cash source: write to `leaderstats.Cash` on the server; persistence picks it up automatically through the Value listener.

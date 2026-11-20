@@ -422,7 +422,7 @@ return function()
 		marker:Destroy()
 	end)
 
-	suite:test("a Bank post builds its guard from EnemyTemplates: health, held weapon, witness and guard, rooted at its post", function(expect)
+	suite:test("a Bank post builds its guard from EnemyTemplates: health, held weapon, witness and guard, free to walk", function(expect)
 		local CollectionService = game:GetService("CollectionService")
 		for _, case in ipairs({ { "GuardPost1", "Security", 80 }, { "GuardPost2", "Police", 100 } }) do
 			local marker = tempMarker(Vector3.new(0, 4000, 0))
@@ -437,7 +437,7 @@ return function()
 				expect.equal(humanoid and humanoid.MaxHealth, case[3], case[2] .. " health from the template")
 				expect.truthy(guard:FindFirstChildOfClass("Tool") ~= nil, case[2] .. " holds the template's weapon")
 				expect.truthy(CollectionService:HasTag(guard, "Witness") and guard:GetAttribute("WitnessRole") == "Guard", "a witness and a guard")
-				expect.truthy(guard.PrimaryPart and guard.PrimaryPart.Anchored, "rooted at its post")
+				expect.truthy(guard.PrimaryPart and not guard.PrimaryPart.Anchored, "free to walk (2026-11-20 morning)")
 				local want = marker.Position + Vector3.new(0, Config.GuardSpawnLift, 0)
 				expect.truthy(guard.PrimaryPart and (guard.PrimaryPart.Position - want).Magnitude < 0.05, "root GuardSpawnLift above the post")
 			end
@@ -530,6 +530,50 @@ return function()
 		clock = 100 + Combat.FLINCH_COOLDOWN
 		post:Provoke(attacker)
 		expect.equal(post._shotAfter, clock + Combat.FLINCH_SHOT_DELAY, "after the cooldown it flinches again")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	-- Edit is the truth (developer rule, 2026-11-20 morning).
+	suite:test("a post's Edit rig is its guard's template, and the post stands where the rig stands", function(expect)
+		local marker = tempMarker(Vector3.new(0, 4000, 0))
+		marker.Name = "GuardPost1" -- the list says Security here; the rig says Police
+		local editRig = game:GetService("ServerStorage").EnemyTemplates.Police:Clone()
+		editRig:PivotTo(CFrame.new(7, 4000 + Config.GuardSpawnLift, 3))
+		;(editRig.PrimaryPart :: BasePart).Anchored = true
+		editRig.Parent = marker
+		local post = GuardPost.new(marker, { config = Config, now = function() return 100 end,
+			bank = BankInstance.new({ config = Config, now = function() return 1000 end }) })
+		expect.equal(editRig.Parent, nil, "the Edit rig leaves the world")
+		expect.truthy((marker.Position - Vector3.new(7, 4000, 3)).Magnitude < 0.01, "the post moved to the rig's feet")
+		local guard = post._guard
+		expect.equal(guard and guard:GetAttribute("EnemyTemplate"), "Police", "built from the Edit rig, not the list")
+		local want = Vector3.new(7, 4000 + Config.GuardSpawnLift, 3)
+		expect.truthy(guard and guard.PrimaryPart and (guard.PrimaryPart.Position - want).Magnitude < 0.05, "standing where the rig stood")
+		post:Destroy()
+		marker:Destroy()
+	end)
+
+	suite:test("a guard pays only during a robbery; outside one it walks a beat round its post, in one it heads back", function(expect)
+		local marker = tempMarker(Vector3.new(0, 4000, 0))
+		local state = "Idle"
+		local noCover = table.clone(Config)
+		noCover.Tags = {} -- the walk back to the post, not the world's cover points
+		local post = GuardPost.new(marker, { config = noCover, now = function() return 100 end,
+			bank = { GetState = function() return state end },
+			spawnGuard = function() return rig(false) end })
+		post._candidates = function() return {} end
+		post:Update()
+		expect.equal(post._guard:GetAttribute("NoKillReward"), true, "no pay outside a robbery")
+		-- the leg: still walking, or already ended (a stand-in rig off the navmesh gets no path, at once)
+		local leg = post._walkGoal or post._walkDone
+		expect.truthy(leg ~= nil and (leg - marker.Position).Magnitude <= 8 + 1e-6, "a patrol point near the post")
+		expect.equal(post._humanoid.WalkSpeed, 6, "at a walk")
+		state = "Active"
+		post:Update()
+		expect.equal(post._guard:GetAttribute("NoKillReward"), nil, "pays during a robbery")
+		expect.equal(post._walkGoal or post._walkDone, marker.Position, "engaged with no cover: back to its post")
+		expect.equal(post._humanoid.WalkSpeed, post._walkSpeed, "at its own speed")
 		post:Destroy()
 		marker:Destroy()
 	end)

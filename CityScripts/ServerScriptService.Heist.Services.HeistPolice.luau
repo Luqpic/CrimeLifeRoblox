@@ -25,6 +25,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Constants = require(ReplicatedStorage.Wanted.Constants)
+local EditRig = require(ServerScriptService.Heist.EditRig)
 local STATE = require(ServerScriptService.Enemy.Scripts.EnemyAI).State
 
 local HeistPolice = {}
@@ -44,11 +45,14 @@ function HeistPolice.waveSize(plan, index: number, alive: number, room: number):
 	return math.max(0, math.min(size, plan.cap - alive, room))
 end
 
--- The location's HeistPoliceSpawn markers (BaseParts named HeistPoliceSpawn<n>), in name order.
-function HeistPolice.markersIn(folder: Instance): { BasePart }
+-- The location's spawn markers named <prefix><n> (default HeistPoliceSpawn), in name order. Each takes its Edit rig
+-- (EditRig: the officer the developer sees there in Edit; the marker moves to it and it leaves the world).
+function HeistPolice.markersIn(folder: Instance, prefix: string?): { BasePart }
+	local pattern = "^" .. (prefix or "HeistPoliceSpawn") .. "%d+$"
 	local markers = {}
 	for _, child in folder:GetChildren() do
-		if child:IsA("BasePart") and string.match(child.Name, "^HeistPoliceSpawn%d+$") then
+		if child:IsA("BasePart") and string.match(child.Name, pattern) then
+			EditRig.take(child)
 			table.insert(markers, child)
 		end
 	end
@@ -58,14 +62,32 @@ function HeistPolice.markersIn(folder: Instance): { BasePart }
 	return markers
 end
 
--- deps: bank, plan, vaultPlan (optional), markers, isInside(player); seams: now, spawn, room, reaches, players, wait,
--- addSquadHold, addActiveRobbery.
+-- A plan's markers: the sides' markers taken in turn (A1, B1, A2, B2, ...), each remembered with its side's first
+-- marker, the point its officers are steered from.
+local function sides(entry, lists: { { BasePart } })
+	entry.markers, entry.sideOf, entry.next = {}, {}, 0
+	local longest = 0
+	for _, list in lists do
+		longest = math.max(longest, #list)
+	end
+	for i = 1, longest do
+		for _, list in lists do
+			if list[i] then
+				table.insert(entry.markers, list[i])
+				entry.sideOf[list[i]] = list[1]
+			end
+		end
+	end
+end
+
+-- deps: bank, plan, vaultPlan (optional), markers, innerMarkers (optional: a second side for the timed plan),
+-- vaultMarkers and vaultFilter(player) (optional: the vault plan's own markers and an extra test for its targets),
+-- isInside(player); seams: now, spawn, room, reaches, players, wait, addSquadHold, addActiveRobbery.
 function HeistPolice.new(deps)
 	local dispatcher = require(ServerScriptService.Wanted.PoliceDispatcher)
 	assert(deps.markers and #deps.markers > 0, "HeistPolice needs at least one HeistPoliceSpawn marker")
 	local self = setmetatable({
 		bank = deps.bank,
-		markers = deps.markers,
 		isInside = deps.isInside,
 		now = deps.now or os.clock,
 		spawn = deps.spawn or dispatcher.spawnLoose,
@@ -76,7 +98,8 @@ function HeistPolice.new(deps)
 		_timed = { plan = deps.plan, officers = {}, fired = 0 },
 		_vault = if deps.vaultPlan then { plan = deps.vaultPlan, officers = {}, fired = 0 } else nil,
 		_nextTick = 0,
-		_nextMarker = 0,
+		_origin = setmetatable({}, { __mode = "k" }), -- [officer] = the first marker of the side it stood up on
+		_steerTurn = 0,
 		_steering = false,
 		_insideAtStart = {}, -- [player] = true: inside the building when this session started
 		_session = 0, -- bumped by every clear: a wave still sending from an earlier session stops
@@ -84,6 +107,27 @@ function HeistPolice.new(deps)
 	self._plans = { self._timed, self._vault }
 	self._filter = function(player)
 		return self:mayTarget(player)
+	end
+	-- The timed plan's officers take the sides in turn (the Bank: before the obby pit, then after it; developer,
+	-- 2026-11-20 morning). The vault plan stands at its own markers when it has them (the Bank's lobby: the armed police
+	-- stay upstairs so the vault is not crowded), fights only players vaultFilter allows, keeps plan.patrolRadius and is
+	-- never steered.
+	sides(self._timed, { deps.markers, deps.innerMarkers or {} })
+	self._timed.filter = self._filter
+	local vault = self._vault
+	if vault then
+		if deps.vaultMarkers and #deps.vaultMarkers > 0 then
+			sides(vault, { deps.vaultMarkers })
+			vault.steer = false
+		else
+			sides(vault, { deps.markers, deps.innerMarkers or {} })
+		end
+		local vaultFilter = deps.vaultFilter
+		vault.filter = if vaultFilter
+			then function(player)
+				return self:mayTarget(player) and vaultFilter(player) == true
+			end
+			else self._filter
 	end
 	local function holds(player)
 		return self:holdsSquad(player)
@@ -173,36 +217,55 @@ function HeistPolice:_sendWave(entry, index: number)
 			if self._session ~= session or self.bank:GetState() ~= "Active" or self.room() <= 0 or self:_alive(entry) >= entry.plan.cap then
 				break
 			end
-			self._nextMarker = self._nextMarker % #self.markers + 1
+			entry.next = entry.next % #entry.markers + 1
+			local marker = entry.markers[entry.next]
 			local scatter = Constants.HEIST_POLICE_SCATTER
-			local position = self.markers[self._nextMarker].Position
+			local position = marker.Position
 				+ Vector3.new((math.random() * 2 - 1) * scatter, 0, (math.random() * 2 - 1) * scatter)
-			local _, ai = self.spawn(entry.plan.template, position, self._filter)
+			local _, ai = self.spawn(entry.plan.template, position, entry.filter)
 			if ai then
 				table.insert(entry.officers, ai)
+				self._origin[ai] = entry.sideOf[marker]
+				if entry.plan.patrolRadius then
+					ai.patrolRadius = entry.plan.patrolRadius -- EnemyAI wanders this far from where it stood up
+				end
 			end
 			self.wait() -- one officer a frame
 		end
 	end)
 end
 
--- Officers with no target head for the robber nearest the first marker, when a path from that marker leads there.
+-- Officers with no target head for the robber nearest their side's first marker, when a path from that marker leads
+-- there: one side a tick, in turn (one path check a tick); a plan that is not steered is left alone.
 function HeistPolice:_steer(robbers: { BasePart })
 	if self._steering then
 		return
 	end
-	local idle = {}
+	local idleBySide, sideList = {}, {}
 	for _, entry in self._plans do
-		for _, ai in entry.officers do
-			if not ai.destroyed and (ai.state == STATE.Patrol or ai.state == STATE.Search) then
-				table.insert(idle, ai)
+		if entry.steer ~= false then
+			for _, ai in entry.officers do
+				local side = self._origin[ai]
+				if side and not ai.destroyed and (ai.state == STATE.Patrol or ai.state == STATE.Search) then
+					if not idleBySide[side] then
+						idleBySide[side] = {}
+						table.insert(sideList, side)
+					end
+					table.insert(idleBySide[side], ai)
+				end
 			end
 		end
 	end
-	if #idle == 0 then
+	if #sideList == 0 then
 		return
 	end
-	local from = self.markers[1].Position
+	table.sort(sideList, function(a, b)
+		return a.Name < b.Name
+	end)
+	self._steerTurn = self._steerTurn % #sideList + 1
+	local side = sideList[self._steerTurn]
+	local idle = idleBySide[side]
+	local from = side.Position
 	local goal, best = nil, math.huge
 	for _, root in robbers do
 		local d = (root.Position - from).Magnitude

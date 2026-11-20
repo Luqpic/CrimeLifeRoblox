@@ -33,6 +33,8 @@ Quirks of the `Roblox_Studio` MCP harness itself: `execute_luau`, `user_mouse_in
 - A TextBox is typed from a Client call: `box:CaptureFocus()`, set `Text`, `box:ReleaseFocus(true)` (OBT).
 - A fake purchase prompt leaves an invisible dialog that eats later clicks: record prompts through a seam in tests (OBT).
 
+- **A server ProximityPrompt that checks the player (the Bank's vault door) did not fire** from a Client `prompt:InputHoldBegin()` or from a real E hold through `user_keyboard_input`, with a player teleported to it. Likely the player was not a participant (the vault teleporter makes them one). Test such prompts with a player who came the real way. [[2026-11-20 Walking Bank Guards and Edit Rigs]]
+
 ## Subagents (2026-11-20)
 
 - **A subagent's Write into the gitignored `.superpowers/` folder can be refused by the harness** (it happened to the heist-police and combat-balance implementers). Tell a subagent to return its report as text; the controller saves it. [[2026-11-20 Heist Police and Bank Guards]] [[2026-11-20 Readable Gunfights and Level Toughness]]

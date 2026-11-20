@@ -118,7 +118,8 @@ function SpraypaintService.awardForVictim(player: any, victimHumanoid: unknown)
 		return
 	end
 	local character = victimHumanoid.Parent
-	if not character then
+	-- A heist guard killed outside a robbery pays nothing (GuardPost sets NoKillReward; developer, 2026-11-20).
+	if not character or character:GetAttribute("NoKillReward") then
 		return
 	end
 	local amount = Constants.spraypaintForFaction(character:GetAttribute("Faction"))
