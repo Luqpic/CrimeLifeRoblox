@@ -111,8 +111,28 @@ local function IsObstructed()
 	return false
 end
 
+-- With a tool out the crouch drives the legs only (2026-11-20, developer: crouching with a gun "the gun is pointing
+-- downwards"; picker "The gun's own hold"). Its clips pose the whole body at Action2 / Action3, over the gun hold
+-- (Blaster Idle, shoot, reload at Action), so they drop under it while a tool is held and the arms keep the hold.
+-- Nothing else plays under them while crouched (Movement steps aside). Without a tool: their own priorities.
+local TOOL_CROUCH_PRIORITY = Enum.AnimationPriority.Movement
+local ownPriority: { [AnimationTrack]: Enum.AnimationPriority } = {}
+local function setCrouchPriority(track: AnimationTrack)
+	if ownPriority[track] == nil and track.Length > 0 and track.Priority ~= TOOL_CROUCH_PRIORITY then
+		ownPriority[track] = track.Priority
+	end
+	local want = if Character:FindFirstChildOfClass("Tool") then TOOL_CROUCH_PRIORITY else ownPriority[track]
+	if want and track.Priority ~= want then
+		track.Priority = want
+	end
+end
+
 -- -=/HANDLE CROUCH ANIMATIONS/=-
 local function HandleCrouchAnimations()
+	if isCrouching then
+		setCrouchPriority(CrouchIdleAnim)
+		setCrouchPriority(CrouchWalkAnim)
+	end
 	if notMoving and isCrouching then
 		-- Stop walk animation and play idle animation
 		if currentCrouchAnim == CrouchWalkAnim then
