@@ -9,7 +9,35 @@ sources: ["The developer's request, 2026-11-20 evening: [[2026-11-20 Quest NPCs 
 
 **Read this first after a context compaction.** It holds the request in progress, every answer the developer gave, what is done and what is next. Update it after each step. When a part is finished, it moves to a batch note in `70 Batches/` and the line here says so.
 
-## NEW request in progress (2026-11-20 late evening): bugs, interaction clips, enemy moves, takedown prompt
+## NEWEST request in progress (2026-11-20 late night): smooth enemies, action lock, crouch gun, police patrols, ragdoll
+Verbatim: [[2026-11-20 Smooth Enemies Action Lock Crouch Gun Police Patrols Ragdoll]]. Five parts:
+1. **Enemies jitter and lag** while running, chasing and shooting: smooth them.
+2. **Robbery actions:** tween the player into place facing the object and lock him there; no sliding about.
+3. **Crouch with a gun:** the gun points down; needs a fitting animation.
+4. **Police patrol the city randomly**; police and criminals fight when they see each other.
+5. **Death knockback** from the part last hit (a headshot kill: the head takes the impact first), more precise and realistic ragdoll.
+6. **Duffel drop on death** (added mid-turn, verbatim): "Also if a player dies, tehy drop their duffelbag in which other players or themselves can carry".
+7. **Level-up GUI stuck** (added mid-turn, verbatim): "Also another bug where the level up GUI sometimes gets stuck on teh screen".
+
+### Answers (pickers)
+- **Patrols:** "6, also chase wanted": 6 officers walk random routes on city roads, a new one 30 s after one dies; they shoot criminals on sight and go after wanted players like squads; criminals shoot them on sight too.
+- **Death push:** "By weapon": pistols and rifles knock the body back a few studs from the hit point; shotguns and snipers launch it like OBT.
+- **Crouch gun:** "The gun's own hold": crouched legs only, the arms keep the gun's normal hold.
+- **Action lock:** "Locked until it ends": no walking while the prompt is held or the minigame is open; letting go or closing the minigame frees him.
+- **Duffel drop:** "2 minutes": the bag lies where they died for 120 s with a pick-up prompt, then it and its cash are gone; "Anyone" can pick it up (the owner after respawning, a teammate, another player), and whoever carries it banks it.
+
+### Status
+| Part | Status |
+|---|---|
+| 1 Smooth enemies | **done** (version 70): in Attack a `Facing` AlignOrientation (Responsiveness 30) replaces the 4 Hz root snaps, AutoRotate off; released leaving Attack, when stunned, on death. Client: facing snaps over 12 deg/frame 10 of 10 moving frames (up to 55) -> 0 (max 4); chasing Thugs 16.5 to 17.6 of 18 studs/s, 0 to 1 stalls in 11 s. EnemyAI 59,066 / 566881909 |
+| 2 Action lock | to build |
+| 3 Crouch gun | to build |
+| 4 Police patrols + faction fights | to build |
+| 5 Death knockback | to build |
+| 6 Duffel drop on death | to build |
+| 7 Level-up GUI stuck | to reproduce |
+
+## Earlier request (done) (2026-11-20 late evening): bugs, interaction clips, enemy moves, takedown prompt
 Verbatim: [[2026-11-20 Combat Bugs Interaction Animations Takedown Prompt]]. Six parts:
 1. **Bug: Thugs freeze when shot** with health left.
 2. **Bug: police stutter while chasing** ("as if they have high ping"); they must move fluidly.

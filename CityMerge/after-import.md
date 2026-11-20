@@ -1295,3 +1295,13 @@ NOT published
 The five Crime* clips uploaded to group 4998611 and their ids filled in. Live: CrimeRegister, CrimeChoke, CrimeStagger play. Place version 69.
 
 NOT published
+
+## Smooth enemy facing 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.EnemyAI | 57,600 / 753662010 | 59,066 / 566881909 |
+
+Each enemy gets `HumanoidRootPart.FacingAttachment` and an `AlignOrientation` `Facing` (made at runtime). Place version 70.
+
+NOT published

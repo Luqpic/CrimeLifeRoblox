@@ -161,6 +161,23 @@ function EnemyAI.new(
 	character:SetAttribute("AIState", self.state)
 	self:_setupAnimations()
 
+	-- Smooth facing (2026-11-20, developer: enemies "jitter and lag a lot while running and chasing"; measured: moving
+	-- shooters snapped their facing 12 to 55 degrees a frame, AutoRotate turning them toward the walk and _faceTowards
+	-- snapping them back to the target 4 times a second). In Attack this AlignOrientation turns the body toward the
+	-- target over a few frames, with AutoRotate off; elsewhere AutoRotate faces the walk as before.
+	local facingAttachment = Instance.new("Attachment")
+	facingAttachment.Name = "FacingAttachment"
+	facingAttachment.Parent = self.rootPart
+	local facing = Instance.new("AlignOrientation")
+	facing.Name = "Facing"
+	facing.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	facing.Attachment0 = facingAttachment
+	facing.Responsiveness = 30
+	facing.MaxTorque = math.huge
+	facing.Enabled = false
+	facing.Parent = self.rootPart
+	self.facing = facing
+
 	table.insert(self.connections, humanoid.Died:Connect(function()
 		self:_enterDead()
 	end))
@@ -333,11 +350,24 @@ end
 -- (Humanoid.AutoRotate only turns us while we are walking somewhere).
 function EnemyAI:_faceTowards(position: Vector3)
 	local from = self.rootPart.Position
-	local flatTarget = Vector3.new(position.X, from.Y, position.Z)
-	if (flatTarget - from).Magnitude < 0.1 then
+	local flat = Vector3.new(position.X - from.X, 0, position.Z - from.Z)
+	if flat.Magnitude < 0.1 or not self.facing then
 		return
 	end
-	self.rootPart.CFrame = CFrame.lookAt(from, flatTarget)
+	-- Smoothly (the Facing AlignOrientation, see new), also while it moves; the root is no longer snapped.
+	self.facing.CFrame = CFrame.lookAt(Vector3.zero, flat)
+	if not self.facing.Enabled then
+		self.facing.Enabled = true
+		self.humanoid.AutoRotate = false
+	end
+end
+
+-- Back to turning with the walk: leaving Attack, stunned, dead (an enabled Facing would hold a ragdoll upright).
+function EnemyAI:_releaseFacing()
+	if self.facing and self.facing.Enabled then
+		self.facing.Enabled = false
+		self.humanoid.AutoRotate = true
+	end
 end
 
 -- Picks idle / walk / run from what the character is actually doing, and crossfades only when the
@@ -1009,7 +1039,8 @@ function EnemyAI:_setState(newState: string)
 
 	if self.state == STATE.Attack then
 		self:_stopFiring()
-		-- Leaving Attack ends its cover, its flank side and its tactic.
+		-- Leaving Attack ends its cover, its flank side, its tactic and its smooth facing.
+		self:_releaseFacing()
 		self.coverUntil = 0
 		self.flankDegrees = nil
 		self:_setTactic(nil)
@@ -1044,6 +1075,7 @@ function EnemyAI:_enterDead()
 	self.character:SetAttribute("AIState", STATE.Dead)
 	self:_stopFiring()
 	self:_clearPath()
+	self:_releaseFacing()
 
 	for _, track in self.locomotionTracks or {} do
 		if track.IsPlaying then
@@ -1343,6 +1375,7 @@ function EnemyAI:think(now: number)
 			self:_stopMoving()
 			self.wasStunned = true
 		end
+		self:_releaseFacing()
 		self.humanoid.WalkSpeed = 0
 		return
 	elseif self.wasStunned then
