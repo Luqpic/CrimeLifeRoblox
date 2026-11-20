@@ -34,7 +34,7 @@ end
 local catalogFolder = Instance.new("Folder")
 catalogFolder.Name = "Catalog"
 
-local CATALOG_ATTRIBUTES = { "Category", "Price", "Gamepass", "damage", "rateOfFire", "magazineSize", "range", "ShopViewRotation", "Description" }
+local CATALOG_ATTRIBUTES = { "Category", "Price", "Gamepass", "damage", "rateOfFire", "magazineSize", "range", "ShopViewRotation", "Description", "Rarity" }
 
 for _, template in WEAPONS_FOLDER:GetChildren() do
 	-- Category, not Price: every weapon has a Category, only sellable ones have a Price. Keying
@@ -372,6 +372,11 @@ buyRequest.OnServerEvent:Connect(function(player: Player, weaponName: any)
 		price = 0
 	elseif typeof(price) ~= "number" then
 		return -- not sellable (e.g. Crowbar)
+	end
+	-- Weapon gacha (2026-11-20): weapons come from crates. Only a player the crates are closed to (paid random items
+	-- restricted: GachaAllowed false from GachaService) still buys directly; gamepass weapons are claimed as before.
+	if typeof(gamepass) ~= "string" and player:GetAttribute("GachaAllowed") ~= false then
+		return
 	end
 
 	if isWeaponOwned(player, weaponName) then

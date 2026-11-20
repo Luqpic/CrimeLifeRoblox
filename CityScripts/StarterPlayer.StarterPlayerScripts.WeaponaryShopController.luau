@@ -20,6 +20,13 @@ local CashBurst = require(ReplicatedStorage.UI.CashBurst)
 local SkinsCardController = require(script.Parent:WaitForChild("SkinsCardController"))
 local SpraypaintConstants = require(ReplicatedStorage.Spraypaint.Constants)
 local MonetizationConstants = require(ReplicatedStorage.Monetization.Constants)
+-- Weapon gacha (2026-11-20): unowned weapons come from the crates (CrateGui) unless the crates are closed to this
+-- player (GachaAllowed false: paid random items restricted), who still buys as before.
+local GachaConfig = require(ReplicatedStorage:WaitForChild("Gacha"):WaitForChild("Config"))
+local openCrates = ReplicatedStorage.Gacha:WaitForChild("OpenCrates")
+local function gachaOn(): boolean
+	return player:GetAttribute("GachaAllowed") ~= false
+end
 local promptGamepass = ReplicatedStorage.Monetization.Remotes.PromptGamepassPurchase
 
 local FADE_TIME = 0.25
@@ -678,6 +685,10 @@ local function performAction()
 		promptGamepass:FireServer(pass.key)
 		return
 	end
+	if not pass and not isOwned(weaponName) and gachaOn() then
+		openCrates:Fire()
+		return
+	end
 	if entry then
 		local cost
 		if isOwned(weaponName) then
@@ -943,6 +954,16 @@ function refreshDetailStats(weaponName: string)
 			actionButton.Visible = true
 			pricePillLabel.Text = if unlocked then "FREE" else "R$" .. pass.robux
 			pricePill.Visible = true
+		elseif price and gachaOn() then
+			-- Not bought any more: the button opens the crates, the pill shows the weapon's rarity.
+			local rarity = GachaConfig.rarityOf(entry) or "Common"
+			priceLabel.Visible = false
+			priceIcon.Visible = false
+			actionLabel.Text = "CRATES"
+			actionButton.BackgroundColor3 = BUY_COLOR
+			actionButton.Visible = true
+			pricePillLabel.Text = string.upper(rarity)
+			pricePill.Visible = true
 		elseif price then
 			-- The pill carries the number, so the separate icon+text row would be a second cash
 			-- visual saying the same thing.
@@ -1052,6 +1073,10 @@ local function buildGrid()
 		elseif pass then
 			priceOrOwned.Text = "GAMEPASS"
 			priceOrOwned.TextColor3 = GAMEPASS_COLOR
+		elseif entry:GetAttribute("Price") and gachaOn() then
+			local rarity = GachaConfig.rarityOf(entry) or "Common"
+			priceOrOwned.Text = string.upper(rarity)
+			priceOrOwned.TextColor3 = GachaConfig.COLORS[rarity]
 		elseif entry:GetAttribute("Price") then
 			priceOrOwned.Text = `{entry:GetAttribute("Price")}`
 			priceOrOwned.TextColor3 = Color3.fromRGB(255, 220, 120)

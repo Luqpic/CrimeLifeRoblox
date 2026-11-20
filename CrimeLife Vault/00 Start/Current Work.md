@@ -26,7 +26,7 @@ Rules in force: Edit is the truth (rigs in Edit), native work only (no subagents
 | 2 Combat | answered, to build (step 4) |
 | 3 Hit registration | **done** [[2026-11-20 Hit Registration]] |
 | 4 Crouch stealth | **done** [[2026-11-20 Crouch Stealth]] |
-| 5 Gacha | answered, to build (step 5) |
+| 5 Gacha | **built** [[2026-11-20 Weapon Gacha]]; the Robux products are next |
 
 ## Answers from the developer
 - **Combat, feel (all four):** richer hit feedback (red hit marker on headshots, X on kills, heavier sounds, floating damage numbers); enemy hit reactions (visible flinch on every hit, stagger on headshots, close shotgun knockdown); wounded and finishers (an enemy below about 20 % may kneel for a few seconds, E for a melee finisher with bonus cash and XP, or it crawls away); stealth takedowns (crouched behind an unaware enemy, E for a silent one-hit takedown). Plus, verbatim: "Add animations if necessary for better visuals on teh combat, use the animation pipeline we built".

@@ -1151,3 +1151,22 @@ NOT published
 (Before column: Adler-32 only.) New instances: `ReplicatedStorage.PlayerMovement.Crouch` (RemoteEvent), `StarterGui.StealthVignette` (ScreenGui, IgnoreGuiInset, ResetOnSpawn false, DisplayOrder -1; `Vignette` Frame with Top / Bottom / Left / Right black frames, UIGradient 0 to 1, BackgroundTransparency 1). `CityMergeDeviation` appended on all scripts. City 373 / 373 / 0; heist 764 passed / 0 failed.
 
 NOT published
+
+## Weapon gacha 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ReplicatedStorage.Gacha.Config | new | 3,304 / 47981833 |
+| ReplicatedStorage.Gacha.Draw | new | 2,335 / 103417734 |
+| ServerScriptService.Gacha.GachaService | new | 7,100 / 4103632575 |
+| ServerScriptService.Gacha.GachaServer | new | 1,347 / 858709131 |
+| StarterGui.CrateGui.CrateController | new | 8,201 / 1218098561 |
+| ServerStorage.UnitTest.Cases.Gacha_Test | new | 3,145 / 983743927 |
+| ReplicatedStorage.Persistence.Schema | 2680666850 | 3,005 / 3265984381 |
+| ServerScriptService.Weapons.Scripts.WeaponShopService | 1589322929 | 20,715 / 3198589140 |
+| ServerScriptService.Monetization.Scripts.MonetizationService | 3693060990 | 6,185 / 624582641 |
+| StarterPlayer.StarterPlayerScripts.WeaponaryShopController | 3423576501 | 55,376 / 664613598 |
+
+(Before column: Adler-32 only.) New instances: `ReplicatedStorage.Gacha` (Folder: Config, Draw, Remotes { Roll RemoteFunction, BuyKeys RemoteEvent }, OpenCrates BindableEvent), `ServerScriptService.Gacha` (Folder), `StarterGui.CrateGui` (ScreenGui, 61 instances, Panel hidden, CardTemplate). `Rarity` attributes on the 36 crate weapons in `ServerStorage.Weapons`. City 378 / 378 / 0; heist 764 passed / 0 failed.
+
+NOT published

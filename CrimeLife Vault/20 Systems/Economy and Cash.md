@@ -35,6 +35,10 @@ Cash is the combat currency in the FPS place: earned from enemy cash drops, leve
 ### Heist guards pay only during a robbery (2026-11-20)
 GuardPost sets `NoKillReward` on its guard while no robbery runs at its location; CashService (drop), LevelingService (XP; the kill toast still shows), QuestService (kill credit) and SpraypaintService skip a body with it. Developer: "Pay should start after robbery" (picker: only during a robbery). [[2026-11-20 Walking Bank Guards and Edit Rigs]]
 
+
+### Crates (2026-11-20)
+A Standard roll costs 300 cash (ten for 2,700); a duplicate pays 60 / 150 / 400 / 1,000 by rarity. Premium keys are a Robux product. [[2026-11-20 Weapon Gacha]]
+
 ## Extend it
 - New cash source: write to `leaderstats.Cash` on the server; persistence picks it up automatically through the Value listener.
 - Retune drops: `DROP_CHANCE` / `CASH_VALUES` / `DESPAWN_TIME` at the top of `CashService`.

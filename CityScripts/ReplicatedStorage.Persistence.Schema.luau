@@ -36,6 +36,11 @@ Schema.template = {
 	loadout = {},         -- [slotIndex] = weaponName
 	quests = {},          -- [questId] = { state = string, progress = number }; read back through QuestConfig.restore
 	questCompletions = {}, -- [questId] = number of times turned in
+	-- Weapon gacha (2026-11-20): Premium keys, the pity counters, and the key PurchaseIds already granted.
+	gachaKeys = 0,
+	gachaSinceEpic = 0,
+	gachaSinceLegendary = 0,
+	gachaReceipts = {},
 }
 
 -- Values that are COMPUTED from something else and must never be written.

@@ -34,6 +34,10 @@ The Weaponary shop is the only way to get a weapon. Players browse a catalogue b
 ## Admin give weapon (2026-11-20)
 `WeaponShopService.giveFree` is the buy tail without the charge (owned table, `WeaponOwned_<Name>` attribute, first free slot with the Tool granted, `publishSlots`, `mirrorLoadout`), registered as `Admin.Hooks.giveWeapon`; the buy path itself is untouched. Measured through the remote: Deagle gave `WeaponOwned_Deagle` true, `LoadoutSlot2` "Deagle", the Tool in the Backpack, profile `weaponsOwned.Deagle` true; a second give was refused "already owned". The panel's GIVE WEAPON list click was never exercised ([[Admin Panel]]).
 
+
+## Weapon gacha (2026-11-20)
+Unowned weapons come from crates (`ReplicatedStorage.Gacha`, `ServerScriptService.Gacha`, `StarterGui.CrateGui`); `BuyRequest` now sells only to players whose `GachaAllowed` is false (paid random items restricted) and gamepass weapons. Rarity is the `Rarity` attribute on each weapon Tool. [[2026-11-20 Weapon Gacha]]
+
 ## Extend it
 - New weapon: give the Tool a `Category` and a `Price`; the shop picks it up with no shop code (this is how the Knife reached the shop). Reclassifying a category is a data change.
 - Gamepass weapon: `Gamepass = "<key>"`, no `Price`, and a pass entry in `Monetization.Constants` ([[Gamepasses]]).

@@ -117,3 +117,4 @@ ScreenGui layout, drawing order and text. The shared UI code is described in [[H
 Related: [[Engine Traps MOC]] · [[Billboard and World GUI Traps]] · [[Tween and Render Traps]]
 
 - **A CanvasGroup's children did not draw in the Studio capture** (2026-11-20): the stealth vignette's four edge frames under a CanvasGroup at GroupTransparency 0.15 showed nothing; the same frames as plain Frames did. Fade plain frames' BackgroundTransparency for a full-screen overlay. [[2026-11-20 Crouch Stealth]]
+- **`UIScaleController` measures a ScreenGui's widest offset-sized descendant** (2026-11-20): a 5,456-wide reel strip shrank the crate page to the 0.4 floor. Give long strips `AutomaticSize` X with offset 0, and do not add a second UIScale (the controller skips a GUI that already has one). [[2026-11-20 Weapon Gacha]]

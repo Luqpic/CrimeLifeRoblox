@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local Constants = require(ReplicatedStorage.Monetization.Constants)
+local GachaConfig = require(ReplicatedStorage.Gacha.Config)
 local PassOwnership = require(script.Parent.PassOwnership)
 local safePlayerAdded = require(ReplicatedStorage.Utility.safePlayerAdded)
 local validateNumber = require(ServerScriptService.Utility.TypeValidation.validateNumber)
@@ -100,6 +101,16 @@ MarketplaceService.ProcessReceipt = function(receiptInfo)
 	if not player then
 		-- The buyer left before the receipt landed. Not granted, not consumed -- it will be retried
 		-- when they next join.
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+
+	-- Weapon gacha (2026-11-20): Premium key products, granted once per PurchaseId (GachaService.grantKeys).
+	local keyProduct = GachaConfig.keyProductFor(receiptInfo.ProductId)
+	if keyProduct then
+		local GachaService = require(ServerScriptService.Gacha.GachaService) :: any
+		if GachaService.grantKeys(player, keyProduct.keys, receiptInfo.PurchaseId) then
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		end
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 
