@@ -250,6 +250,16 @@ local function initialize()
 		)
 	end
 
+	-- Edit is the truth (developer rule, 2026-11-20): each spawn point carries a rig of its enemy type in Edit, standing
+	-- on the pad. The pad moves under that rig (ServerScriptService.Heist.EditRig) and the rig leaves the world before
+	-- anything spawns, so moving the rig in Edit moves where that type spawns. The enemies still come from the templates.
+	local EditRig = require(game:GetService("ServerScriptService").Heist.EditRig)
+	for _, point in CollectionService:GetTagged(Constants.SPAWN_POINT_TAG) do
+		if point:IsA("BasePart") then
+			EditRig.take(point, point.Size.Y / 2 + 3.2) -- a template rig's root stands 3.2 over its feet
+		end
+	end
+
 	-- Top up to the configured maximum. Covers server start-up and any spawn attempt that found no
 	-- valid point (every player was standing too close, for instance); deaths themselves are
 	-- reported by the AI rather than discovered here.

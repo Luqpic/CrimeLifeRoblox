@@ -152,7 +152,8 @@ Concerns carried from the reports (pre-existing or measured, not fixed):
 From [[2026-11-20 Walking Bank Guards and Edit Rigs]].
 - **The admin panel has cut buttons.** Left as asked until the GUI revamp; the rule is in [[GUI Rules]].
 - **Weapons by gacha instead of buying** (developer: "Instead of buying, we are doing gacha"). A future batch, pickers first: currency (cash or Robux), odds shown, duplicates, pity, and the paid random item rules (`PolicyService` restrictions) if Robux is involved.
-- **Edit rigs elsewhere.** The Edit rule now covers every Play spawn. Not yet done: the city's enemy spawners, star squads, loose and admin-spawned NPCs, and GUIs that only exist in ServerStorage (the admin panel is delivered per admin for security, so it cannot sit in StarterGui; a disabled preview copy would need its scripts removed). Apply when each is next touched, or in one pass if the developer wants.
+- **Edit rigs elsewhere: done** ([[2026-11-20 Edit Rigs on Every Spawner]]): criminal pads, civilian spawners and the admin GUIs. Police squads and admin-spawned NPCs stay without rigs (the developer: no fixed place).
+- **A non-admin joining should get no admin GUI** now that the GUIs live in StarterGui in Edit (taken back at boot). Needs a second player to see.
 - **The armed wave was not watched live:** the vault door prompt did not fire for the test player (teleported, likely not a participant). Covered by the spec and the boot read-back.
 - **Guard room damage.** A player standing still in the open lost 178 HP in 10 s (2 Police guards from cover, 17 hits of 6; the near Security guard chasing, about 5 swings). Levers: `MELEE_LEASH` 20 in GuardPost, `GuardDamage` 6 in the Bank config.
 - One patrolling guard was seen standing on a low object in the guard room (the path agent can jump). Cosmetic; a `PathfindingModifier` or `AgentCanJump = false` would stop it.

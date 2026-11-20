@@ -101,6 +101,7 @@ Details: [[2026-11-20 Walking Bank Guards and Edit Rigs]].
 - **Guards walk.** Unanchored, EnemyAI's idle / walk / run clips. Outside a robbery: a beat round the post (8 studs, speed 6, 3 to 6 s pauses). Engaged: gun guards run to their claimed `HeistCoverPoint` (NewsStation: back to the post) and fire only standing; Security (Baton) goes for its target within 20 studs of its post (`MELEE_LEASH`). One path per walk, off the update thread; a walk ends within 2 studs or after 10 s.
 - **Guard pay.** `NoKillReward` on the guard outside a robbery; Cash, Leveling (XP), Quest and Spraypaint skip it.
 - **Police sides.** The Bank's timed police alternate `HeistPoliceSpawn<n>` (before the obby pit) and `HeistPoliceInnerSpawn<n>` (after it, by the money-vault corridor). The armed police stand at `HeistPoliceUpperSpawn<n>` in the lobby, fight only robbers in the Lobby zone, patrol 12 studs and are not steered; robbers meet them coming back up through TeleporterBankB.
+- **Civilians ([[2026-11-20 Edit Rigs on Every Spawner]]).** The 10 `NPCSpawner` placeholders carry their NPC as an Edit rig; `NPCSpawnManager` takes it at boot (the placeholder moves to it). The pre-placed clerks and cashiers that used to stand there are gone from Edit (the game deleted them at boot anyway).
 
 ## Extend it
 - New location: consume `LocationServer` with a `markerFolder`, a Config with `EscapeDistance`, a `StatusBillboardAnchor`; add boot asserts and `WorldSpec` entries.

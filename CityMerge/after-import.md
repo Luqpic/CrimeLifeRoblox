@@ -1104,3 +1104,20 @@ The developer's morning asks: Edit is the truth (Play spawns shown as rigs in Ed
 City 366 / 366 / 0; heist 764 passed / 0 failed. Edit after: no `Tmp*`, 1 enabled SpawnLocation, no Workspace attributes, no cover point claimed, 20 rigs on their markers.
 
 NOT published
+
+## Edit rigs on every spawner 2026-11-20
+
+The developer: "Do all of them now". Picker answers: police squads no fixed spot ("I meant the NPCS like the criminals"), admin-spawned NPCs as is, the real admin panel in StarterGui, civilian spawners get rigs. Built natively.
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Enemy.Scripts.EnemySpawner | 11,091 / 1886183207 | 11,742 / 4169185854 |
+| ReplicatedStorage.SharedSystems.NPCSpawnManager (first mirror) | 6,140 / 2309961238 | 6,706 / 2524640644 |
+| ServerScriptService.Admin.AdminService | 3,819 / 2179144165 | 4,519 / 1245643989 |
+| ServerStorage.UnitTest.Cases.EditRigs_Test | new | 2,344 / 901316888 |
+
+`CityMergeDeviation` appended on the three scripts; the test carries its own. World (three undo steps): 6 criminal rigs on the `EnemySpawnPoint` pads (EnemyTemplates clones, root anchored, weapon in hand; Offender and Disrupters on the terrain surface 1 stud above their pads), 10 civilian rigs on the `NPCSpawner` placeholders (ModelTemplates clones at the placeholder CFrame, root anchored), the 5 pre-placed `Bank Clerk` and SlowFoods `Cashier` models removed (deleted at boot by `_clearPreexisting` anyway), `AdminHudGui` and `AdminPanelGui` moved from `ServerStorage.AdminPanel` to StarterGui with `Enabled` false.
+
+City 369 / 369 / 0 (test player shielded; unshielded, 2 tests that use the real player failed while enemies hurt it and passed alone); heist 764 passed / 0 failed. Edit after: no `Tmp*`, 1 enabled SpawnLocation, no Workspace attributes, 36 rigs on their markers.
+
+NOT published

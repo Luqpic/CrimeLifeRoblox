@@ -1,7 +1,7 @@
 ---
 type: tool
 tags: [tool, testing, unit-tests]
-updated: 2026-11-18
+updated: 2026-11-20
 sources: ["docs/superpowers/plans/2026-09-23-persistence-phase-3.md (The medium; Running tests)", "70 Batches/FPS System/FPS-Persistence-Phase-3.md", "70 Batches/FPS System/FPS-Spraypaint-Phase-2.md", "70 Batches/FPS System/FPS-Quest-Overflow-And-Dead-Code-Removal.md", "70 Batches/FPS System/FPS-Weapon-Skins-Phase-1.md", "CrimeLifeRoblox/FPSSystem/ViewmodelAnimations/README.md", ".superpowers/sdd/skins-card-sticky-fix-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-report.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/task-4-review.md", "CrimeLifeRoblox/.superpowers/sdd/2026-11-18-open-items-pass/progress.md", ".superpowers/sdd/2026-11-18-open-items-pass/task-6-report.md"]
 ---
 
@@ -47,6 +47,8 @@ Recorded totals: city 315 / 315 and heist 740 passed, 0 failed (2026-11-18, clos
 - **Attribute signals are deferred.** A test that writes an attribute and reads a dependent value on the next line sees the old value; `task.wait()` between them ([[Luau and Scripting Traps]]).
 
 Related: [[Tools MOC]] · [[Studio MCP Gotchas]] · [[Persistence and Saves]]
+
+- **Shield the Play player for a full city run** (2026-11-20). `WantedService_Test` and `EnemyTargetFilter_Test` use the real player and fail if an enemy hurts them mid-run (the spawn is near the criminals' area). Parent a `ForceField` (Visible false) to the character for the run, then remove it. [[2026-11-20 Edit Rigs on Every Spawner]]
 
 ## History
 - 2026-11-18: closing totals city 315 / 315, heist 740 / 0; RunAll's result is its return value. [[2026-11-18 Open Items Pass]]

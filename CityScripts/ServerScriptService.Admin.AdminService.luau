@@ -5,6 +5,22 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
+local StarterGui = game:GetService("StarterGui")
+
+-- Edit is the truth (developer rule, 2026-11-20): both admin GUIs sit in StarterGui, switched off, so the developer
+-- sees and edits the real panel in Edit. They are taken back into ServerStorage.AdminPanel here, first thing at server
+-- start and before anyone joins (StarterGui would copy them to every player), switched on as they run, and given to
+-- admins only (below).
+do
+	local folder = ServerStorage:FindFirstChild("AdminPanel")
+	for _, name in { "AdminHudGui", "AdminPanelGui" } do
+		local gui = StarterGui:FindFirstChild(name)
+		if folder and gui and gui:IsA("ScreenGui") then
+			gui.Enabled = true
+			gui.Parent = folder
+		end
+	end
+end
 
 local Actions = require(script.Parent.Actions)
 local Roles = require(script.Parent.Roles)
