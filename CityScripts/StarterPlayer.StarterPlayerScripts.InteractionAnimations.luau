@@ -6,6 +6,8 @@
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Clips = require(ReplicatedStorage:WaitForChild("Combat"):WaitForChild("Clips"))
 local player = Players.LocalPlayer
@@ -20,6 +22,10 @@ local HOLDS = {
 local TRIGGERED = { { "pick up", "PickUp" }, { "steal supplies", "PickUp" } }
 -- While open (ScreenGui.Enabled).
 local MINIGAMES = { LockpickGui = "Kneel", HackCodeGui = "Type", WordScrambleGui = "Type" }
+-- The action lock (developer 2026-11-20: "tween them into the place and fixate their character in that spot"; picker
+-- "Locked until it ends"): the character eases to STAND_MIN..STAND_MAX studs from the object, facing it, over
+-- TWEEN_SECONDS, and the movement controls are off until the hold ends or the minigame closes.
+local STAND_MIN, STAND_MAX, TWEEN_SECONDS = 2.2, 3.2, 0.25
 
 local cache: { [string]: AnimationTrack } = {}
 local animator: Animator? = nil
@@ -49,7 +55,71 @@ local function kindOf(prompt: ProximityPrompt, list): string?
 	return nil
 end
 
+local controls: any = nil
+local function getControls(): any
+	if controls == nil then
+		local ok, module = pcall(function()
+			return require(player:WaitForChild("PlayerScripts"):WaitForChild("PlayerModule") :: any)
+		end)
+		controls = if ok and module then module:GetControls() else false
+	end
+	return controls or nil
+end
+
+local locked = false
+local function unlock()
+	if locked then
+		locked = false
+		local c = getControls()
+		if c then
+			c:Enable()
+		end
+	end
+end
+
+-- Lock the controls; with a prompt, ease into place in front of its object, facing it.
+local function lock(prompt: ProximityPrompt?)
+	if not locked then
+		locked = true
+		local c = getControls()
+		if c then
+			c:Disable()
+		end
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local holder = prompt and prompt.Parent
+	local target = if holder and holder:IsA("Attachment") then holder.WorldPosition
+		elseif holder and holder:IsA("BasePart") then holder.Position
+		else nil
+	if not (root and target) then
+		return
+	end
+	local flat = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
+	if flat.Magnitude < 0.1 then
+		return
+	end
+	local spot = Vector3.new(target.X, root.Position.Y, target.Z) + flat.Unit * math.clamp(flat.Magnitude, STAND_MIN, STAND_MAX)
+	local goal = CFrame.lookAt(spot, Vector3.new(target.X, spot.Y, target.Z))
+	local start = root.CFrame
+	local began = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.Heartbeat:Connect(function()
+		local alpha = math.min(1, (os.clock() - began) / TWEEN_SECONDS)
+		if not locked or not root.Parent then
+			connection:Disconnect()
+			return
+		end
+		root.CFrame = start:Lerp(goal, TweenService:GetValue(alpha, Enum.EasingStyle.Quad, Enum.EasingDirection.Out))
+		root.AssemblyLinearVelocity = Vector3.zero
+		if alpha >= 1 then
+			connection:Disconnect()
+		end
+	end)
+end
+
 local function stop()
+	unlock()
 	generation += 1
 	for _, track in playing do
 		track:Stop(0.2)
@@ -112,6 +182,7 @@ ProximityPromptService.PromptButtonHoldBegan:Connect(function(prompt)
 	if kind then
 		holding = prompt
 		start(kind)
+		lock(prompt)
 	end
 end)
 
@@ -148,6 +219,7 @@ for name, kind in MINIGAMES do
 		screen:GetPropertyChangedSignal("Enabled"):Connect(function()
 			if screen.Enabled then
 				start(kind)
+				lock(nil)
 			elseif current == kind and not holding then
 				stop()
 			end

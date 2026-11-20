@@ -30,7 +30,7 @@ Verbatim: [[2026-11-20 Smooth Enemies Action Lock Crouch Gun Police Patrols Ragd
 | Part | Status |
 |---|---|
 | 1 Smooth enemies | **done** (version 70): in Attack a `Facing` AlignOrientation (Responsiveness 30) replaces the 4 Hz root snaps, AutoRotate off; released leaving Attack, when stunned, on death. Client: facing snaps over 12 deg/frame 10 of 10 moving frames (up to 55) -> 0 (max 4); chasing Thugs 16.5 to 17.6 of 18 studs/s, 0 to 1 stalls in 11 s. EnemyAI 59,066 / 566881909 |
-| 2 Action lock | to build |
+| 2 Action lock | **done** (version 73): `StarterPlayerScripts.InteractionAnimations` `lock(prompt)` turns the PlayerModule controls off and eases the root over 0.25 s (Quad Out, Heartbeat lerp) to 2.2 to 3.2 studs from the prompt's part, facing it; `unlock()` in `stop()`; a minigame opening locks without moving. Live: from 4.9 studs, held E: 3.20 studs, facing 0 deg off; W while held moved 0.00; after release S walked 12. InteractionAnimations 6,930 / 2625369882 |
 | 3 Crouch gun | to build |
 | 4 Police patrols + faction fights | to build |
 | 5 Death knockback | **done** (version 72): every killing shot flings the ragdoll from the part it hit (`ShotResolver.flingRagdoll(..., hitPart, hitPosition)`: the hit part 1.6x, the body 0.75x, the torso spun by the off-centre lever; a hat or hair counts as the part it is worn on); push by weapon (`killPushFor`: Pistol 18, AutoRifle 22, Melee 20, Shotgun 55, semi-auto rifles 42, a `killPush` attribute wins). Live: AUG kill 2.0 studs (hit hand first, 24 studs/s), S&W 29 4.3 studs (head first, 36), Remington 870 12.8 studs (hit hand first, 54). ShotResolver 43,510 / 245144580 |
