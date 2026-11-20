@@ -56,8 +56,9 @@ function Witnesses.sees(position: Vector3, except: Instance?): boolean
 	return anySees(position, Constants.WITNESS_RANGE, false, except)
 end
 
-function Witnesses.guardSees(position: Vector3): boolean
-	return anySees(position, Constants.SEEN_RANGE, true)
+-- `range` (crouch stealth, 2026-11-20): the watched player's notice range when it is shorter than SEEN_RANGE.
+function Witnesses.guardSees(position: Vector3, range: number?): boolean
+	return anySees(position, range or Constants.SEEN_RANGE, true)
 end
 
 return Witnesses

@@ -11,6 +11,7 @@ local BlasterConstants = require(ReplicatedStorage.Blaster.Constants)
 local CharacterAnimationController = require(ReplicatedStorage.Blaster.Scripts.CharacterAnimationController)
 local Combat = require(ReplicatedStorage.Enemy.Combat)
 local NpcFire = require(ServerScriptService.Enemy.Scripts.NpcFire) :: any
+local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 local RagdollController = require(ReplicatedStorage.Modules.RagdollController)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
@@ -531,7 +532,8 @@ function GuardPost:_candidates()
 			table.insert(candidates, {
 				player = player,
 				position = playerRoot.Position,
-				visible = hit == nil,
+				-- crouch stealth (2026-11-20): a crouched or hidden player is seen only within its StealthRange
+				visible = hit == nil and direction.Magnitude <= Stealth.noticeRange(character, math.huge),
 			})
 		end
 	end

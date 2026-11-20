@@ -34,6 +34,7 @@ local EnemyAI = require(ServerScriptService.Enemy.Scripts.EnemyAI)
 local EnemyRig = require(ServerScriptService.Enemy.Scripts.EnemyRig)
 local Sight = require(script.Parent.Sight)
 local Witnesses = require(script.Parent.Witnesses)
+local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 
 local PoliceDispatcher = {}
 
@@ -618,17 +619,19 @@ function PoliceDispatcher.isSeen(player: Player): boolean
 	if not root then
 		return false
 	end
+	-- Crouch stealth (2026-11-20): a crouched or hidden player is seen only within its StealthRange.
+	local range = Stealth.noticeRange(player.Character, Constants.SEEN_RANGE)
 	for _, ai in EnemyAI.getLive() do
 		if ai.config.faction == FACTION
 			and not leavingAi[ai]
-			and (ai.rootPart.Position - root.Position).Magnitude <= Constants.SEEN_RANGE
+			and (ai.rootPart.Position - root.Position).Magnitude <= range
 			and ai:canSee(player.Character)
 		then
 			lastSeen[player] = root.Position
 			return true
 		end
 	end
-	if Witnesses.guardSees(root.Position) then
+	if Witnesses.guardSees(root.Position, range) then
 		lastSeen[player] = root.Position
 		return true
 	end

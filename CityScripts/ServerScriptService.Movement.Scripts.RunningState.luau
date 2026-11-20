@@ -5,6 +5,7 @@ local makeValidateRunningState = require(script.validateRunningState)
 local validateRunningState = makeValidateRunningState()
 local SprintAuthority = require(script.Parent.SprintAuthority)
 local RollAuthority = require(script.Parent.RollAuthority)
+local Stealth = require(script.Parent.Stealth)
 
 local runEvent = ReplicatedStorage:WaitForChild("UpdateRunningState")
 -- 2026-11-20: StarterCharacterScripts.Movement rolls at once (the character is the client's) and asks here for the
@@ -28,6 +29,12 @@ local function onPlayerRemoving(player: Player)
 end
 
 SprintAuthority.start()
+-- Crouch stealth (2026-11-20): the client reports its crouch here (a boolean); Stealth decides what it is worth.
+local crouchEvent = ReplicatedStorage:WaitForChild("PlayerMovement"):WaitForChild("Crouch")
+crouchEvent.OnServerEvent:Connect(function(player: Player, on: unknown)
+	Stealth.setCrouch(player, on)
+end)
+Stealth.start()
 
 runEvent.OnServerEvent:Connect(onUpdateRunningState)
 rollEvent.OnServerEvent:Connect(function(player: Player)

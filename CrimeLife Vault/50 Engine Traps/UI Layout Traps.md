@@ -1,7 +1,7 @@
 ---
 type: trap
 tags: [trap, ui, layout, gui]
-updated: 2026-11-14
+updated: 2026-11-20
 sources: ["CLAUDE.md (Known traps)", "70 Batches/FPS System/*.md and 70 Batches/Robbery System/*.md (cited per trap)", "OBT Vault/50 Engine Traps/UI Layout Traps.md (generic traps)"]
 ---
 
@@ -115,3 +115,5 @@ ScreenGui layout, drawing order and text. The shared UI code is described in [[H
 - Strip `LuaSourceContainer`s from a GUI copied only for its look.
 
 Related: [[Engine Traps MOC]] · [[Billboard and World GUI Traps]] · [[Tween and Render Traps]]
+
+- **A CanvasGroup's children did not draw in the Studio capture** (2026-11-20): the stealth vignette's four edge frames under a CanvasGroup at GroupTransparency 0.15 showed nothing; the same frames as plain Frames did. Fade plain frames' BackgroundTransparency for a full-screen overlay. [[2026-11-20 Crouch Stealth]]

@@ -1132,3 +1132,22 @@ NOT published
 `CityMergeDeviation` appended on validateTag; the test carries its own. City 370 / 370 / 0; heist 764 passed / 0 failed. Details: `CrimeLife Vault/70 Batches/2026-11-20 Hit Registration.md`.
 
 NOT published
+
+## Crouch stealth 2026-11-20
+
+| Script | Before | After |
+|---|---|---|
+| ServerScriptService.Movement.Scripts.Stealth | new | 7,602 / 1517421686 |
+| StarterGui.StealthVignette.StealthVignetteController | new | 1,523 / 1815874126 |
+| ServerStorage.UnitTest.Cases.Stealth_Test | new | 1,779 / 94783184 |
+| ServerScriptService.Movement.Scripts.RunningState | 1623531334 | 1,883 / 4096500649 |
+| StarterPlayer.StarterCharacterScripts.Crouching | 2420100717 | 12,383 / 2137990833 |
+| ServerScriptService.Enemy.Scripts.EnemyAI | 3345696100 | 46,573 / 3743326890 |
+| ServerScriptService.Wanted.PoliceDispatcher | 1578145209 | 25,074 / 3423070207 |
+| ServerScriptService.Wanted.Witnesses | 2589221737 | 2,684 / 1945931860 |
+| ServerScriptService.Heist.Components.GuardPost | 3389669030 | 34,901 / 416649834 |
+| ServerScriptService.Blaster.Scripts.Blaster | 1213314758 | 2,997 / 3941799855 |
+
+(Before column: Adler-32 only.) New instances: `ReplicatedStorage.PlayerMovement.Crouch` (RemoteEvent), `StarterGui.StealthVignette` (ScreenGui, IgnoreGuiInset, ResetOnSpawn false, DisplayOrder -1; `Vignette` Frame with Top / Bottom / Left / Right black frames, UIGradient 0 to 1, BackgroundTransparency 1). `CityMergeDeviation` appended on all scripts. City 373 / 373 / 0; heist 764 passed / 0 failed.
+
+NOT published

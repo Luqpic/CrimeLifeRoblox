@@ -33,6 +33,7 @@ local castRays = require(ReplicatedStorage.Blaster.Utility.castRays)
 local findOwningHumanoid = require(ReplicatedStorage.Blaster.Utility.findOwningHumanoid)
 local locomotionAnimations = require(ReplicatedStorage.Movement.Scripts.locomotionAnimations)
 local templateConfig = require(ReplicatedStorage.Enemy.templateConfig)
+local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 
 local taggedEvent = ServerScriptService.Blaster.Events.Tagged
 
@@ -415,7 +416,8 @@ function EnemyAI:_findVisibleTarget(): (Player?, Humanoid?)
 		end
 
 		local distance = (aimPosition - eyePosition).Magnitude
-		if distance > self.config.detectionRadius or (distance >= bestDistance and player ~= preferred) then
+		-- Crouch stealth (2026-11-20): a crouched or hidden player is noticed only within its StealthRange.
+		if distance > Stealth.noticeRange(character, self.config.detectionRadius) or (distance >= bestDistance and player ~= preferred) then
 			continue
 		end
 		if not ShotResolver.hasLineOfSight(self.character, eyePosition, humanoid) then
@@ -982,7 +984,7 @@ function EnemyAI:_thinkChase(now: number)
 	-- sight: an enemy should not track a target from further away than it could have spotted it in
 	-- the first place. Without this, a target that stays visible on open ground is chased across the
 	-- entire map and the Search state is unreachable.
-	if distance > self.config.detectionRadius then
+	if distance > Stealth.noticeRange(targetHumanoid.Parent, self.config.detectionRadius) then -- hidden: lost
 		self:_setState(STATE.Search)
 		return
 	end

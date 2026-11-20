@@ -25,7 +25,7 @@ Rules in force: Edit is the truth (rigs in Edit), native work only (no subagents
 | 1 Quest NPCs | **done** [[2026-11-20 Quest NPCs by Their Criminals]] |
 | 2 Combat | answered, to build (step 4) |
 | 3 Hit registration | **done** [[2026-11-20 Hit Registration]] |
-| 4 Crouch stealth | answered, to build (step 3) |
+| 4 Crouch stealth | **done** [[2026-11-20 Crouch Stealth]] |
 | 5 Gacha | answered, to build (step 5) |
 
 ## Answers from the developer

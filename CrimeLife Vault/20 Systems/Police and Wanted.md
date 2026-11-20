@@ -58,6 +58,10 @@ Details: [[2026-11-20 Heist Police and Bank Guards]], [[2026-11-20 Readable Gunf
 - **Known limits.** (Until the next morning the vault Armed Police spawned at the B-arrival markers; they now stay in the lobby.) squads cannot spawn while every robber is in the vault (the entrance lookup covers `Workspace.Bank`, not `BankVault`); a non-participant left in the lobby after the hold is unseen and drains. See [[Open Items]].
 - **2026-11-20 morning ([[2026-11-20 Walking Bank Guards and Edit Rigs]]).** Bank waves alternate two sides (before and after the obby pit); the armed plan stays in the lobby (`vaultMarkers`, `vaultFilter` Lobby zone, `patrolRadius` 12, not steered); steering checks one side a tick. `HeistPolice.markersIn(folder, prefix)` takes each marker's Edit rig. EnemyAI reads `ai.patrolRadius` before `Constants.PATROL_RADIUS`.
 
+
+## Crouch stealth (2026-11-20)
+`isSeen` uses the player's `StealthRange` instead of `SEEN_RANGE` when it is shorter (officers and guards), so a hidden wanted player 25+ studs away is unseen and the stars drain. [[2026-11-20 Crouch Stealth]]
+
 ## Extend it
 - Tune by number in `Constants` only (heat amounts, drain, squad table, rings, cap). Guard damage and rate are per location Config (`HeistShared.Config`, `NewsStationShared.Config`).
 - A new robbery location: add its name to `ALARM_LEVELS`, make it call `WantedService.onAlarm` where it announces `NotifyRobberyTriggered`, register its active-robbery check with `addActiveRobbery` through `Getaway:IsNear`, and add its building and zones to the dispatcher's robbery boxes.

@@ -38,6 +38,10 @@ Clip playback, the roll (Q) and the ledge climb moved to [[Character Movement an
 ## Roll stamps RollingUntil (2026-11-20)
 `RollAuthority` now writes `RollingUntil` (server clock, `os.clock()` plus 0.744 s, the longest roll) on the character's root for every accepted roll; a refused roll stamps nothing. NPC aim reads it and gives a rolling target the widest cone ([[Enemies and Spawner]]). The remote carries no argument, so the client cannot pick the time. The stamp does not check that the character moves: a roll in place gets the same cone, bounded by stamina (12.3 a roll) and the 0.9 s cooldown, about 37 % uptime sustained (review Minor, open). Spec: `RollAuthority_Test` (5 cases). [[2026-11-20 Readable Gunfights and Level Toughness]]
 
+
+## Crouch stealth (2026-11-20)
+The crouch reaches the server through `PlayerMovement.Crouch`; `Movement.Scripts.Stealth` turns it into `Stealth` (Hidden / Crouched) and `StealthRange` (25 / 70) on the character, read by enemies, police and guards. [[2026-11-20 Crouch Stealth]]
+
 ## Extend it
 - Movement tuning goes in `ReplicatedStorage.Movement.Constants` only, so client and server stay in step.
 - If small drops feel sluggish, add a fall-height or fall-speed threshold for opening the landing window, not a return of the sprint test.

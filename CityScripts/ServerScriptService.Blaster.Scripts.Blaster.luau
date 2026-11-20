@@ -7,6 +7,7 @@ local validateShootArguments = require(script.validateShootArguments)
 local validateShot = require(script.validateShot)
 local validateReload = require(script.validateReload)
 local ShotResolver = require(script.Parent.ShotResolver)
+local Stealth = require(ServerScriptService.Movement.Scripts.Stealth)
 
 local remotes = ReplicatedStorage.Blaster.Remotes
 local shootRemote = remotes.Shoot
@@ -30,6 +31,11 @@ local function onShootEvent(
 	-- Validate that the player can make this shot
 	if not validateShot(player, timestamp, blaster, origin) then
 		return
+	end
+
+	-- Crouch stealth (2026-11-20): gunfire gives the shooter away for a few seconds; a melee swing stays quiet.
+	if not blaster:GetAttribute(Constants.MELEE_HIT_EFFECT_ATTRIBUTE) then
+		Stealth.expose(player)
 	end
 
 	ShotResolver.resolveShot({

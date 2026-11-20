@@ -61,6 +61,10 @@ Details: [[2026-11-20 Readable Gunfights and Level Toughness]]. Every number is 
 - EnemyAI's patrol reads `self.patrolRadius` before `Constants.PATROL_RADIUS` (heist armed police: 12).
 - The Edit rule ([[Verify in Edit and by Screenshot]]): NPCs that appear in Play are rigs in Edit. Heist guards and heist police have them ([[2026-11-20 Walking Bank Guards and Edit Rigs]]), and so do the 6 criminal spawn pads: a rig of the pad's type stands on it, and `EnemySpawner` takes it at start so the pad moves under the rig ([[2026-11-20 Edit Rigs on Every Spawner]]). Star squads and admin-spawned NPCs have none by the developer's choice (no fixed place).
 
+
+## Crouch stealth (2026-11-20)
+`EnemyAI` notices and keeps a target only within `Stealth.noticeRange(character, detectionRadius)`: 25 when hidden, 70 when crouched in the open. [[2026-11-20 Crouch Stealth]]
+
 ## Extend it
 - New enemy type: clone a template in `ServerStorage.EnemyTemplates`, **clear every attribute the donor carried** before setting new ones (a Saboteur built from Disrupters would otherwise keep AKM recoil/aim), set `DamageOverride` (and `EngageRangeFraction` for melee), add a `<Type>Spawner` with an `EnemyType` StringValue in `Workspace.EnemySpawns`, and point a quest at it in `QuestConfig`.
 - Anything that must run on an enemy goes on after spawn (like `EnemyGUI`), never in the template.

@@ -11,6 +11,7 @@ local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local CameraAuthority = require(game:GetService("ReplicatedStorage").Modules.CameraAuthority)
 local MovementConstants = require(game:GetService("ReplicatedStorage").Movement.Constants)
+local crouchRemote = game:GetService("ReplicatedStorage"):WaitForChild("PlayerMovement"):WaitForChild("Crouch")
 
 ----------------- { CONFIGURATION } ---------------------
 
@@ -143,6 +144,7 @@ local function Crouch()
 	crouchDebounce = false
 	isCrouching = true
 	RootPart:SetAttribute("IsCrouching", true)
+	crouchRemote:FireServer(true) -- crouch stealth (2026-11-20): the server's Stealth owns what a crouch hides
 
 	-- Play appropriate crouch animation based on movement
 	HandleCrouchAnimations()
@@ -171,6 +173,7 @@ local function Stop()
 		if isCrouching then
 			isCrouching = false
 			RootPart:SetAttribute("IsCrouching", false)
+			crouchRemote:FireServer(false)
 
 			-- Stop both crouch animations
 			CrouchIdleAnim:Stop()
